@@ -7,18 +7,18 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Carmen/go/carmen"
-	carmenstate "github.com/Fantom-foundation/Carmen/go/state"
+	_ "github.com/Fantom-foundation/Carmen/go/carmen/experimental"
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 )
 
 type CarmenStateTestCase struct {
-	Variant carmen.Variant
-	Schema  carmen.Schema
-	Archive carmen.Archive
+	Variant string
+	Schema  int
+	Archive string
 }
 
-func NewCarmenStateTestCase(variant carmen.Variant, schema carmen.Schema, archive carmen.Archive) CarmenStateTestCase {
+func NewCarmenStateTestCase(variant string, schema int, archive string) CarmenStateTestCase {
 	return CarmenStateTestCase{Variant: variant, Schema: schema, Archive: archive}
 }
 
@@ -30,8 +30,8 @@ func (c CarmenStateTestCase) String() string {
 func GetAllCarmenConfigurations() []CarmenStateTestCase {
 	var res []CarmenStateTestCase
 
-	for cfg := range carmenstate.GetAllRegisteredStateFactories() {
-		res = append(res, NewCarmenStateTestCase(carmen.Variant(cfg.Variant), carmen.Schema(cfg.Schema), carmen.Archive(cfg.Archive)))
+	for _, cfg := range carmen.GetAllConfigurations() {
+		res = append(res, NewCarmenStateTestCase(string(cfg.Variant), int(cfg.Schema), string(cfg.Archive)))
 	}
 	return res
 }
@@ -65,4 +65,44 @@ func GetRandom(rangeLower int, rangeUpper int) int {
 	// get randomized balance
 	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
 	return randInt
+}
+
+func MakeCarmenDbTestContext(dir string, variant string, schema int, archive string) (StateDB, error) {
+	db, err := MakeCarmenStateDB(dir, variant, schema, archive)
+	if err != nil {
+		return nil, err
+	}
+
+	err = BeginCarmenDbTestContext(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func CloseCarmenDbTestContext(db StateDB) error {
+	err := db.EndTransaction()
+	if err != nil {
+		return err
+	}
+	err = db.EndBlock()
+	if err != nil {
+		return err
+	}
+	return db.Close()
+}
+
+func BeginCarmenDbTestContext(db StateDB) error {
+	err := db.BeginBlock(uint64(1))
+	if err != nil {
+		return fmt.Errorf("cannot begin block; %w", err)
+	}
+
+	err = db.BeginTransaction(uint32(0))
+	if err != nil {
+		return fmt.Errorf("cannot begin transaction; %w", err)
+	}
+
+	return nil
 }

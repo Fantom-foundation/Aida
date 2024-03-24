@@ -27,7 +27,7 @@ func TestTransactionEventEmitter_PreTransactionCallsBeginTx(t *testing.T) {
 	}
 }
 
-func TestTransactionEventEmitter_PostTransactionCallsBeginTx(t *testing.T) {
+func TestTransactionEventEmitter_PostTransactionCallsEndTx(t *testing.T) {
 	ext := MakeTransactionEventEmitter[any]()
 
 	mockCtrl := gomock.NewController(t)

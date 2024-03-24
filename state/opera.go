@@ -219,7 +219,7 @@ func (s *operaStateDB) EndBlock() error {
 	var err error
 	s.stateRoot, err = s.Commit(true)
 	if err != nil {
-		s.log.Fatalf("cannot commit; %v", err)
+		return fmt.Errorf("cannot commit; %v", err)
 	}
 
 	// todo trie commit/cap
@@ -236,6 +236,7 @@ func (s *operaStateDB) EndSyncPeriod() {
 }
 
 func (s *operaStateDB) GetHash() (common.Hash, error) {
+	s.log.Fatal("get hash is yet implemented for opera statedb")
 	return common.Hash{}, nil // not supported
 }
 

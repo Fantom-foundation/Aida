@@ -335,7 +335,9 @@ func (p *EventProxy) BeginTransaction(number uint32) error {
 	p.registry.RegisterOp(BeginTransactionID)
 
 	// call real StateDB
-	p.db.BeginTransaction(number)
+	if err := p.db.BeginTransaction(number); err != nil {
+		return err
+	}
 
 	// clear all snapshots
 	p.snapshots = []int{}
@@ -347,7 +349,9 @@ func (p *EventProxy) EndTransaction() error {
 	p.registry.RegisterOp(EndTransactionID)
 
 	// call real StateDB
-	p.db.EndTransaction()
+	if err := p.db.EndTransaction(); err != nil {
+		return err
+	}
 
 	// clear all snapshots
 	p.snapshots = []int{}
@@ -359,8 +363,7 @@ func (p *EventProxy) BeginBlock(number uint64) error {
 	p.registry.RegisterOp(BeginBlockID)
 
 	// call real StateDB
-	p.db.BeginBlock(number)
-	return nil
+	return p.db.BeginBlock(number)
 }
 
 func (p *EventProxy) EndBlock() error {
@@ -368,8 +371,7 @@ func (p *EventProxy) EndBlock() error {
 	p.registry.RegisterOp(EndBlockID)
 
 	// call real StateDB
-	p.db.EndBlock()
-	return nil
+	return p.db.EndBlock()
 }
 
 func (p *EventProxy) BeginSyncPeriod(number uint64) {

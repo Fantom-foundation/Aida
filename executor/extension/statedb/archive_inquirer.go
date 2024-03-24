@@ -161,8 +161,15 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	defer func() {
-		archive.EndTransaction()
-		archive.Release()
+		err = archive.EndTransaction()
+		if err != nil {
+			errCh <- fmt.Errorf("cannot end archive inquirer transaction; %w", err)
+		}
+		err = archive.Release()
+		if err != nil {
+			errCh <- fmt.Errorf("cannot release archive inside archive inquirer; %w", err)
+		}
+
 	}()
 
 	state := executor.State[txcontext.TxContext]{

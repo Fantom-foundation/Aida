@@ -777,14 +777,8 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				if err = sDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = sDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = sDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				if err = state.CloseCarmenDbTestContext(sDB); err != nil {
+					t.Fatal(err)
 				}
 			}(sDB)
 
@@ -800,14 +794,10 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			if err = pc.PrimeStateDB(ws, sDB); err != nil {
 				t.Fatal(err)
 			}
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = sDB.BeginBlock(1)
+
+			err = state.BeginCarmenDbTestContext(sDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = sDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			// Call for state DB validation and subsequent check for error
@@ -834,14 +824,8 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				if err = sDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = sDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = sDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				if err = state.CloseCarmenDbTestContext(sDB); err != nil {
+					t.Fatal(err)
 				}
 			}(sDB)
 
@@ -868,14 +852,9 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			ws[addr] = subAcc
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = sDB.BeginBlock(1)
+			err = state.BeginCarmenDbTestContext(sDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = sDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly

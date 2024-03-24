@@ -274,31 +274,35 @@ func (p *ProfilerProxy) do(opId byte, op func()) {
 }
 
 func (p *ProfilerProxy) BeginTransaction(number uint32) error {
+	var err error
 	p.do(operation.BeginTransactionID, func() {
-		p.db.BeginTransaction(number)
+		err = p.db.BeginTransaction(number)
 	})
-	return nil
+	return err
 }
 
 func (p *ProfilerProxy) EndTransaction() error {
+	var err error
 	p.do(operation.EndTransactionID, func() {
-		p.db.EndTransaction()
+		err = p.db.EndTransaction()
 	})
-	return nil
+	return err
 }
 
 func (p *ProfilerProxy) BeginBlock(number uint64) error {
+	var err error
 	p.do(operation.BeginBlockID, func() {
-		p.db.BeginBlock(number)
+		err = p.db.BeginBlock(number)
 	})
-	return nil
+	return err
 }
 
 func (p *ProfilerProxy) EndBlock() error {
+	var err error
 	p.do(operation.EndBlockID, func() {
-		p.db.EndBlock()
+		err = p.db.EndBlock()
 	})
-	return nil
+	return err
 }
 
 func (p *ProfilerProxy) BeginSyncPeriod(number uint64) {

@@ -97,14 +97,9 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				if err = sDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = sDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = sDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = state.CloseCarmenDbTestContext(sDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(sDB)
 
@@ -119,14 +114,9 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = sDB.BeginBlock(1)
+			err = state.BeginCarmenDbTestContext(sDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = sDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			// Checks if state DB was primed correctly

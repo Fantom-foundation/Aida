@@ -53,37 +53,21 @@ func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 func TestCarmenState_AccountLifecycle(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -112,37 +96,21 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -174,7 +142,7 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 func TestCarmenState_NonceOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -185,26 +153,11 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -226,7 +179,7 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 func TestCarmenState_CodeOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -237,26 +190,11 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -286,7 +224,7 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 func TestCarmenState_StateOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -297,26 +235,11 @@ func TestCarmenState_StateOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -362,16 +285,28 @@ func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 				csDB.BeginSyncPeriod(uint64(i))
 
 				for j := 0; j < 100; j++ {
-					csDB.BeginBlock(uint64(blockNumber))
+					err = csDB.BeginBlock(uint64(blockNumber))
+					if err != nil {
+						t.Fatalf("cannot begin block; %v", err)
+					}
 					blockNumber++
 
 					for k := 0; k < 100; k++ {
-						csDB.BeginTransaction(uint32(trxNumber))
+						err = csDB.BeginTransaction(uint32(trxNumber))
+						if err != nil {
+							t.Fatalf("cannot begin transaction; %v", err)
+						}
 						trxNumber++
-						csDB.EndTransaction()
+						err = csDB.EndTransaction()
+						if err != nil {
+							t.Fatalf("cannot end transaction; %v", err)
+						}
 					}
 
-					csDB.EndBlock()
+					err = csDB.EndBlock()
+					if err != nil {
+						t.Fatalf("cannot end block; %v", err)
+					}
 				}
 
 				csDB.EndSyncPeriod()
@@ -384,37 +319,21 @@ func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 func TestCarmenState_RefundOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			refundValue := uint64(GetRandom(10000*4000, 10000*5000))
 			csDB.AddRefund(refundValue)
@@ -438,37 +357,21 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 func TestCarmenState_AccessListOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			// prepare content of access list
 			sender := common.BytesToAddress(MakeRandomByteSlice(t, 40))
@@ -554,18 +457,13 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 		}
 		t.Run(tc.String(), func(t *testing.T) {
 			tempDir := t.TempDir()
-			csDB, err := MakeCarmenStateDB(tempDir, tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
-
-			csDB.BeginBlock(1)
-			csDB.BeginTransaction(1)
-
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 			csDB.CreateAccount(addr)
@@ -576,8 +474,10 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 
 			csDB.SetState(addr, key, value)
 
-			csDB.EndTransaction()
-			csDB.EndBlock()
+			err = CloseCarmenDbTestContext(csDB)
+			if err != nil {
+				t.Fatalf("cannot close carmen test context; %v", err)
+			}
 
 			err = csDB.Close()
 			if err != nil {
@@ -585,7 +485,6 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 			}
 
 			csDB, err = MakeCarmenStateDB(tempDir, tc.Variant, 1, tc.Archive)
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
@@ -599,7 +498,6 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 			}(csDB)
 
 			_, err = csDB.GetArchiveState(1)
-
 			if err != nil {
 				t.Fatalf("failed to retrieve Archive state of carmen state DB: %v", err)
 			}
@@ -611,7 +509,7 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -622,14 +520,9 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -650,14 +543,9 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
+			err = BeginCarmenDbTestContext(csDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if csDB.GetBalance(addr).Cmp(newBalance) != 0 {
@@ -671,7 +559,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -682,14 +570,9 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			// Closing of state DB
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -711,14 +594,9 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
+			err = BeginCarmenDbTestContext(csDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if csDB.GetNonce(addr) != newNonce {
@@ -732,7 +610,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -743,14 +621,9 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -774,14 +647,9 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
+			err = BeginCarmenDbTestContext(csDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if csDB.GetState(addr, key) != value {
@@ -795,7 +663,7 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -806,14 +674,9 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				if err = csDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err = csDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err = csDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err = CloseCarmenDbTestContext(csDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -836,14 +699,9 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
+			err = BeginCarmenDbTestContext(csDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if !bytes.Equal(csDB.GetCode(addr), code) {
@@ -857,7 +715,7 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_BulkloadOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -872,16 +730,6 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = csDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = csDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}
@@ -950,7 +798,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 func TestCarmenState_GetShadowDB(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}

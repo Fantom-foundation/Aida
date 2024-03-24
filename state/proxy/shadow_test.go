@@ -13,12 +13,37 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
+func makeTestShadowDBWithCarmenTestContext(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
 	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
 	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
 
+	if err != nil {
+		t.Fatalf("failed to create carmen state DB: %v", err)
+	}
+
+	gsDB, err := state.MakeGethStateDB(t.TempDir(), "", common.Hash{}, false, nil)
+
+	if err != nil {
+		t.Fatalf("failed to create geth state DB: %v", err)
+	}
+
+	shadowDB := NewShadowProxy(csDB, gsDB, false)
+
+	err = state.BeginCarmenDbTestContext(shadowDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return shadowDB
+}
+
+func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
+	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
+	if errors.Is(err, carmen.UnsupportedConfiguration) {
+		t.Skip("unsupported configuration")
+	}
 	if err != nil {
 		t.Fatalf("failed to create carmen state DB: %v", err)
 	}
@@ -52,30 +77,15 @@ func TestShadowState_InitCloseShadowDB(t *testing.T) {
 func TestShadowState_AccountLifecycle(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -104,30 +114,15 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 func TestShadowState_AccountBalanceOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -159,30 +154,15 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 func TestShadowState_NonceOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -204,30 +184,15 @@ func TestShadowState_NonceOperations(t *testing.T) {
 func TestShadowState_CodeOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -257,30 +222,15 @@ func TestShadowState_CodeOperations(t *testing.T) {
 func TestShadowState_StateOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -319,16 +269,28 @@ func TestShadowState_TrxBlockSyncPeriodOperations(t *testing.T) {
 				shadowDB.BeginSyncPeriod(uint64(i))
 
 				for j := 0; j < 100; j++ {
-					shadowDB.BeginBlock(uint64(blockNumber))
+					err := shadowDB.BeginBlock(uint64(blockNumber))
+					if err != nil {
+						t.Fatalf("cannot begin block; %v", err)
+					}
 					blockNumber++
 
 					for k := 0; k < 100; k++ {
-						shadowDB.BeginTransaction(uint32(trxNumber))
+						err = shadowDB.BeginTransaction(uint32(trxNumber))
+						if err != nil {
+							t.Fatalf("cannot begin transaction; %v", err)
+						}
 						trxNumber++
-						shadowDB.EndTransaction()
+						err = shadowDB.EndTransaction()
+						if err != nil {
+							t.Fatalf("cannot end transaction; %v", err)
+						}
 					}
 
-					shadowDB.EndBlock()
+					err = shadowDB.EndBlock()
+					if err != nil {
+						t.Fatalf("cannot end block; %v", err)
+					}
 				}
 
 				shadowDB.EndSyncPeriod()
@@ -341,30 +303,15 @@ func TestShadowState_TrxBlockSyncPeriodOperations(t *testing.T) {
 func TestShadowState_RefundOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			refundValue := uint64(state.GetRandom(10000*4000, 10000*5000))
 			shadowDB.AddRefund(refundValue)
@@ -388,30 +335,15 @@ func TestShadowState_RefundOperations(t *testing.T) {
 func TestShadowState_AccessListOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			// prepare content of access list
 			sender := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
@@ -497,14 +429,9 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
 
@@ -526,14 +453,9 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = shadowDB.BeginBlock(1)
+			err = state.BeginCarmenDbTestContext(shadowDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if shadowDB.GetBalance(addr).Cmp(newBalance) != 0 {
@@ -551,14 +473,9 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
 
@@ -581,14 +498,9 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = shadowDB.BeginBlock(1)
+			err = state.BeginCarmenDbTestContext(shadowDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if shadowDB.GetNonce(addr) != newNonce {
@@ -606,14 +518,9 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
 
@@ -662,14 +569,9 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				if err := shadowDB.EndTransaction(); err != nil {
-					t.Fatalf("cannot end tx; %v", err)
-				}
-				if err := shadowDB.EndBlock(); err != nil {
-					t.Fatalf("cannot end block; %v", err)
-				}
-				if err := shadowDB.Close(); err != nil {
-					t.Fatalf("cannot close db; %v", err)
+				err := state.CloseCarmenDbTestContext(shadowDB)
+				if err != nil {
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(shadowDB)
 
@@ -693,14 +595,9 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is necessary because Carmen requires txCtx for db interactions
-			err = shadowDB.BeginBlock(1)
+			err = state.BeginCarmenDbTestContext(shadowDB)
 			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
+				t.Fatal(err)
 			}
 
 			if bytes.Compare(shadowDB.GetCode(addr), code) != 0 {
@@ -714,20 +611,10 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 func TestShadowState_BulkloadOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
+			shadowDB := makeTestShadowDBWithCarmenTestContext(t, ctc)
 
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}
-
-			// this is necessary because Carmen requires txCtx for db interactions
-			err := shadowDB.BeginBlock(1)
-			if err != nil {
-				t.Fatalf("cannot begin block; %v", err)
-			}
-			err = shadowDB.BeginTransaction(0)
-			if err != nil {
-				t.Fatalf("cannot begin tx; %v", err)
-			}
 
 			for i := 0; i < len(accounts); i++ {
 				accounts[i] = common.BytesToAddress(state.MakeRandomByteSlice(t, 40))

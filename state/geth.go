@@ -178,7 +178,9 @@ func (s *gethStateDB) EndBlock() error {
 	}
 	// if archival node, flush trie to disk after each block
 	if s.evmState != nil {
-		s.trieCommit()
+		if err = s.trieCommit(); err != nil {
+			return fmt.Errorf("cannot commit trie; %w", err)
+		}
 		s.trieCap()
 	}
 	return nil

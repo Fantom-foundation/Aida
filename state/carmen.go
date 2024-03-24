@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Carmen/go/carmen"
@@ -13,15 +14,38 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func MakeCarmenStateDB(dir string, variant carmen.Variant, schema carmen.Schema, archive carmen.Archive) (StateDB, error) {
+func MakeCarmenStateDB(dir string, variant string, schema int, archive string) (StateDB, error) {
 	return MakeCarmenStateDBWithCacheSize(dir, variant, schema, archive, 0, 0)
 }
 
-func MakeCarmenStateDBWithCacheSize(dir string, variant carmen.Variant, schema carmen.Schema, archive carmen.Archive, liveDbCacheSize, archiveCacheSize int) (StateDB, error) {
+func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, archive string, liveDbCacheSize, archiveCacheSize int) (StateDB, error) {
+	var archiveType carmen.Archive
+
+	switch strings.ToLower(archive) {
+	case "none":
+		archiveType = ""
+	case "": // = default option
+		fallthrough
+	case "ldb":
+		fallthrough
+	case "leveldb":
+		archiveType = "ldb"
+	case "sql":
+		fallthrough
+	case "sqlite":
+		archiveType = "sql"
+	case "s4":
+		archiveType = "s4"
+	case "s5":
+		archiveType = "s5"
+	default:
+		return nil, fmt.Errorf("unsupported archive type: %s", archive)
+	}
+
 	cfg := carmen.Configuration{
-		Variant: variant,
-		Schema:  schema,
-		Archive: archive,
+		Variant: carmen.Variant(variant),
+		Schema:  carmen.Schema(schema),
+		Archive: archiveType,
 	}
 
 	properties := make(carmen.Properties)

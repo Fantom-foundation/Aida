@@ -26,7 +26,7 @@ func GetStateDbTestCases() []StateDbTestCase {
 		{"geth", "geth", true, "", false},
 		{"carmen", "geth", false, "none", false},
 		{"carmen", "geth", true, "ldb", false},
-		//{"carmen", "geth", true, "sqlite", false}, newest carmen api does not support sqlite anymore
+		{"carmen", "geth", true, "sqlite", false},
 	}
 
 	return testCases

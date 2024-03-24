@@ -157,26 +157,22 @@ func (s *LoggingStateDb) Error() error {
 
 func (s *loggingVmStateDb) BeginTransaction(tx uint32) error {
 	s.writeLog("BeginTransaction, %v", tx)
-	s.db.BeginTransaction(tx)
-	return nil
+	return s.db.BeginTransaction(tx)
 }
 
 func (s *loggingVmStateDb) EndTransaction() error {
 	s.writeLog("EndTransaction")
-	s.db.EndTransaction()
-	return nil
+	return s.db.EndTransaction()
 }
 
 func (s *LoggingStateDb) BeginBlock(blk uint64) error {
 	s.writeLog("BeginBlock, %v", blk)
-	s.state.BeginBlock(blk)
-	return nil
+	return s.state.BeginBlock(blk)
 }
 
 func (s *LoggingStateDb) EndBlock() error {
 	s.writeLog("EndBlock")
-	s.state.EndBlock()
-	return nil
+	return s.state.EndBlock()
 }
 
 func (s *LoggingStateDb) BeginSyncPeriod(number uint64) {
@@ -190,9 +186,9 @@ func (s *LoggingStateDb) EndSyncPeriod() {
 }
 
 func (s *LoggingStateDb) GetHash() (common.Hash, error) {
-	hash, _ := s.state.GetHash()
+	hash, err := s.state.GetHash()
 	s.writeLog("GetHash, %v", hash)
-	return hash, nil
+	return hash, err
 }
 
 func (s *loggingNonCommittableStateDb) GetHash() (common.Hash, error) {

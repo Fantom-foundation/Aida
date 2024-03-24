@@ -9,7 +9,6 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/Carmen/go/carmen"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
@@ -197,7 +196,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDBWithCacheSize(directory, carmen.Variant(variant), carmen.Schema(carmenSchema), carmen.Archive(archiveVariant), cfg.CarmenStateCacheSize, cfg.CarmenNodeCacheSize)
+		return state.MakeCarmenStateDBWithCacheSize(directory, variant, carmenSchema, archiveVariant, cfg.CarmenStateCacheSize, cfg.CarmenNodeCacheSize)
 	case "opera":
 		return state.MakeOperaStateDB(directory, variant, cfg.LogLevel)
 	}

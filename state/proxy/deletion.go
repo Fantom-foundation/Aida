@@ -214,8 +214,7 @@ func (r *DeletionProxy) AddPreimage(addr common.Hash, image []byte) {
 
 // ForEachStorage performs a function over all storage locations in a contract.
 func (r *DeletionProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	err := r.db.ForEachStorage(addr, fn)
-	return err
+	return r.db.ForEachStorage(addr, fn)
 }
 
 // Prepare sets the current transaction hash and index.
@@ -257,23 +256,19 @@ func (r *DeletionProxy) PrepareSubstate(substate txcontext.WorldState, block uin
 }
 
 func (r *DeletionProxy) BeginTransaction(number uint32) error {
-	r.db.BeginTransaction(number)
-	return nil
+	return r.db.BeginTransaction(number)
 }
 
 func (r *DeletionProxy) EndTransaction() error {
-	r.db.EndTransaction()
-	return nil
+	return r.db.EndTransaction()
 }
 
 func (r *DeletionProxy) BeginBlock(number uint64) error {
-	r.db.BeginBlock(number)
-	return nil
+	return r.db.BeginBlock(number)
 }
 
 func (r *DeletionProxy) EndBlock() error {
-	r.db.EndBlock()
-	return nil
+	return r.db.EndBlock()
 }
 
 func (r *DeletionProxy) BeginSyncPeriod(number uint64) {
