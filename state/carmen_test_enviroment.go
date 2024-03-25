@@ -36,12 +36,28 @@ func GetAllCarmenConfigurations() []CarmenStateTestCase {
 	return res
 }
 
+// GetCurrentCarmenTestCases returns currently used carmen version.
+func GetCurrentCarmenTestCases() []CarmenStateTestCase {
+	var res []CarmenStateTestCase
+
+	for _, cfg := range carmen.GetAllConfigurations() {
+		if cfg.Variant != "go-file" {
+			continue
+		}
+		if cfg.Schema != 5 {
+			continue
+		}
+		if cfg.Archive != "ldb" && cfg.Archive != "leveldb" && cfg.Archive != "none" {
+			continue
+		}
+		res = append(res, NewCarmenStateTestCase(string(cfg.Variant), int(cfg.Schema), string(cfg.Archive)))
+	}
+	return res
+}
+
 // A minimal combination of carmen db configuration for testing interface
 func GetCarmenStateTestCases() []CarmenStateTestCase {
-	return []CarmenStateTestCase{
-		NewCarmenStateTestCase("go-file", 3, "none"),
-		NewCarmenStateTestCase("go-file", 3, "leveldb"),
-	}
+	return GetCurrentCarmenTestCases()
 }
 
 // MakeRandomByteSlice creates byte slice of given length with randomized values
