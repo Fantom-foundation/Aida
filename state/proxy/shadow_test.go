@@ -686,7 +686,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 func TestShadowState_GetShadowDB(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, 1, ctc.Archive)
+			csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}

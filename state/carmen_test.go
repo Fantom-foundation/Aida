@@ -13,7 +13,7 @@ import (
 
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid Variant
 func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
-	csDB, err := MakeCarmenStateDB("", "invalid-Variant", 1, "")
+	csDB, err := MakeCarmenStateDB("", "invalid-Variant", 5, "")
 	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
@@ -32,7 +32,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 	for _, tc := range GetAllCarmenConfigurations() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -262,7 +262,7 @@ func TestCarmenState_StateOperations(t *testing.T) {
 func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, 1, tc.Archive)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -451,13 +451,14 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 
 // TestCarmenState_GetArchiveState tests retrieving an Archive state
 func TestCarmenState_GetArchiveState(t *testing.T) {
-	for _, tc := range GetCarmenStateTestCases() {
-		if tc.Archive != "sqlite" && tc.Archive != "leveldb" {
+	cfgs := GetCarmenStateTestCases()
+	for _, tc := range cfgs {
+		if tc.Archive == "none" || tc.Archive == "" {
 			continue // relevant only if the Archive is enabled
 		}
 		t.Run(tc.String(), func(t *testing.T) {
 			tempDir := t.TempDir()
-			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeCarmenDbTestContext(tempDir, tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -479,12 +480,7 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 				t.Fatalf("cannot close carmen test context; %v", err)
 			}
 
-			err = csDB.Close()
-			if err != nil {
-				t.Fatalf("failed to close carmen state DB: %v", err)
-			}
-
-			csDB, err = MakeCarmenStateDB(tempDir, tc.Variant, 1, tc.Archive)
+			csDB, err = MakeCarmenStateDB(tempDir, tc.Variant, tc.Schema, tc.Archive)
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
@@ -497,9 +493,14 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 				}
 			}(csDB)
 
-			_, err = csDB.GetArchiveState(1)
+			archive, err := csDB.GetArchiveState(1)
 			if err != nil {
 				t.Fatalf("failed to retrieve Archive state of carmen state DB: %v", err)
+			}
+
+			err = archive.Release()
+			if err != nil {
+				t.Fatal("cannot release archive; %w", err)
 			}
 		})
 	}
