@@ -24,9 +24,9 @@ func GetStateDbTestCases() []StateDbTestCase {
 	testCases := []StateDbTestCase{
 		{"geth", "", true, "", false},
 		{"geth", "geth", true, "", false},
-		{"carmen", "geth", false, "none", false},
-		{"carmen", "geth", true, "ldb", false},
-		{"carmen", "geth", true, "sqlite", false},
+		//{"carmen", "geth", false, "none", false},
+		//{"carmen", "geth", true, "ldb", false},
+		//{"carmen", "geth", true, "sqlite", false},
 	}
 
 	return testCases

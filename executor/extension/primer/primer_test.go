@@ -2,6 +2,7 @@ package primer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -28,20 +29,21 @@ func TestStateDbPrimerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
 
 }
 
-func TestStateDbPrimerExtension_PrimingDoesNotTriggerForExistingStateDb(t *testing.T) {
+func TestStateDbPrimerExtension_PrimingDExistingStateDbMissingDbInfo(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
 	cfg := &utils.Config{}
-	cfg.SkipPriming = false
 	cfg.IsExistingStateDb = true
-
-	log.EXPECT().Warning("Skipping priming due to usage of pre-existing StateDb")
 
 	ext := makeStateDbPrimer[any](cfg, log)
 
-	ext.PreRun(executor.State[any]{}, nil)
+	expected := errors.New("cannot read state db info; failed to read statedb_info.json; open statedb_info.json: no such file or directory")
 
+	err := ext.PreRun(executor.State[any]{}, nil)
+	if err.Error() != expected.Error() {
+		t.Errorf("Priming should fail if db info is missing; got: %v; expected: %v", err, expected)
+	}
 }
 
 func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testing.T) {
@@ -188,7 +190,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 			}
 
 			// Generating randomized world state
-			alloc, addresses := utils.MakeWorldState(t)
+			alloc, _ := utils.MakeWorldState(t)
 			ws := substatecontext.NewWorldState(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
@@ -198,6 +200,28 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				t.Fatalf("failed to prime state DB: %v", err)
 			}
 
+			// Checks if state DB was primed correctly
+			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+				if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
+					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
+				}
+
+				if sDB.GetNonce(addr) != acc.GetNonce() {
+					t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), acc.GetNonce())
+				}
+
+				if bytes.Compare(sDB.GetCode(addr), acc.GetCode()) != 0 {
+					t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), acc.GetCode())
+				}
+
+				acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+					if sDB.GetState(addr, keyHash) != valueHash {
+						t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, keyHash), valueHash)
+					}
+				})
+			})
+
+			rootHash := sDB.GetHash()
 			// Closing of state DB
 			err = sDB.Close()
 			if err != nil {
@@ -206,7 +230,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 
 			cfg.StateDbSrc = sDbDir
 			// Call for json creation and writing into it
-			err = utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, common.Hash{})
+			err = utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, rootHash)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
@@ -225,27 +249,6 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 					t.Fatalf("failed to close state DB: %v", err)
 				}
 			}()
-
-			// Generating randomized world state
-			alloc2, addresses2 := utils.MakeWorldState(t)
-
-			//check if the adddresses are not clashing with addresses2
-			for _, addr := range addresses {
-				for _, addr2 := range addresses2 {
-					if addr == addr2 {
-						t.Fatalf("address %v is clashing; such small possibility shouldn't ever occure rerun the test", addr)
-					}
-				}
-			}
-
-			ws2 := substatecontext.NewWorldState(alloc2)
-
-			pc2 := utils.NewPrimeContext(cfg, sDB2, 0, log)
-			// Priming state DB
-			err = pc2.PrimeStateDB(ws2, sDB2)
-			if err != nil {
-				t.Fatalf("failed to prime state DB2: %v", err)
-			}
 
 			// Checks if state DB was primed correctly
 			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
@@ -267,6 +270,17 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 					}
 				})
 			})
+
+			// Generating randomized world state
+			alloc2, _ := utils.MakeWorldState(t)
+			ws2 := substatecontext.NewWorldState(alloc2)
+
+			pc2 := utils.NewPrimeContext(cfg, sDB2, 1, log)
+			// Priming state DB
+			err = pc2.PrimeStateDB(ws2, sDB2)
+			if err != nil {
+				t.Fatalf("failed to prime state DB2: %v", err)
+			}
 
 			// Checks if state DB was primed correctly
 			ws2.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
