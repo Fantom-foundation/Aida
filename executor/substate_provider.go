@@ -34,7 +34,6 @@ type substateProvider struct {
 
 func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxContext]) error {
 	iter := s.db.NewSubstateIterator(from, s.numParallelDecoders)
-	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
 		if tx.Block >= uint64(to) {
@@ -44,6 +43,9 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 			return err
 		}
 	}
+	// this cannot be used in defer because Release() has a WaitGroup.Wait() call
+	// so if called after iter.Error() there is a change the error does not get distributed.
+	iter.Release()
 	return iter.Error()
 }
 
