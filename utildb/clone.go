@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -22,6 +23,7 @@ type cloner struct {
 	cfg             *utils.Config
 	log             logger.Logger
 	aidaDb, cloneDb ethdb.Database
+	cloneComponent  dbcomponent.DbComponent
 	count           uint64
 	typ             utils.AidaDbType
 	writeCh         chan rawEntry
@@ -74,16 +76,26 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
+	var dbComponent dbcomponent.DbComponent
+
+	if cloneType == utils.CustomType {
+		dbComponent, err = dbcomponent.ParseDbComponent(cfg.DbComponent)
+		if err != nil {
+			return err
+		}
+	}
+
 	start := time.Now()
 	c := cloner{
-		cfg:     cfg,
-		cloneDb: cloneDb,
-		aidaDb:  aidaDb,
-		log:     log,
-		typ:     cloneType,
-		writeCh: make(chan rawEntry, cloneWriteChanSize),
-		errCh:   make(chan error, 1),
-		stopCh:  make(chan any),
+		cfg:            cfg,
+		cloneDb:        cloneDb,
+		aidaDb:         aidaDb,
+		log:            log,
+		typ:            cloneType,
+		cloneComponent: dbComponent,
+		writeCh:        make(chan rawEntry, cloneWriteChanSize),
+		errCh:          make(chan error, 1),
+		stopCh:         make(chan any),
 	}
 
 	if err = c.clone(isFirstGenerationFromGenesis); err != nil {
@@ -116,11 +128,13 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 		}
 	}
 
-	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
-	chainID := sourceMD.GetChainID()
+	if c.typ != utils.CustomType {
+		sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
+		chainID := sourceMD.GetChainID()
 
-	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
-		return err
+		if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+			return err
+		}
 	}
 
 	//  compact written data
@@ -139,6 +153,10 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 func (c *cloner) readData(isFirstGenerationFromGenesis bool) error {
 	// notify writer that all data was read
 	defer close(c.writeCh)
+
+	if c.typ == utils.CustomType {
+		return c.readDataCustom()
+	}
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
@@ -277,7 +295,7 @@ func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 
 		// if there is no updateset before interval (first 1M blocks) then 0 is returned
 		return lastUpdateBeforeRange
-	} else if c.typ == utils.PatchType {
+	} else if c.typ == utils.PatchType || c.typ == utils.CustomType {
 		var wantedBlock uint64
 
 		// if we are working with first patch that was created from genesis we need to move the start of the iterator minus one block
@@ -416,6 +434,38 @@ func (c *cloner) stop() {
 		close(c.stopCh)
 		c.closeDbs()
 	}
+}
+
+// readDataCustom retrieves data from source AidaDb based on given dbComponent
+func (c *cloner) readDataCustom() error {
+	if c.cloneComponent == dbcomponent.Substate || c.cloneComponent == dbcomponent.All {
+		c.read([]byte(substate.Stage1CodePrefix), 0, nil)
+		err := c.readSubstate()
+		if err != nil {
+			return fmt.Errorf("cannot read substate; %v", err)
+		}
+	}
+
+	if c.cloneComponent == dbcomponent.Delete || c.cloneComponent == dbcomponent.All {
+		err := c.readDeletions(c.cfg.First)
+		if err != nil {
+			return fmt.Errorf("cannot read deletions; %v", err)
+		}
+	}
+
+	if c.cloneComponent == dbcomponent.Update || c.cloneComponent == dbcomponent.All {
+		lastUpdateBeforeRange := c.readUpdateSet(false)
+		c.log.Noticef("Last updateset found at block %v", lastUpdateBeforeRange)
+	}
+
+	if c.cloneComponent == dbcomponent.StateHash || c.cloneComponent == dbcomponent.All {
+		err := c.readStateHashes()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // OpenCloningDbs prepares aida and target databases
