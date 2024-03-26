@@ -7,7 +7,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Carmen/go/carmen"
-	oldCommon "github.com/Fantom-foundation/Carmen/go/common"
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 	"github.com/ethereum/go-ethereum/common"
@@ -245,12 +244,12 @@ func (s *carmenStateDB) AddSlotToAccessList(addr common.Address, slot common.Has
 }
 
 func (s *carmenStateDB) AddLog(log *types.Log) {
-	topics := make([]oldCommon.Hash, 0, len(log.Topics))
+	topics := make([]carmen.Hash, 0, len(log.Topics))
 	for _, topic := range log.Topics {
-		topics = append(topics, oldCommon.Hash(topic))
+		topics = append(topics, carmen.Hash(topic))
 	}
 	s.txCtx.AddLog(&carmen.Log{
-		Address: oldCommon.Address(log.Address),
+		Address: carmen.Address(log.Address),
 		Topics:  topics,
 		Data:    log.Data,
 	})
