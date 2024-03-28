@@ -25,6 +25,7 @@ const (
 	GenType
 	PatchType
 	CloneType
+	CustomType
 )
 
 const (

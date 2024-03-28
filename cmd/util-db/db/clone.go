@@ -16,6 +16,7 @@ var CloneCommand = cli.Command{
 	Subcommands: []*cli.Command{
 		&CloneDb,
 		&ClonePatch,
+		&CloneCustom,
 	},
 }
 
@@ -52,6 +53,26 @@ var CloneDb = cli.Command{
 	},
 	Description: `
 Creates clone db is used to create subset of aida-db to have more compact database, but still fully usable for desired block range.
+`,
+}
+
+// CloneDb enables creation of aida-db read or subset
+var CloneCustom = cli.Command{
+	Action:    createCustomClone,
+	Name:      "custom",
+	Usage:     "clone custom creates a copy of aida-db components from specified range",
+	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.DbComponentFlag,
+		&utils.TargetDbFlag,
+		&utils.CompactDbFlag,
+		&utils.ValidateFlag,
+		&logger.LogLevelFlag,
+	},
+	Description: `
+Clone custom is a specialized clone tool which copies specific components in aida-db from 
+ the given block range.
 `,
 }
 
@@ -115,4 +136,27 @@ func createDbClone(ctx *cli.Context) error {
 	utildb.MustCloseDB(targetDb)
 
 	return utildb.PrintMetadata(cfg.TargetDb)
+}
+
+// createDbClone creates aida-db copy or subset
+func createCustomClone(ctx *cli.Context) error {
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
+	}
+
+	aidaDb, targetDb, err := utildb.OpenCloningDbs(cfg.AidaDb, cfg.TargetDb)
+	if err != nil {
+		return err
+	}
+
+	err = utildb.Clone(cfg, aidaDb, targetDb, utils.CustomType, false)
+	if err != nil {
+		return err
+	}
+
+	utildb.MustCloseDB(aidaDb)
+	utildb.MustCloseDB(targetDb)
+
+	return nil
 }
