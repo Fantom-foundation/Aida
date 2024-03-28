@@ -32,6 +32,8 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 	var err error
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+	//fmt.Printf("Blk: %v Tx: %v\n", state.Block, state.Transaction)
+	//fmt.Printf("%s\n", ctx.ExecutionResult)
 	if err == nil {
 		return nil
 	}

@@ -1,6 +1,8 @@
 package substate
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,4 +54,8 @@ func (r *result) GetGasUsed() uint64 {
 
 func (r *result) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(r, y)
+}
+
+func (r *result) String() string {
+	return fmt.Sprintf("Status: %v\nBloom: %s\nContract Address: %s\nGas Used: %v\nLogs: %v\n", r.Status, string(r.Bloom.Bytes()), r.ContractAddress, r.GasUsed, r.Logs)
 }

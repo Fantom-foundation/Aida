@@ -40,6 +40,9 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxCont
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	fmt.Printf("Blk: %v Tx: %v\n", state.Block, state.Transaction)
+	fmt.Printf("%s\n", ctx.ExecutionResult)
+	fmt.Printf("%s\n", state.Data.GetResult())
 	return v.runPostTxValidation("live-db-validator", ctx.State, state, ctx.ExecutionResult, ctx.ErrorInput)
 }
 
@@ -143,6 +146,9 @@ func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, 
 
 	// TODO remove state.Transaction < 99999 after patch aida-db
 	if v.target.Receipt && state.Transaction < 99999 {
+
+		//fmt.Printf("%s", res)
+		//fmt.Printf("%s", state.Data.GetResult())
 		if err := v.validateReceipt(res.GetReceipt(), state.Data.GetResult().GetReceipt()); err != nil {
 			err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 			if v.isErrFatal(err, errOutput) {

@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/txcontext"
 )
 
@@ -29,4 +31,8 @@ func (r *result) GetRawResult() ([]byte, error) {
 
 func (r *result) GetGasUsed() uint64 {
 	return r.gasUsed
+}
+
+func (r *result) String() string {
+	return fmt.Sprintf("Result: %v\nError: %v\n; Gas Used: %v", string(r.result), r.err, r.gasUsed)
 }
