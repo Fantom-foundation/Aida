@@ -40,9 +40,9 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxCont
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	fmt.Printf("Blk: %v Tx: %v\n", state.Block, state.Transaction)
-	fmt.Printf("%s\n", ctx.ExecutionResult)
-	fmt.Printf("%s\n", state.Data.GetResult())
+	//fmt.Printf("Blk: %v Tx: %v\n", state.Block, state.Transaction)
+	//fmt.Printf("%s\n", ctx.ExecutionResult)
+	//fmt.Printf("%s\n", state.Data.GetResult())
 	return v.runPostTxValidation("live-db-validator", ctx.State, state, ctx.ExecutionResult, ctx.ErrorInput)
 }
 
