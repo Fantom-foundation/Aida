@@ -40,7 +40,7 @@ aida-rpc: carmen tosca
 
 aida-stochastic-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic-sdb \
 	./cmd/aida-stochastic-sdb
@@ -62,7 +62,7 @@ aida-vm-sdb: carmen tosca
 
 aida-vm: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm \
 	./cmd/aida-vm
