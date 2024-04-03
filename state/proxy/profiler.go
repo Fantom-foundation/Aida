@@ -273,28 +273,36 @@ func (p *ProfilerProxy) do(opId byte, op func()) {
 	p.anlt.Update(opId, float64(elapsed))
 }
 
-func (p *ProfilerProxy) BeginTransaction(number uint32) {
+func (p *ProfilerProxy) BeginTransaction(number uint32) error {
+	var err error
 	p.do(operation.BeginTransactionID, func() {
-		p.db.BeginTransaction(number)
+		err = p.db.BeginTransaction(number)
 	})
+	return err
 }
 
-func (p *ProfilerProxy) EndTransaction() {
+func (p *ProfilerProxy) EndTransaction() error {
+	var err error
 	p.do(operation.EndTransactionID, func() {
-		p.db.EndTransaction()
+		err = p.db.EndTransaction()
 	})
+	return err
 }
 
-func (p *ProfilerProxy) BeginBlock(number uint64) {
+func (p *ProfilerProxy) BeginBlock(number uint64) error {
+	var err error
 	p.do(operation.BeginBlockID, func() {
-		p.db.BeginBlock(number)
+		err = p.db.BeginBlock(number)
 	})
+	return err
 }
 
-func (p *ProfilerProxy) EndBlock() {
+func (p *ProfilerProxy) EndBlock() error {
+	var err error
 	p.do(operation.EndBlockID, func() {
-		p.db.EndBlock()
+		err = p.db.EndBlock()
 	})
+	return err
 }
 
 func (p *ProfilerProxy) BeginSyncPeriod(number uint64) {
@@ -309,7 +317,7 @@ func (p *ProfilerProxy) EndSyncPeriod() {
 	})
 }
 
-func (p *ProfilerProxy) GetHash() common.Hash {
+func (p *ProfilerProxy) GetHash() (common.Hash, error) {
 	// TODO: add profiling for this operation
 	return p.db.GetHash()
 }
@@ -397,9 +405,9 @@ func (p *ProfilerProxy) Close() error {
 	return err
 }
 
-func (p *ProfilerProxy) StartBulkLoad(block uint64) state.BulkLoad {
+func (p *ProfilerProxy) StartBulkLoad(block uint64) (state.BulkLoad, error) {
 	p.log.Fatal("StartBulkLoad not supported by ProfilerProxy")
-	return nil
+	return nil, nil
 }
 
 func (p *ProfilerProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {

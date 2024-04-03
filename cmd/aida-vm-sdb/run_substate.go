@@ -79,6 +79,7 @@ func runSubstates(
 		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[txcontext.TxContext](cfg),
 		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
+		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 		profiler.MakeOperationProfiler[txcontext.TxContext](cfg),
 

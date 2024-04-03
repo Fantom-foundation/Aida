@@ -777,9 +777,8 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
+				if err = state.CloseCarmenDbTestContext(sDB); err != nil {
+					t.Fatal(err)
 				}
 			}(sDB)
 
@@ -792,7 +791,14 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			// Create new prime context
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
-			pc.PrimeStateDB(ws, sDB)
+			if err = pc.PrimeStateDB(ws, sDB); err != nil {
+				t.Fatal(err)
+			}
+
+			err = state.BeginCarmenDbTestContext(sDB)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			// Call for state DB validation and subsequent check for error
 			err = doSubsetValidation(ws, sDB, false)
@@ -818,9 +824,8 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
+				if err = state.CloseCarmenDbTestContext(sDB); err != nil {
+					t.Fatal(err)
 				}
 			}(sDB)
 
@@ -846,6 +851,11 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			}
 
 			ws[addr] = subAcc
+
+			err = state.BeginCarmenDbTestContext(sDB)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
 			err = doSubsetValidation(substatecontext.NewWorldState(ws), sDB, true)

@@ -140,6 +140,9 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 			i.log.Warningf("failed to obtain archive block height: %v", err)
 			return
 		}
+		if empty {
+			i.log.Warning("cannot run inquiry - archive is empty")
+		}
 		if !empty && uint64(tx.block) <= height {
 			break
 		}
@@ -150,12 +153,24 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	// Perform historic query.
-	archive, err := i.state.GetArchiveState(uint64(tx.block))
+	archive, err := i.getArchive(uint64(tx.block), uint32(tx.number))
 	if err != nil {
-		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", tx.block, err)
+		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
+		errCh <- err
 		return
 	}
-	defer archive.Release()
+
+	defer func() {
+		err = archive.EndTransaction()
+		if err != nil {
+			errCh <- fmt.Errorf("cannot end archive inquirer transaction; %w", err)
+		}
+		err = archive.Release()
+		if err != nil {
+			errCh <- fmt.Errorf("cannot release archive inside archive inquirer; %w", err)
+		}
+
+	}()
 
 	state := executor.State[txcontext.TxContext]{
 		Block:       tx.block,
@@ -167,6 +182,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 		ErrorInput: errCh,
 	}
 
+	// input validation
 	err = i.validator.PreTransaction(state, ctx)
 	if err != nil {
 		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
@@ -228,6 +244,20 @@ func (i *archiveInquirer) runProgressReport() {
 			return
 		}
 	}
+}
+
+func (i *archiveInquirer) getArchive(blk uint64, tx uint32) (state.NonCommittableStateDB, error) {
+	archive, err := i.state.GetArchiveState(blk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain access to archive blk %d, tx %d: %w", blk, tx, err)
+	}
+
+	err = archive.BeginTransaction(tx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot begin transaction blk: %d, tx: %d; %w", blk, tx, err)
+	}
+
+	return archive, nil
 }
 
 type historicTransaction struct {

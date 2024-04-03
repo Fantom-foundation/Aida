@@ -436,20 +436,24 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	return substatecontext.NewWorldState(res)
 }
 
-func (db *inMemoryStateDB) BeginTransaction(number uint32) {
+func (db *inMemoryStateDB) BeginTransaction(number uint32) error {
 	// ignored
+	return nil
 }
 
-func (db *inMemoryStateDB) EndTransaction() {
+func (db *inMemoryStateDB) EndTransaction() error {
 	db.Finalise(true)
+	return nil
 }
 
-func (db *inMemoryStateDB) BeginBlock(number uint64) {
+func (db *inMemoryStateDB) BeginBlock(number uint64) error {
 	db.blockNum = number
+	return nil
 }
 
-func (db *inMemoryStateDB) EndBlock() {
+func (db *inMemoryStateDB) EndBlock() error {
 	// ignored
+	return nil
 }
 
 func (db *inMemoryStateDB) BeginSyncPeriod(number uint64) {
@@ -460,8 +464,8 @@ func (db *inMemoryStateDB) EndSyncPeriod() {
 	// ignored
 }
 
-func (s *inMemoryStateDB) GetHash() common.Hash {
-	return common.Hash{} // not a great hash function, but a valid one :)
+func (s *inMemoryStateDB) GetHash() (common.Hash, error) {
+	return common.Hash{}, nil // not a great hash function, but a valid one :)
 }
 
 func (db *inMemoryStateDB) Close() error {
@@ -488,8 +492,8 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc txcontext.WorldState, block uin
 	db.blockNum = block
 }
 
-func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
-	return &gethInMemoryBulkLoad{}
+func (s *inMemoryStateDB) StartBulkLoad(uint64) (BulkLoad, error) {
+	return &gethInMemoryBulkLoad{}, nil
 }
 
 func (s *inMemoryStateDB) GetShadowDB() StateDB {

@@ -69,6 +69,7 @@ func record(
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
+		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
 	}
 
 	extensions = append(extensions, extra...)

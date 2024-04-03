@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// operaStateDB implements stateDb using Opera database
+// operaStateDB implements db using Opera database
 type operaStateDB struct {
 	db            *geth.StateDB
 	stateReader   *gossip.EvmStateReader
@@ -199,27 +199,31 @@ func (s *operaStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *operaStateDB) BeginTransaction(number uint32) {
+func (s *operaStateDB) BeginTransaction(number uint32) error {
 	// ignored
+	return nil
 }
-func (s *operaStateDB) EndTransaction() {
+func (s *operaStateDB) EndTransaction() error {
 	s.Finalise(true)
+	return nil
 }
 
-func (s *operaStateDB) BeginBlock(number uint64) {
+func (s *operaStateDB) BeginBlock(number uint64) error {
 	if err := s.openStateDB(); err != nil {
 		s.log.Fatalf("cannot begin block; %v", err)
 	}
 	s.block = number
+	return nil
 }
-func (s *operaStateDB) EndBlock() {
+func (s *operaStateDB) EndBlock() error {
 	var err error
 	s.stateRoot, err = s.Commit(true)
 	if err != nil {
-		s.log.Fatalf("cannot commit; %v", err)
+		return fmt.Errorf("cannot commit; %v", err)
 	}
 
 	// todo trie commit/cap
+	return nil
 }
 
 func (s *operaStateDB) BeginSyncPeriod(number uint64) {
@@ -231,8 +235,9 @@ func (s *operaStateDB) EndSyncPeriod() {
 
 }
 
-func (s *operaStateDB) GetHash() common.Hash {
-	return common.Hash{} // not supported
+func (s *operaStateDB) GetHash() (common.Hash, error) {
+	s.log.Fatal("get hash is yet implemented for opera statedb")
+	return common.Hash{}, nil // not supported
 }
 
 func (s *operaStateDB) Error() error {
@@ -254,9 +259,9 @@ func (s *operaStateDB) Close() error {
 	return db.DiskDB().Close()
 }
 
-func (s *operaStateDB) StartBulkLoad(block uint64) BulkLoad {
+func (s *operaStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
 	s.log.Fatal("bulkload not yet implemented for opera statedb")
-	return nil
+	return nil, nil
 }
 
 func (s *operaStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
@@ -317,6 +322,7 @@ func (s *operaStateDB) openStateDB() error {
 	return err
 }
 
-func (s *operaStateDB) Release() {
+func (s *operaStateDB) Release() error {
 	// nothing to do
+	return nil
 }

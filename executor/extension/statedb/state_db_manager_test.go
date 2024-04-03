@@ -226,7 +226,10 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	// then the second stateDb hash can be confirmed as correct copy of the source
 	insertRandomDataIntoStateDb(t, ctx)
 
-	expectedHash := ctx.State.GetHash()
+	expectedHash, err := ctx.State.GetHash()
+	if err != nil {
+		t.Fatalf("failed to get state hash; %v", err)
+	}
 
 	if err := ext.PostRun(state0, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)
@@ -251,7 +254,10 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 		t.Fatalf("failed to to run pre-run: %v", err)
 	}
 
-	currentHash := ctx.State.GetHash()
+	currentHash, err := ctx.State.GetHash()
+	if err != nil {
+		t.Fatalf("failed to get state hash; %v", err)
+	}
 
 	if currentHash != expectedHash {
 		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)
@@ -306,7 +312,10 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	// then the second stateDb hash can be confirmed as correct copy of the source
 	insertRandomDataIntoStateDb(t, ctx)
 
-	expectedHash := ctx.State.GetHash()
+	expectedHash, err := ctx.State.GetHash()
+	if err != nil {
+		t.Fatalf("failed to get state hash; %v", err)
+	}
 
 	if err := ext.PostRun(state0, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)
@@ -329,7 +338,10 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 		t.Fatalf("failed to to run pre-run: %v", err)
 	}
 
-	currentHash := ctx.State.GetHash()
+	currentHash, err := ctx.State.GetHash()
+	if err != nil {
+		t.Fatalf("failed to get state hash; %v", err)
+	}
 
 	if currentHash != expectedHash {
 		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)

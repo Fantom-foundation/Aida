@@ -242,31 +242,39 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		// Tx 1
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		// Tx 2
+		archive.EXPECT().BeginTransaction(uint32(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Block 3
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](3), gomock.Any()),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Block 4
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](4), gomock.Any()),
+		archive.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		archive.EXPECT().Release(),
 
@@ -319,13 +327,17 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 		// Tx 1
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		// Tx 2
+		archive.EXPECT().BeginTransaction(uint32(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 		archive.EXPECT().Release(),
 	)
@@ -334,9 +346,11 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](3), gomock.Any()),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		archive.EXPECT().Release(),
 	)
@@ -345,9 +359,11 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](4), gomock.Any()),
+		archive.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		archive.EXPECT().Release(),
 	)
@@ -383,19 +399,19 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		// we return correct expected data so tx does not fail
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(true),
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Prepare(gomock.Any(), 1),
 		archive.EXPECT().Snapshot().Return(15),
 		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archive.EXPECT().RevertToSnapshot(15),
 		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		archive.EXPECT().EndTransaction(),
+		// end transaction is not called because we expect fail
 	)
 
 	// run fails but not on validation
@@ -435,19 +451,18 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		// we return correct expected data so tx does not fail
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(true),
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Prepare(gomock.Any(), 1),
 		archive.EXPECT().Snapshot().Return(15),
 		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archive.EXPECT().RevertToSnapshot(15),
 		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		archive.EXPECT().EndTransaction(),
 	)
 
 	// run fails but not on validation
@@ -485,6 +500,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
@@ -527,6 +543,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
