@@ -442,7 +442,7 @@ func (c *cloner) readDataCustom() error {
 		c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 		err := c.readSubstate()
 		if err != nil {
-			return fmt.Errorf("cannot read substate; %w", err)
+			return fmt.Errorf("cannot read substate; %v", err)
 		}
 	}
 
