@@ -223,7 +223,10 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				})
 			})
 
-			rootHash := sDB.GetHash()
+			rootHash, err := sDB.GetHash()
+			if err != nil {
+				t.Fatalf("failed to get root hash: %v", err)
+			}
 			// Closing of state DB
 			err = sDB.Close()
 			if err != nil {
