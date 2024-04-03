@@ -43,7 +43,7 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 	if p.cfg.IsExistingStateDb {
 		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(p.cfg.StateDbSrc, utils.PathToDbInfo))
 		if err != nil {
-			return fmt.Errorf("cannot read state db info; %v", err)
+			return fmt.Errorf("cannot read state db info; %w", err)
 		}
 		primingStartBlock = stateDbInfo.Block + 1
 	}
@@ -53,18 +53,14 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 		return nil
 	}
 
-	if p.cfg.First == 0 {
+	if p.cfg.First == 0 || primingStartBlock == p.cfg.First {
+		p.log.Debugf("skipping priming; first priming block %v; first block %v", primingStartBlock-1, p.cfg.First)
 		return nil
 	}
 
 	// user incorrectly tries to prime data into database even tho database is already advanced further
 	if primingStartBlock > p.cfg.First {
 		return fmt.Errorf("undefined behaviour; starting block %v shouldn't lower than block of provided stateDb %v", p.cfg.First, primingStartBlock-1)
-	}
-
-	if primingStartBlock == p.cfg.First {
-		p.log.Noticef("Skipping priming due to usage of pre-existing StateDb at %v that aligns with first block %v", primingStartBlock-1, p.cfg.First)
-		return nil
 	}
 
 	if p.cfg.PrimeRandom {
@@ -77,16 +73,17 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 	p.log.Noticef("Priming to block %v...", p.cfg.First-1)
 	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, primingStartBlock, p.log)
 
-	return p.prime(ctx.State, primingStartBlock)
+	return p.prime(ctx.State)
 }
 
 // prime the stateDb to given first block.
 // stateDb		state-db to prime
 // block		current block position
-func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, block uint64) error {
+func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	var (
-		totalSize uint64 // total size of unprimed update set
-		hasPrimed bool   // if true, db has been primed
+		totalSize uint64        // total size of unprimed update set
+		hasPrimed bool          // if true, db has been primed
+		block     = p.ctx.Block // current block priming position
 	)
 
 	// load pre-computed update-set from update-set db
@@ -112,7 +109,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, block uint64) error {
 		if totalSize+incrementalSize > p.cfg.UpdateBufferSize {
 			p.log.Infof("\tPriming...")
 			if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
-				return fmt.Errorf("cannot prime state-db; %v", err)
+				return fmt.Errorf("cannot prime state-db; %w", err)
 			}
 
 			totalSize = 0
@@ -141,7 +138,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, block uint64) error {
 	// if update set is not empty, prime the remaining
 	if len(update) > 0 {
 		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
-			return fmt.Errorf("cannot prime state-db; %v", err)
+			return fmt.Errorf("cannot prime state-db; %w", err)
 		}
 		update = make(substate.SubstateAlloc)
 		hasPrimed = true
@@ -154,13 +151,13 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, block uint64) error {
 		log.Infof("\tPriming using substate from %v to %v", block, p.cfg.First-1)
 		update, deletedAccounts, err := utils.GenerateUpdateSet(block, p.cfg.First-1, p.cfg)
 		if err != nil {
-			return fmt.Errorf("cannot generate update-set; %v", err)
+			return fmt.Errorf("cannot generate update-set; %w", err)
 		}
 		if hasPrimed {
 			p.ctx.SuicideAccounts(stateDb, deletedAccounts)
 		}
 		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
-			return fmt.Errorf("cannot prime state-db; %v", err)
+			return fmt.Errorf("cannot prime state-db; %w", err)
 		}
 	}
 

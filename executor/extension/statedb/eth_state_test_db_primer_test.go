@@ -42,7 +42,7 @@ func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	}
 }
 
-func Test_ethStateTestDbPrimer_PreTransactionPriming_AlreadyExisting(t *testing.T) {
+func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t *testing.T) {
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 

@@ -77,6 +77,8 @@ func TestStateDbPrimerExtension_AttemptToPrimeBlockZeroDoesNotFail(t *testing.T)
 
 	ext := makeStateDbPrimer[any](cfg, log)
 
+	log.EXPECT().Debugf("skipping priming; first priming block %v; first block %v", ^uint64(0), uint64(0))
+
 	err := ext.PreRun(executor.State[any]{}, &executor.Context{})
 	if err != nil {
 		t.Errorf("priming should not happen hence should not fail")
