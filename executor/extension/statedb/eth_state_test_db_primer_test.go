@@ -24,7 +24,7 @@ func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	mockState := state.NewMockStateDB(mockCtrl)
 	mockLoad := state.NewMockBulkLoad(mockCtrl)
 
-	mockState.EXPECT().StartBulkLoad(uint64(0)).Return(mockLoad)
+	mockState.EXPECT().StartBulkLoad(uint64(0)).Return(mockLoad, nil)
 	for address, account := range testData.Pre {
 		mockLoad.EXPECT().CreateAccount(address)
 		mockLoad.EXPECT().SetBalance(address, account.Balance)

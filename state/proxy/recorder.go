@@ -314,24 +314,28 @@ func (r *RecorderProxy) PrepareSubstate(substate txcontext.WorldState, block uin
 	r.db.PrepareSubstate(substate, block)
 }
 
-func (r *RecorderProxy) BeginTransaction(number uint32) {
+func (r *RecorderProxy) BeginTransaction(number uint32) error {
 	r.write(operation.NewBeginTransaction(number))
 	r.db.BeginTransaction(number)
+	return nil
 }
 
-func (r *RecorderProxy) EndTransaction() {
+func (r *RecorderProxy) EndTransaction() error {
 	r.write(operation.NewEndTransaction())
 	r.db.EndTransaction()
+	return nil
 }
 
-func (r *RecorderProxy) BeginBlock(number uint64) {
+func (r *RecorderProxy) BeginBlock(number uint64) error {
 	r.write(operation.NewBeginBlock(number))
 	r.db.BeginBlock(number)
+	return nil
 }
 
-func (r *RecorderProxy) EndBlock() {
+func (r *RecorderProxy) EndBlock() error {
 	r.write(operation.NewEndBlock())
 	r.db.EndBlock()
+	return nil
 }
 
 func (r *RecorderProxy) BeginSyncPeriod(number uint64) {
@@ -344,7 +348,7 @@ func (r *RecorderProxy) EndSyncPeriod() {
 	r.db.EndSyncPeriod()
 }
 
-func (r *RecorderProxy) GetHash() common.Hash {
+func (r *RecorderProxy) GetHash() (common.Hash, error) {
 	// TODO: record this event
 	return r.db.GetHash()
 }
@@ -361,7 +365,7 @@ func (r *RecorderProxy) Close() error {
 	return r.db.Close()
 }
 
-func (r *RecorderProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (r *RecorderProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("StartBulkLoad not supported by RecorderProxy")
 }
 

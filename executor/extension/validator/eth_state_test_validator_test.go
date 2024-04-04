@@ -34,7 +34,7 @@ func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T
 	expectedErr := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", "TestLabel", "TestNetwork", got.Hex(), want.Hex())
 
 	gomock.InOrder(
-		db.EXPECT().GetHash().Return(got),
+		db.EXPECT().GetHash().Return(got, nil),
 		log.EXPECT().Error(expectedErr),
 	)
 
@@ -62,7 +62,7 @@ func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
 	want := data.GetStateHash()
 
 	gomock.InOrder(
-		db.EXPECT().GetHash().Return(want),
+		db.EXPECT().GetHash().Return(want, nil),
 		log.EXPECT().Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", "TestLabel", "TestNetwork", 1, 1, want.Hex()),
 	)
 
@@ -90,7 +90,7 @@ func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
 	got := common.HexToHash("0x01")
 	want := data.GetStateHash()
 
-	db.EXPECT().GetHash().Return(got)
+	db.EXPECT().GetHash().Return(got, nil)
 
 	ext := makeEthStateTestValidator(cfg, log)
 

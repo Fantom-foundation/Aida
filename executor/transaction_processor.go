@@ -126,7 +126,6 @@ func (s *TxProcessor) isErrFatal() bool {
 
 func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Result, error) {
 	if tx >= utils.PseudoTx {
-
 		return s.processPseudoTx(st.GetOutputState(), db), nil
 	}
 	return s.processRegularTx(db, block, tx, st)
@@ -134,9 +133,6 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 
 // processRegularTx executes VM on a chosen storage system.
 func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
-	db.BeginTransaction(uint32(tx))
-	defer db.EndTransaction()
-
 	var (
 		gasPool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
@@ -214,9 +210,6 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
 func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
-	db.BeginTransaction(utils.PseudoTx)
-	defer db.EndTransaction()
-
 	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		db.SubBalance(addr, db.GetBalance(addr))
 		db.AddBalance(addr, acc.GetBalance())

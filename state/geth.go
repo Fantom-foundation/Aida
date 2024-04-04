@@ -145,11 +145,12 @@ func (s *gethStateDB) Error() error {
 	return nil
 }
 
-func (s *gethStateDB) BeginTransaction(number uint32) {
+func (s *gethStateDB) BeginTransaction(number uint32) error {
 	// ignored
+	return nil
 }
 
-func (s *gethStateDB) EndTransaction() {
+func (s *gethStateDB) EndTransaction() error {
 	if s.chainConduit == nil || s.chainConduit.IsFinalise(s.block) {
 		// Opera or Ethereum after Byzantium
 		s.Finalise(true)
@@ -157,14 +158,18 @@ func (s *gethStateDB) EndTransaction() {
 		// Ethereum before Byzantium
 		s.IntermediateRoot(s.chainConduit.DeleteEmptyObjects(s.block))
 	}
+	return nil
 }
 
-func (s *gethStateDB) BeginBlock(number uint64) {
-	s.openStateDB()
+func (s *gethStateDB) BeginBlock(number uint64) error {
+	if err := s.openStateDB(); err != nil {
+		return fmt.Errorf("cannot open geth state-db; %w", err)
+	}
 	s.block = new(big.Int).SetUint64(number)
+	return nil
 }
 
-func (s *gethStateDB) EndBlock() {
+func (s *gethStateDB) EndBlock() error {
 	var err error
 	//commit at the end of a block
 	s.stateRoot, err = s.Commit(true)
@@ -173,9 +178,12 @@ func (s *gethStateDB) EndBlock() {
 	}
 	// if archival node, flush trie to disk after each block
 	if s.evmState != nil {
-		s.trieCommit()
+		if err = s.trieCommit(); err != nil {
+			return fmt.Errorf("cannot commit trie; %w", err)
+		}
 		s.trieCap()
 	}
+	return nil
 }
 
 func (s *gethStateDB) BeginSyncPeriod(number uint64) {
@@ -190,8 +198,8 @@ func (s *gethStateDB) EndSyncPeriod() {
 	}
 }
 
-func (s *gethStateDB) GetHash() common.Hash {
-	return s.IntermediateRoot(true)
+func (s *gethStateDB) GetHash() (common.Hash, error) {
+	return s.IntermediateRoot(true), nil
 }
 
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
@@ -298,10 +306,14 @@ func (s *gethStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.
 	return []*types.Log{}
 }
 
-func (s *gethStateDB) StartBulkLoad(block uint64) BulkLoad {
-	s.BeginBlock(block)
-	s.BeginTransaction(0)
-	return &gethBulkLoad{db: s}
+func (s *gethStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
+	if err := s.BeginBlock(block); err != nil {
+		return nil, err
+	}
+	if err := s.BeginTransaction(0); err != nil {
+		return nil, err
+	}
+	return &gethBulkLoad{db: s}, nil
 }
 
 func (s *gethStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {

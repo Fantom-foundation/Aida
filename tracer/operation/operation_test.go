@@ -125,20 +125,24 @@ func (s *MockStateDB) RevertToSnapshot(id int) {
 	s.recording = append(s.recording, Record{RevertToSnapshotID, []any{id}})
 }
 
-func (s *MockStateDB) BeginTransaction(tx uint32) {
+func (s *MockStateDB) BeginTransaction(tx uint32) error {
 	s.recording = append(s.recording, Record{BeginTransactionID, []any{tx}})
+	return nil
 }
 
-func (s *MockStateDB) EndTransaction() {
+func (s *MockStateDB) EndTransaction() error {
 	s.recording = append(s.recording, Record{EndTransactionID, []any{}})
+	return nil
 }
 
-func (s *MockStateDB) BeginBlock(blk uint64) {
+func (s *MockStateDB) BeginBlock(blk uint64) error {
 	s.recording = append(s.recording, Record{BeginBlockID, []any{blk}})
+	return nil
 }
 
-func (s *MockStateDB) EndBlock() {
+func (s *MockStateDB) EndBlock() error {
 	s.recording = append(s.recording, Record{EndBlockID, []any{}})
+	return nil
 }
 
 func (s *MockStateDB) BeginSyncPeriod(id uint64) {
@@ -149,7 +153,7 @@ func (s *MockStateDB) EndSyncPeriod() {
 	s.recording = append(s.recording, Record{EndSyncPeriodID, []any{}})
 }
 
-func (s *MockStateDB) StartBulkLoad(uint64) state.BulkLoad {
+func (s *MockStateDB) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("Bulk load not supported in mock")
 }
 
@@ -183,7 +187,7 @@ func (s *MockStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
-func (s *MockStateDB) GetHash() common.Hash {
+func (s *MockStateDB) GetHash() (common.Hash, error) {
 	panic("GetHash not supported in mock")
 }
 

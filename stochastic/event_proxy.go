@@ -312,7 +312,7 @@ func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return p.db.Commit(deleteEmptyObjects)
 }
 
-func (p *EventProxy) GetHash() common.Hash {
+func (p *EventProxy) GetHash() (common.Hash, error) {
 	return p.db.GetHash()
 }
 
@@ -330,42 +330,48 @@ func (p *EventProxy) PrepareSubstate(substate txcontext.WorldState, block uint64
 	p.db.PrepareSubstate(substate, block)
 }
 
-func (p *EventProxy) BeginTransaction(number uint32) {
+func (p *EventProxy) BeginTransaction(number uint32) error {
 	// register event
 	p.registry.RegisterOp(BeginTransactionID)
 
 	// call real StateDB
-	p.db.BeginTransaction(number)
+	if err := p.db.BeginTransaction(number); err != nil {
+		return err
+	}
 
 	// clear all snapshots
 	p.snapshots = []int{}
+	return nil
 }
 
-func (p *EventProxy) EndTransaction() {
+func (p *EventProxy) EndTransaction() error {
 	// register event
 	p.registry.RegisterOp(EndTransactionID)
 
 	// call real StateDB
-	p.db.EndTransaction()
+	if err := p.db.EndTransaction(); err != nil {
+		return err
+	}
 
 	// clear all snapshots
 	p.snapshots = []int{}
+	return nil
 }
 
-func (p *EventProxy) BeginBlock(number uint64) {
+func (p *EventProxy) BeginBlock(number uint64) error {
 	// register event
 	p.registry.RegisterOp(BeginBlockID)
 
 	// call real StateDB
-	p.db.BeginBlock(number)
+	return p.db.BeginBlock(number)
 }
 
-func (p *EventProxy) EndBlock() {
+func (p *EventProxy) EndBlock() error {
 	// register event
 	p.registry.RegisterOp(EndBlockID)
 
 	// call real StateDB
-	p.db.EndBlock()
+	return p.db.EndBlock()
 }
 
 func (p *EventProxy) BeginSyncPeriod(number uint64) {
@@ -388,7 +394,7 @@ func (p *EventProxy) Close() error {
 	return p.db.Close()
 }
 
-func (p *EventProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (p *EventProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("StartBulkLoad not supported by EventProxy")
 }
 

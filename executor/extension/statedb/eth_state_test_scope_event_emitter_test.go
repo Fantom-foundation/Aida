@@ -10,13 +10,14 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateBlockEventEmitter_PreTransactionCallsBeginBlock(t *testing.T) {
+func TestEthStateScopeEventEmitter_PreTransactionCallsBeginBlockAndBeginTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
-	ext := ethStateBlockEventEmitter{}
+	ext := ethStateScopeEventEmitter{}
 
 	db.EXPECT().BeginBlock(uint64(1))
+	db.EXPECT().BeginTransaction(uint32(1))
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestData(t)}
 	ctx := &executor.Context{State: db}
@@ -26,12 +27,13 @@ func TestEthStateBlockEventEmitter_PreTransactionCallsBeginBlock(t *testing.T) {
 	}
 }
 
-func TestEthStateBlockEventEmitter_PostTransactionCallsEndBlock(t *testing.T) {
+func TestEthStateScopeEventEmitter_PostTransactionCallsEndBlockAndEndTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
-	ext := ethStateBlockEventEmitter{}
+	ext := ethStateScopeEventEmitter{}
 
+	db.EXPECT().EndTransaction()
 	db.EXPECT().EndBlock()
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestData(t)}

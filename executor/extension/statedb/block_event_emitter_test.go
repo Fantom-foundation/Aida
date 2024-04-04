@@ -20,7 +20,8 @@ func TestBlockEventEmitter_SingleBlock(t *testing.T) {
 	)
 
 	state := executor.State[any]{
-		Block: 0,
+		Block:       0,
+		Transaction: 0,
 	}
 	ctx := &executor.Context{
 		State: mockStateDB,
@@ -49,7 +50,8 @@ func TestBlockEventEmitter_MultipleBlocks(t *testing.T) {
 	)
 
 	state := executor.State[any]{
-		Block: 0,
+		Block:       0,
+		Transaction: 0,
 	}
 	ctx := &executor.Context{
 		State: mockStateDB,

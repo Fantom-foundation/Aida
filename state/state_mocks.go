@@ -128,9 +128,11 @@ func (mr *MockVmStateDBMockRecorder) AddressInAccessList(addr any) *gomock.Call 
 }
 
 // BeginTransaction mocks base method.
-func (m *MockVmStateDB) BeginTransaction(arg0 uint32) {
+func (m *MockVmStateDB) BeginTransaction(arg0 uint32) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BeginTransaction", arg0)
+	ret := m.ctrl.Call(m, "BeginTransaction", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // BeginTransaction indicates an expected call of BeginTransaction.
@@ -166,9 +168,11 @@ func (mr *MockVmStateDBMockRecorder) Empty(arg0 any) *gomock.Call {
 }
 
 // EndTransaction mocks base method.
-func (m *MockVmStateDB) EndTransaction() {
+func (m *MockVmStateDB) EndTransaction() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EndTransaction")
+	ret := m.ctrl.Call(m, "EndTransaction")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // EndTransaction indicates an expected call of EndTransaction.
@@ -608,9 +612,11 @@ func (mr *MockNonCommittableStateDBMockRecorder) AddressInAccessList(addr any) *
 }
 
 // BeginTransaction mocks base method.
-func (m *MockNonCommittableStateDB) BeginTransaction(arg0 uint32) {
+func (m *MockNonCommittableStateDB) BeginTransaction(arg0 uint32) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BeginTransaction", arg0)
+	ret := m.ctrl.Call(m, "BeginTransaction", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // BeginTransaction indicates an expected call of BeginTransaction.
@@ -646,9 +652,11 @@ func (mr *MockNonCommittableStateDBMockRecorder) Empty(arg0 any) *gomock.Call {
 }
 
 // EndTransaction mocks base method.
-func (m *MockNonCommittableStateDB) EndTransaction() {
+func (m *MockNonCommittableStateDB) EndTransaction() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EndTransaction")
+	ret := m.ctrl.Call(m, "EndTransaction")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // EndTransaction indicates an expected call of EndTransaction.
@@ -756,11 +764,12 @@ func (mr *MockNonCommittableStateDBMockRecorder) GetCommittedState(arg0, arg1 an
 }
 
 // GetHash mocks base method.
-func (m *MockNonCommittableStateDB) GetHash() common.Hash {
+func (m *MockNonCommittableStateDB) GetHash() (common.Hash, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHash")
 	ret0, _ := ret[0].(common.Hash)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetHash indicates an expected call of GetHash.
@@ -878,9 +887,11 @@ func (mr *MockNonCommittableStateDBMockRecorder) PrepareAccessList(sender, dest,
 }
 
 // Release mocks base method.
-func (m *MockNonCommittableStateDB) Release() {
+func (m *MockNonCommittableStateDB) Release() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Release")
+	ret := m.ctrl.Call(m, "Release")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Release indicates an expected call of Release.
@@ -1114,9 +1125,11 @@ func (mr *MockStateDBMockRecorder) AddressInAccessList(addr any) *gomock.Call {
 }
 
 // BeginBlock mocks base method.
-func (m *MockStateDB) BeginBlock(arg0 uint64) {
+func (m *MockStateDB) BeginBlock(arg0 uint64) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BeginBlock", arg0)
+	ret := m.ctrl.Call(m, "BeginBlock", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // BeginBlock indicates an expected call of BeginBlock.
@@ -1138,9 +1151,11 @@ func (mr *MockStateDBMockRecorder) BeginSyncPeriod(arg0 any) *gomock.Call {
 }
 
 // BeginTransaction mocks base method.
-func (m *MockStateDB) BeginTransaction(arg0 uint32) {
+func (m *MockStateDB) BeginTransaction(arg0 uint32) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BeginTransaction", arg0)
+	ret := m.ctrl.Call(m, "BeginTransaction", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // BeginTransaction indicates an expected call of BeginTransaction.
@@ -1205,9 +1220,11 @@ func (mr *MockStateDBMockRecorder) Empty(arg0 any) *gomock.Call {
 }
 
 // EndBlock mocks base method.
-func (m *MockStateDB) EndBlock() {
+func (m *MockStateDB) EndBlock() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EndBlock")
+	ret := m.ctrl.Call(m, "EndBlock")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // EndBlock indicates an expected call of EndBlock.
@@ -1229,9 +1246,11 @@ func (mr *MockStateDBMockRecorder) EndSyncPeriod() *gomock.Call {
 }
 
 // EndTransaction mocks base method.
-func (m *MockStateDB) EndTransaction() {
+func (m *MockStateDB) EndTransaction() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EndTransaction")
+	ret := m.ctrl.Call(m, "EndTransaction")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // EndTransaction indicates an expected call of EndTransaction.
@@ -1396,11 +1415,12 @@ func (mr *MockStateDBMockRecorder) GetCommittedState(arg0, arg1 any) *gomock.Cal
 }
 
 // GetHash mocks base method.
-func (m *MockStateDB) GetHash() common.Hash {
+func (m *MockStateDB) GetHash() (common.Hash, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHash")
 	ret0, _ := ret[0].(common.Hash)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetHash indicates an expected call of GetHash.
@@ -1649,11 +1669,12 @@ func (mr *MockStateDBMockRecorder) Snapshot() *gomock.Call {
 }
 
 // StartBulkLoad mocks base method.
-func (m *MockStateDB) StartBulkLoad(block uint64) BulkLoad {
+func (m *MockStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartBulkLoad", block)
 	ret0, _ := ret[0].(BulkLoad)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // StartBulkLoad indicates an expected call of StartBulkLoad.
