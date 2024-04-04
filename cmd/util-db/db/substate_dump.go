@@ -1,9 +1,11 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,8 +16,8 @@ var SubstateDumpCommand = cli.Command{
 	Usage:     "returns content in substates in json format",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
+		&utils.WorkersFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The aida-vm dump command requires two arguments:
@@ -34,11 +36,13 @@ func substateDumpAction(ctx *cli.Context) error {
 		return err
 	}
 
-	substate.SetSubstateDb(ctx.String(substate.SubstateDbFlag.Name))
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
-	taskPool := substate.NewSubstateTaskPool("aida-vm dump", utildb.SubstateDumpTask, cfg.First, cfg.Last, ctx)
+	taskPool := sdb.NewSubstateTaskPool("aida-vm dump", utildb.SubstateDumpTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

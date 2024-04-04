@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/status-im/keycard-go/hexutils"
 )
@@ -21,12 +21,12 @@ type StateHashProvider interface {
 	GetStateHash(blockNumber int) (common.Hash, error)
 }
 
-func MakeStateHashProvider(db ethdb.Database) StateHashProvider {
+func MakeStateHashProvider(db db.BaseDB) StateHashProvider {
 	return &stateHashProvider{db}
 }
 
 type stateHashProvider struct {
-	db ethdb.Database
+	db db.BaseDB
 }
 
 func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
@@ -40,7 +40,7 @@ func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 }
 
 // StateHashScraper scrapes state hashes from a node and saves them to a leveldb database
-func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db ethdb.Database, firstBlock, lastBlock uint64, log logger.Logger) error {
+func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db db.BaseDB, firstBlock, lastBlock uint64, log logger.Logger) error {
 	ipcPath := operaPath + "/opera.ipc"
 
 	client, err := getClient(ctx, chainId, ipcPath, log)
@@ -124,7 +124,7 @@ func getClient(ctx context.Context, chainId ChainID, ipcPath string, log logger.
 }
 
 // SaveStateRoot saves the state root hash to the database
-func SaveStateRoot(db ethdb.Database, blockNumber string, stateRoot string) error {
+func SaveStateRoot(db db.BaseDB, blockNumber string, stateRoot string) error {
 	fullPrefix := StateHashPrefix + blockNumber
 	err := db.Put([]byte(fullPrefix), hexutils.HexToBytes(strings.TrimPrefix(stateRoot, "0x")))
 	if err != nil {
@@ -160,7 +160,7 @@ func StateHashKeyToUint64(hexBytes []byte) (uint64, error) {
 }
 
 // GetFirstStateHash returns the first block number for which we have a state hash
-func GetFirstStateHash(db ethdb.Database) (uint64, error) {
+func GetFirstStateHash(db db.BaseDB) (uint64, error) {
 	// TODO MATEJ will be fixed in future commit
 	//iter := db.NewIterator([]byte(StateHashPrefix), []byte("0x"))
 	//
@@ -180,7 +180,7 @@ func GetFirstStateHash(db ethdb.Database) (uint64, error) {
 }
 
 // GetLastStateHash returns the last block number for which we have a state hash
-func GetLastStateHash(db ethdb.Database) (uint64, error) {
+func GetLastStateHash(db db.BaseDB) (uint64, error) {
 	// TODO MATEJ will be fixed in future commit
 	//return GetLastKey(db, StateHashPrefix)
 	return 0, fmt.Errorf("not implemented")

@@ -6,7 +6,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,7 +20,7 @@ var RunArchiveApp = cli.App{
 	// TODO: derive supported flags from utilized executor extensions (issue #664).
 	Flags: []cli.Flag{
 		// substate
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 
 		// utils
 		&utils.CpuProfileFlag,

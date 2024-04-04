@@ -9,7 +9,8 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/google/martian/log"
 )
 
@@ -72,14 +73,14 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	)
 
 	// load pre-computed update-set from update-set db
-	udb, err := substate.OpenUpdateDBReadOnly(p.cfg.UpdateDb)
+	udb, err := db.NewDefaultUpdateDB(p.cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
 
 	defer udb.Close()
-	updateIter := substate.NewUpdateSetIterator(udb, block, p.cfg.First-1)
-	update := make(substate.SubstateAlloc)
+	updateIter := udb.NewUpdateSetIterator(block, p.cfg.First-1)
+	update := make(substate.WorldState)
 
 	for updateIter.Next() {
 		newSet := updateIter.Value()
@@ -88,7 +89,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 		}
 		block = newSet.Block
 
-		incrementalSize := update.EstimateIncrementalSize(*newSet.UpdateSet)
+		incrementalSize := update.EstimateIncrementalSize(newSet.WorldState)
 
 		// Prime StateDB
 		if totalSize+incrementalSize > p.cfg.UpdateBufferSize {
@@ -98,7 +99,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 			}
 
 			totalSize = 0
-			update = make(substate.SubstateAlloc)
+			update = make(substate.WorldState)
 			hasPrimed = true
 		}
 
@@ -111,7 +112,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 			p.ctx.SuicideAccounts(stateDb, newSet.DeletedAccounts)
 		}
 
-		update.Merge(*newSet.UpdateSet)
+		update.Merge(newSet.WorldState)
 		totalSize += incrementalSize
 		p.log.Infof("\tMerge update set at block %v. New total size %v MB (+%v MB)",
 			newSet.Block, totalSize/1_000_000,
@@ -125,7 +126,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
 			return fmt.Errorf("cannot prime state-db; %v", err)
 		}
-		update = make(substate.SubstateAlloc)
+		update = make(substate.WorldState)
 		hasPrimed = true
 	}
 	updateIter.Release()

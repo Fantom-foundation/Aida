@@ -14,7 +14,8 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substateTypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
@@ -111,7 +112,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinu
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err != nil {
@@ -143,7 +144,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOn
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -184,7 +185,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -215,7 +216,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 
 	gomock.InOrder(
 		log.EXPECT().Warning(gomock.Any()),
-		db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.SubstateAlloc{})),
+		db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.WorldState{})),
 		log.EXPECT().Errorf("Different %s:\nwant: %v\nhave: %v\n", "substate alloc size", 1, 0),
 		log.EXPECT().Errorf("\tmissing address=%v\n", common.Address{0}),
 	)
@@ -225,7 +226,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -275,7 +276,7 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err != nil {
@@ -285,7 +286,7 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 	err = ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	// PostTransaction must not return error because ContinueOnFailure is enabled and error threshold is high enough
@@ -329,7 +330,7 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err != nil {
@@ -339,7 +340,7 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 	err = ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -362,7 +363,7 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
 	alloc := &substate.Substate{
-		OutputAlloc: getIncorrectSubstateAlloc(),
+		OutputSubstate: getIncorrectWorldState(),
 	}
 
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
@@ -391,7 +392,7 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
 	alloc := &substate.Substate{
-		InputAlloc: getIncorrectSubstateAlloc(),
+		InputSubstate: getIncorrectWorldState(),
 	}
 
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
@@ -479,7 +480,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithCont
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err != nil {
@@ -511,7 +512,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinu
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -552,7 +553,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -580,14 +581,14 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 
 	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
-	db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.SubstateAlloc{}))
+	db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.WorldState{}))
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -637,7 +638,7 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err != nil {
@@ -647,7 +648,7 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 	err = ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	// PostTransaction must not return error because ContinueOnFailure is enabled and error threshold is high enough
@@ -691,7 +692,7 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err != nil {
@@ -701,7 +702,7 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 	err = ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestWorldState(),
 	}, ctx)
 
 	if err == nil {
@@ -727,7 +728,7 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 		Block:       1,
 		Transaction: 1,
 		Data: substatecontext.NewTxContext(&substate.Substate{
-			OutputAlloc: getIncorrectSubstateAlloc(),
+			OutputSubstate: getIncorrectWorldState(),
 		}),
 	}, ctx)
 
@@ -754,7 +755,7 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 		Block:       1,
 		Transaction: 1,
 		Data: substatecontext.NewTxContext(&substate.Substate{
-			InputAlloc: getIncorrectSubstateAlloc(),
+			InputSubstate: getIncorrectWorldState(),
 		}),
 	}, ctx)
 
@@ -843,14 +844,14 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			addr := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
 
 			// create new account
-			subAcc := &substate.SubstateAccount{
+			subAcc := &substate.Account{
 				Nonce:   uint64(utils.GetRandom(1, 1000*5000)),
 				Balance: big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
 				Storage: utils.MakeAccountStorage(t),
 				Code:    utils.MakeRandomByteSlice(t, 2048),
 			}
 
-			ws[addr] = subAcc
+			ws[substateTypes.Address(addr)] = subAcc
 
 			err = state.BeginCarmenDbTestContext(sDB)
 			if err != nil {
@@ -863,7 +864,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 				t.Fatalf("failed to throw errors while validating state DB: %v", err)
 			}
 
-			acc := ws[addr]
+			acc := ws[substateTypes.Address(addr)]
 			if sDB.GetBalance(addr).Cmp(acc.Balance) != 0 {
 				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.Balance)
 			}
@@ -877,8 +878,8 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			}
 
 			for keyHash, valueHash := range acc.Storage {
-				if sDB.GetState(addr, keyHash) != valueHash {
-					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, keyHash), valueHash)
+				if sDB.GetState(addr, common.Hash(keyHash)) != common.Hash(valueHash) {
+					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, common.Hash(keyHash)), valueHash)
 				}
 			}
 
@@ -890,7 +891,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 	sub := &substate.Substate{Result: getDummyResult()}
 	ctx := new(executor.Context)
-	ctx.ExecutionResult = substatecontext.NewResult(getDummyResult())
+	ctx.ExecutionResult = substatecontext.NewReceipt(getDummyResult())
 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
@@ -905,7 +906,7 @@ func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 
 	// test negative
 	// mismatched contract
-	sub.Result.ContractAddress = common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
+	sub.Result.ContractAddress = substateTypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
 	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
@@ -939,8 +940,8 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	// change result so validation fails
 	expectedResult.GasUsed = 15000
 
-	vmRes := substatecontext.NewResult(vmResult)
-	expRes := substatecontext.NewResult(expectedResult)
+	vmRes := substatecontext.NewReceipt(vmResult)
+	expRes := substatecontext.NewReceipt(expectedResult)
 
 	err := ext.validateReceipt(vmRes, expRes)
 	if err == nil {
@@ -978,34 +979,34 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	}
 }
 
-// getIncorrectTestSubstateAlloc returns an error
-// Substate with incorrect InputAlloc and OutputAlloc.
+// getIncorrectTestWorldState returns an error
+// Substate with incorrect InputSubstate and OutputAlloc.
 // This func is only used in testing.
-func getIncorrectTestSubstateAlloc() txcontext.TxContext {
+func getIncorrectTestWorldState() txcontext.TxContext {
 	sub := &substate.Substate{
-		InputAlloc:  getIncorrectSubstateAlloc(),
-		OutputAlloc: getIncorrectSubstateAlloc(),
+		InputSubstate:  getIncorrectWorldState(),
+		OutputSubstate: getIncorrectWorldState(),
 	}
 
 	return substatecontext.NewTxContext(sub)
 }
 
-func getIncorrectSubstateAlloc() substate.SubstateAlloc {
-	alloc := make(substate.SubstateAlloc)
-	alloc[common.Address{0}] = &substate.SubstateAccount{
+func getIncorrectWorldState() substate.WorldState {
+	alloc := make(substate.WorldState)
+	alloc[substateTypes.Address{0}] = &substate.Account{
 		Nonce:   0,
 		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.Hash),
+		Storage: make(map[substateTypes.Hash]substateTypes.Hash),
 		Code:    make([]byte, 0),
 	}
 
 	return alloc
 }
 
-func getDummyResult() *substate.SubstateResult {
-	r := &substate.SubstateResult{
-		Logs:            []*types.Log{},
-		ContractAddress: common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
+func getDummyResult() *substate.Result {
+	r := &substate.Result{
+		Logs:            []*substateTypes.Log{},
+		ContractAddress: substateTypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
 		GasUsed:         1000000,
 		Status:          types.ReceiptStatusSuccessful,
 	}

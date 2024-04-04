@@ -4,7 +4,7 @@ package executor
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/Aida/txcontext/substate/newsubstate"
+	"github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
@@ -39,7 +39,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, newsubstate.NewTxContext(tx)}); err != nil {
+		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substate.NewTxContext(tx)}); err != nil {
 			return err
 		}
 	}

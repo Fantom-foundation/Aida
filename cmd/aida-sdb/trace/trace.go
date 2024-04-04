@@ -3,7 +3,6 @@ package trace
 import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,7 +37,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.ShadowDb,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
@@ -75,7 +74,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&utils.SyncPeriodLengthFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,

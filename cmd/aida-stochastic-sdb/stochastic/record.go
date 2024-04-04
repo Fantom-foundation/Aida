@@ -13,6 +13,7 @@ import (
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -26,7 +27,7 @@ var StochasticRecordCommand = cli.Command{
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.OutputFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.AidaDbFlag,
 	},
@@ -59,10 +60,12 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	processor := executor.MakeLiveDbTxProcessor(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
-	iter := substate.NewSubstateIterator(cfg.First, ctx.Int(substate.WorkersFlag.Name))
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
+	iter := sdb.NewSubstateIterator(int(cfg.First), ctx.Int(utils.WorkersFlag.Name))
 	defer iter.Release()
 	oldBlock := uint64(math.MaxUint64) // set to an infeasible block
 	var (
@@ -103,9 +106,9 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		}
 
 		var statedb state.StateDB
-		statedb = state.MakeInMemoryStateDB(substatecontext.NewWorldState(tx.Substate.InputAlloc), tx.Block)
+		statedb = state.MakeInMemoryStateDB(substatecontext.NewWorldState(tx.InputSubstate), tx.Block)
 		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if _, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx.Substate)); err != nil {
+		if _, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx)); err != nil {
 			return err
 		}
 

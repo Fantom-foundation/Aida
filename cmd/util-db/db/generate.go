@@ -6,7 +6,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -25,7 +24,7 @@ var GenerateCommand = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.UpdateBufferSizeFlag,
 		&utils.SkipStateHashScrappingFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `

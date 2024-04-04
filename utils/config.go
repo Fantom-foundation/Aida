@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Substate/db"
 	_ "github.com/Fantom-foundation/Tosca/go/geth_adapter"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -445,7 +445,7 @@ func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, error) {
 	}
 
 	// read meta data
-	aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true)
+	aidaDb, err := db.NewDefaultBaseDB(cc.cfg.AidaDb)
 	if err != nil {
 		cc.log.Warningf("Cannot open AidaDB; %v", err)
 		return defaultFirst, defaultLast, defaultLastPatch, nil
@@ -507,7 +507,7 @@ func (cc *configContext) setChainId() error {
 		cc.log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
-		if aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true); err == nil {
+		if aidaDb, err := db.NewDefaultBaseDB(cc.cfg.AidaDb); err == nil {
 			md := NewAidaDbMetadata(aidaDb, cc.cfg.LogLevel)
 
 			cc.cfg.ChainID = md.GetChainID()

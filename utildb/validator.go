@@ -9,8 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 const (
@@ -20,7 +19,7 @@ const (
 
 // validator is used to iterate over all key/value pairs inside AidaDb and creating md5 hash
 type validator struct {
-	db     ethdb.Database
+	db     db.BaseDB
 	start  time.Time
 	input  chan []byte
 	result chan []byte
@@ -53,7 +52,7 @@ func FindDbHashOnline(chainId utils.ChainID, log logger.Logger, md *utils.AidaDb
 
 	var ok bool
 
-	md.FirstBlock, md.LastBlock, ok = utils.FindBlockRangeInSubstate()
+	md.FirstBlock, md.LastBlock, ok = utils.FindBlockRangeInSubstate(db.MakeDefaultSubstateDBFromBaseDB(md.Db))
 	if !ok {
 		return nil, errors.New("cannot find block range in substate")
 	}
@@ -73,7 +72,7 @@ func FindDbHashOnline(chainId utils.ChainID, log logger.Logger, md *utils.AidaDb
 }
 
 // newDbValidator returns new instance of validator
-func newDbValidator(db ethdb.Database, logLevel string) *validator {
+func newDbValidator(db db.BaseDB, logLevel string) *validator {
 	l := logger.NewLogger(logLevel, "Db-Validator")
 
 	return &validator{
@@ -88,7 +87,7 @@ func newDbValidator(db ethdb.Database, logLevel string) *validator {
 }
 
 // GenerateDbHash for given AidaDb
-func GenerateDbHash(db ethdb.Database, logLevel string) ([]byte, error) {
+func GenerateDbHash(db db.BaseDB, logLevel string) ([]byte, error) {
 	v := newDbValidator(db, logLevel)
 
 	v.wg.Add(2)
@@ -112,7 +111,7 @@ func GenerateDbHash(db ethdb.Database, logLevel string) ([]byte, error) {
 }
 
 // GeneratePrefixHash for given AidaDb
-func GeneratePrefixHash(db ethdb.Database, prefix string, logLevel string) ([]byte, error) {
+func GeneratePrefixHash(db db.BaseDB, prefix string, logLevel string) ([]byte, error) {
 	v := newDbValidator(db, logLevel)
 
 	v.wg.Add(2)
@@ -153,21 +152,21 @@ func (v *validator) iterate() {
 	now = time.Now()
 
 	v.log.Notice("Iterating over Stage 1 Substate...")
-	v.doIterate(substate.Stage1SubstatePrefix)
+	v.doIterate(db.SubstateDBPrefix)
 
 	v.log.Infof("Stage 1 Substate took %v.", time.Since(now).Round(1*time.Second))
 
 	now = time.Now()
 
 	v.log.Notice("Iterating over Substate Alloc...")
-	v.doIterate(substate.SubstateAllocPrefix)
+	v.doIterate(db.UpdateDBPrefix)
 
 	v.log.Infof("Substate Alloc took %v.", time.Since(now).Round(1*time.Second))
 
 	now = time.Now()
 
 	v.log.Notice("Iterating over Destroyed Accounts...")
-	v.doIterate(substate.DestroyedAccountPrefix)
+	v.doIterate(db.DestroyedAccountPrefix)
 
 	v.log.Infof("Destroyed Accounts took %v.", time.Since(now).Round(1*time.Second))
 

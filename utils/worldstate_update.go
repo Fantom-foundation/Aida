@@ -7,24 +7,31 @@ import (
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Substate/types"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // GenerateUpdateSet generates an update set for a block range.
-func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
+func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.WorldState, []types.Address, error) {
 	var (
-		deletedAccountDB *substate.DestroyedAccountDB
-		deletedAccounts  []common.Address
+		deletedAccountDB *db.DestroyedAccountDB
+		deletedAccounts  []types.Address
 		err              error
 	)
-	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
-	update := make(substate.SubstateAlloc)
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
+
+	stateIter := sdb.NewSubstateIterator(int(first), cfg.Workers)
+	update := make(substate.WorldState)
 	defer stateIter.Release()
 
 	// Todo rewrite in wrapping functions
-	deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	deletedAccountDB, err = db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,23 +60,23 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 		}
 
 		// merge output substate to update
-		update.Merge(tx.Substate.OutputAlloc)
+		update.Merge(tx.OutputSubstate)
 	}
 	return update, deletedAccounts, nil
 }
 
 // GenerateWorldStateFromUpdateDB generates an initial world-state
 // from pre-computed update-set
-func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.SubstateAlloc, error) {
-	ws := make(substate.SubstateAlloc)
+func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.WorldState, error) {
+	ws := make(substate.WorldState)
 	block := uint64(0)
 	// load pre-computed update-set from update-set db
-	db, err := substate.OpenUpdateDBReadOnly(cfg.AidaDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
-	updateIter := substate.NewUpdateSetIterator(db, block, target)
+	defer udb.Close()
+	updateIter := udb.NewUpdateSetIterator(block, target)
 	for updateIter.Next() {
 		blk := updateIter.Value()
 		if blk.Block > target {
@@ -80,7 +87,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 		// The known accessed storage locations in the updateset range has already been
 		// reset when generating the update set database.
 		ClearAccountStorage(ws, blk.DeletedAccounts)
-		ws.Merge(*blk.UpdateSet)
+		ws.Merge(blk.WorldState)
 		block++
 	}
 	updateIter.Release()
@@ -96,21 +103,21 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 }
 
 // ClearAccountStorage clears storage of all input accounts.
-func ClearAccountStorage(update substate.SubstateAlloc, accounts []common.Address) {
+func ClearAccountStorage(update substate.WorldState, accounts []types.Address) {
 	for _, addr := range accounts {
 		if _, found := update[addr]; found {
-			update[addr].Storage = make(map[common.Hash]common.Hash)
+			update[addr].Storage = make(map[types.Hash]types.Hash)
 		}
 	}
 }
 
 // GenerateFirstOperaWorldState generates an initial world-state for a block.
-func GenerateFirstOperaWorldState(worldStateDbDir string, cfg *Config) (substate.SubstateAlloc, error) {
+func GenerateFirstOperaWorldState(worldStateDbDir string, cfg *Config) (substate.WorldState, error) {
 	worldStateDB, err := snapshot.OpenStateDB(worldStateDbDir)
 	if err != nil {
 		return nil, err
 	}
 	defer snapshot.MustCloseStateDB(worldStateDB)
-	ws, err := worldStateDB.ToSubstateAlloc(context.Background())
+	ws, err := worldStateDB.ToWorldState(context.Background())
 	return ws, err
 }

@@ -3,13 +3,14 @@ package snapshot
 import (
 	"context"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// ToSubstateAlloc converts snapshot world state database into SubstateAlloc format
-func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc, error) {
-	ssAccounts := make(substate.SubstateAlloc)
+// ToWorldState converts snapshot world state database into WorldState format
+func (db *StateDB) ToWorldState(ctx context.Context) (substate.WorldState, error) {
+	ssAccounts := make(substate.WorldState)
 	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()
 
@@ -35,22 +36,22 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 			//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())
 			continue
 		}
-		storage := make(map[common.Hash]common.Hash, len(acc.Storage))
+		storage := make(map[types.Hash]types.Hash, len(acc.Storage))
 		for h, v := range acc.Storage {
 			// We use the hashed keys in the first iteration, before resolving them in a bulk fetch
 			// from the DB and rewritting them below.
 			needed[h] = true
-			storage[h] = v
+			storage[types.Hash(h)] = types.Hash(v)
 		}
 
-		ss := substate.SubstateAccount{
+		ss := substate.Account{
 			Nonce:   acc.Nonce,
 			Balance: acc.Balance,
 			Storage: storage,
 			Code:    acc.Code,
 		}
 
-		ssAccounts[address] = &ss
+		ssAccounts[types.Address(address)] = &ss
 	}
 
 	if iter.Error() != nil {
@@ -65,11 +66,11 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 
 	// Rewrite storage keys according to resolved keys.
 	for _, value := range ssAccounts {
-		storage := make(map[common.Hash]common.Hash, len(value.Storage))
+		storage := make(map[types.Hash]types.Hash, len(value.Storage))
 		for h, v := range value.Storage {
-			s, found := resolved[h]
+			s, found := resolved[common.Hash(h)]
 			if found {
-				storage[s] = v
+				storage[types.Hash(s)] = v
 			} else {
 				// not all storage addresses are currently exportable - missing pre genesis data
 				//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())

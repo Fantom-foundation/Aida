@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,8 +16,8 @@ var GenDeletedAccountsCommand = cli.Command{
 	Usage:     "executes full state transitions and record suicided accounts",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
+		&utils.WorkersFlag,
+		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&utils.CpuProfileFlag,
@@ -45,15 +45,17 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
 	}
 
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
-	ddb, err := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
+	ddb, err := db.OpenDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
 	defer ddb.Close()
 
-	return utildb.GenDeletedAccountsAction(cfg, ddb, cfg.First, cfg.Last)
+	return utildb.GenDeletedAccountsAction(cfg, sdb, ddb, cfg.First, cfg.Last)
 }

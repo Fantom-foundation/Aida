@@ -6,7 +6,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -85,7 +84,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 
 		// Utils
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.SyncPeriodLengthFlag,
@@ -143,7 +142,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.MemoryProfileFlag,
 
 		// Utils
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.KeepDbFlag,

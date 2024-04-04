@@ -7,22 +7,22 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
-	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type Merger struct {
 	cfg           *utils.Config
 	log           logger.Logger
-	targetDb      ethdb.Database
-	sourceDbs     []ethdb.Database
+	targetDb      db.BaseDB
+	sourceDbs     []db.BaseDB
 	sourceDbPaths []string
 	md            *utils.AidaDbMetadata
 	start         time.Time
 }
 
 // NewMerger returns new instance of Merger
-func NewMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *utils.AidaDbMetadata) *Merger {
+func NewMerger(cfg *utils.Config, targetDb db.BaseDB, sourceDbs []db.BaseDB, sourceDbPaths []string, md *utils.AidaDbMetadata) *Merger {
 	return &Merger{
 		cfg:           cfg,
 		log:           logger.NewLogger(cfg.LogLevel, "aida-db-Merger"),
@@ -113,7 +113,7 @@ func (m *Merger) Merge() error {
 }
 
 // copyData copies data from iterator into target database
-func (m *Merger) copyData(sourceDb ethdb.Database) (uint64, error) {
+func (m *Merger) copyData(sourceDb db.BaseDB) (uint64, error) {
 	dbBatchWriter := m.targetDb.NewBatch()
 
 	var written uint64

@@ -6,7 +6,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substateTypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -15,7 +16,7 @@ func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
-	return MakeInMemoryStateDB(substatecontext.NewWorldState(make(substate.SubstateAlloc)), 0), nil
+	return MakeInMemoryStateDB(substatecontext.NewWorldState(make(substate.WorldState)), 0), nil
 }
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
@@ -346,7 +347,7 @@ func (s *inMemoryStateDB) Error() error {
 	return nil
 }
 
-func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
+func (db *inMemoryStateDB) getEffects() substate.WorldState {
 	// todo this should return txcontext.WorldState
 	// collect all modified accounts
 	touched := map[common.Address]int{}
@@ -357,13 +358,13 @@ func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
 	}
 
 	// build state of all touched addresses
-	res := make(substate.SubstateAlloc)
+	res := make(substate.WorldState)
 	for addr := range touched {
-		cur := new(substate.SubstateAccount)
+		cur := new(substate.Account)
 		cur.Nonce = db.GetNonce(addr)
 		cur.Balance = db.GetBalance(addr)
 		cur.Code = db.GetCode(addr)
-		cur.Storage = make(map[common.Hash]common.Hash)
+		cur.Storage = make(map[substateTypes.Hash]substateTypes.Hash)
 
 		reported := map[common.Hash]int{}
 		for state := db.state; state != nil; state = state.parent {
@@ -372,13 +373,13 @@ func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
 					_, exist := reported[key.key]
 					if !exist {
 						reported[key.key] = 0
-						cur.Storage[key.key] = value
+						cur.Storage[substateTypes.Hash(key.key)] = substateTypes.Hash(value)
 					}
 				}
 			}
 		}
 
-		res[addr] = cur
+		res[substateTypes.Address(addr)] = cur
 	}
 
 	return res
@@ -387,13 +388,13 @@ func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
 func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// todo we should not copy the map
 	// rn the inMemoryDb is broken and unused anyway, when fixed this should be reworked
-	res := make(substate.SubstateAlloc)
+	res := make(substate.WorldState)
 	db.ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
-		storage := make(map[common.Hash]common.Hash)
+		storage := make(map[substateTypes.Hash]substateTypes.Hash)
 		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
-			storage[keyHash] = valueHash
+			storage[substateTypes.Hash(keyHash)] = substateTypes.Hash(valueHash)
 		})
-		res[addr] = &substate.SubstateAccount{
+		res[substateTypes.Address(addr)] = &substate.Account{
 			Nonce:   acc.GetNonce(),
 			Balance: acc.GetBalance(),
 			Storage: storage,
@@ -418,16 +419,16 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	}
 	for state := db.state; state != nil; state = state.parent {
 		for slot := range state.touchedSlots {
-			if _, exist := res[slot.addr]; exist {
-				if _, contain := res[slot.addr].Storage[slot.key]; !contain {
-					res[slot.addr].Storage[slot.key] = common.Hash{}
+			if _, exist := res[substateTypes.Address(slot.addr)]; exist {
+				if _, contain := res[substateTypes.Address(slot.addr)].Storage[substateTypes.Hash(slot.key)]; !contain {
+					res[substateTypes.Address(slot.addr)].Storage[substateTypes.Hash(slot.key)] = substateTypes.Hash{}
 				}
 			}
 		}
 	}
 
 	for key := range res {
-		if db.HasSuicided(key) || db.Empty(key) {
+		if db.HasSuicided(common.Address(key)) || db.Empty(common.Address(key)) {
 			delete(res, key)
 			continue
 		}

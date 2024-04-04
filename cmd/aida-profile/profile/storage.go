@@ -5,8 +5,9 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Substate/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,7 +18,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 	Usage:     "returns changes in storage size by transactions in the specified block range",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
@@ -33,18 +34,18 @@ Output log format: (block, timestamp, transaction, account, storage update size,
 }
 
 // computeStorageSize computes the number of non-zero storage entries
-func computeStorageSizes(inUpdateSet map[common.Hash]common.Hash, outUpdateSet map[common.Hash]common.Hash) (int64, uint64, uint64) {
+func computeStorageSizes(inUpdateSet map[types.Hash]types.Hash, outUpdateSet map[types.Hash]types.Hash) (int64, uint64, uint64) {
 	deltaSize := int64(0)
 	inUpdateSize := uint64(0)
 	outUpdateSize := uint64(0)
 	wordSize := uint64(32) //bytes
 	for address, outValue := range outUpdateSet {
 		if inValue, found := inUpdateSet[address]; found {
-			if (inValue == common.Hash{} && outValue != common.Hash{}) {
+			if (inValue == types.Hash{} && outValue != types.Hash{}) {
 				// storage increases by one new cell
 				// (cell is empty in in-storage)
 				deltaSize++
-			} else if (inValue != common.Hash{} && outValue == common.Hash{}) {
+			} else if (inValue != types.Hash{} && outValue == types.Hash{}) {
 				// storage shrinks by one new cell
 				// (cell is empty in out-storage)
 				deltaSize--
@@ -52,12 +53,12 @@ func computeStorageSizes(inUpdateSet map[common.Hash]common.Hash, outUpdateSet m
 		} else {
 			// storage increases by one new cell
 			// (cell is not found in in-storage but found in out-storage)
-			if (outValue != common.Hash{}) {
+			if (outValue != types.Hash{}) {
 				deltaSize++
 			}
 		}
 		// compute update size
-		if (outValue != common.Hash{}) {
+		if (outValue != types.Hash{}) {
 			outUpdateSize++
 		}
 	}
@@ -65,11 +66,11 @@ func computeStorageSizes(inUpdateSet map[common.Hash]common.Hash, outUpdateSet m
 		if _, found := outUpdateSet[address]; !found {
 			// storage shrinks by one cell
 			// (The cell does not exist for an address in in-storage)
-			if (inValue != common.Hash{}) {
+			if (inValue != types.Hash{}) {
 				deltaSize--
 			}
 		}
-		if (inValue != common.Hash{}) {
+		if (inValue != types.Hash{}) {
 			inUpdateSize++
 		}
 	}
@@ -77,29 +78,29 @@ func computeStorageSizes(inUpdateSet map[common.Hash]common.Hash, outUpdateSet m
 }
 
 // getStorageUpdateSizeTask replays storage access of accounts in each transaction
-func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskPool *db.SubstateTaskPool) error {
 
 	timestamp := st.Env.Timestamp
-	for wallet, outputAccount := range st.OutputAlloc {
+	for wallet, outputAccount := range st.OutputSubstate {
 		var (
 			deltaSize     int64
 			inUpdateSize  uint64
 			outUpdateSize uint64
 		)
 		// account exists in both input substate and output substate
-		if inputAccount, found := st.InputAlloc[wallet]; found {
+		if inputAccount, found := st.InputSubstate[wallet]; found {
 			deltaSize, inUpdateSize, outUpdateSize = computeStorageSizes(inputAccount.Storage, outputAccount.Storage)
 			// account exists in output substate but not input substate
 		} else {
-			deltaSize, inUpdateSize, outUpdateSize = computeStorageSizes(map[common.Hash]common.Hash{}, outputAccount.Storage)
+			deltaSize, inUpdateSize, outUpdateSize = computeStorageSizes(map[types.Hash]types.Hash{}, outputAccount.Storage)
 		}
-		fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n", block, timestamp, tx, wallet.Hex(), deltaSize, inUpdateSize, outUpdateSize)
+		fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n", block, timestamp, tx, wallet.String(), deltaSize, inUpdateSize, outUpdateSize)
 	}
 	// account exists in input substate but not output substate
-	for wallet, inputAccount := range st.InputAlloc {
-		if _, found := st.OutputAlloc[wallet]; !found {
-			deltaSize, inUpdateSize, outUpdateSize := computeStorageSizes(inputAccount.Storage, map[common.Hash]common.Hash{})
-			fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n", block, timestamp, tx, wallet.Hex(), deltaSize, inUpdateSize, outUpdateSize)
+	for wallet, inputAccount := range st.InputSubstate {
+		if _, found := st.OutputSubstate[wallet]; !found {
+			deltaSize, inUpdateSize, outUpdateSize := computeStorageSizes(inputAccount.Storage, map[types.Hash]types.Hash{})
+			fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n", block, timestamp, tx, wallet.String(), deltaSize, inUpdateSize, outUpdateSize)
 		}
 	}
 	return nil
@@ -118,11 +119,13 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 
 	log.Infof("chain-id: %v\n", cfg.ChainID)
 
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
-	taskPool := substate.NewSubstateTaskPool("aida-vm storage", getStorageUpdateSizeTask, cfg.First, cfg.Last, ctx)
+	taskPool := sdb.NewSubstateTaskPool("aida-vm storage", getStorageUpdateSizeTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

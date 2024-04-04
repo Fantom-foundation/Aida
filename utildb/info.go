@@ -7,14 +7,12 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // FindBlockRangeInUpdate finds the first and last block in the update set
-func FindBlockRangeInUpdate(aidaDb ethdb.Database) (uint64, uint64, error) {
-	udb := substate.NewUpdateDB(aidaDb)
+func FindBlockRangeInUpdate(udb db.UpdateDB) (uint64, uint64, error) {
 	firstBlock, err := udb.GetFirstKey()
 	if err != nil {
 		return 0, 0, fmt.Errorf("cannot get first updateset; %v", err)
@@ -29,8 +27,7 @@ func FindBlockRangeInUpdate(aidaDb ethdb.Database) (uint64, uint64, error) {
 }
 
 // FindBlockRangeInDeleted finds the first and last block in the deleted accounts
-func FindBlockRangeInDeleted(aidaDb ethdb.Database) (uint64, uint64, error) {
-	ddb := substate.NewDestroyedAccountDB(aidaDb)
+func FindBlockRangeInDeleted(ddb *db.DestroyedAccountDB) (uint64, uint64, error) {
 	firstBlock, err := ddb.GetFirstKey()
 	if err != nil {
 		return 0, 0, fmt.Errorf("cannot get first deleted accounts; %v", err)
@@ -45,7 +42,7 @@ func FindBlockRangeInDeleted(aidaDb ethdb.Database) (uint64, uint64, error) {
 }
 
 // FindBlockRangeInStateHash finds the first and last block in the state hash
-func FindBlockRangeInStateHash(db ethdb.Database, log logger.Logger) (uint64, uint64, error) {
+func FindBlockRangeInStateHash(db db.BaseDB, log logger.Logger) (uint64, uint64, error) {
 	var firstStateHashBlock, lastStateHashBlock uint64
 	var err error
 	firstStateHashBlock, err = utils.GetFirstStateHash(db)
@@ -62,12 +59,11 @@ func FindBlockRangeInStateHash(db ethdb.Database, log logger.Logger) (uint64, ui
 }
 
 // GetSubstateCount in given AidaDb
-func GetSubstateCount(cfg *utils.Config, aidaDb ethdb.Database) uint64 {
-	substate.SetSubstateDbBackend(aidaDb)
+func GetSubstateCount(cfg *utils.Config, sdb db.SubstateDB) uint64 {
 
 	var count uint64
 
-	iter := substate.NewSubstateIterator(cfg.First, 10)
+	iter := sdb.NewSubstateIterator(int(cfg.First), 10)
 	defer iter.Release()
 	for iter.Next() {
 		if iter.Value().Block > cfg.Last {
@@ -80,16 +76,16 @@ func GetSubstateCount(cfg *utils.Config, aidaDb ethdb.Database) uint64 {
 }
 
 // GetDeletedCount in given AidaDb
-func GetDeletedCount(cfg *utils.Config, aidaDb ethdb.Database) (int, error) {
+func GetDeletedCount(cfg *utils.Config, database db.BaseDB) (int, error) {
 	startingBlockBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(startingBlockBytes, cfg.First)
 
-	iter := aidaDb.NewIterator([]byte(substate.DestroyedAccountPrefix), startingBlockBytes)
+	iter := database.NewIterator([]byte(db.DestroyedAccountPrefix), startingBlockBytes)
 	defer iter.Release()
 
 	count := 0
 	for iter.Next() {
-		block, _, err := substate.DecodeDestroyedAccountKey(iter.Key())
+		block, _, err := db.DecodeDestroyedAccountKey(iter.Key())
 		if err != nil {
 			return 0, fmt.Errorf("cannot Get all destroyed accounts; %v", err)
 		}
@@ -103,14 +99,14 @@ func GetDeletedCount(cfg *utils.Config, aidaDb ethdb.Database) (int, error) {
 }
 
 // GetUpdateCount in given AidaDb
-func GetUpdateCount(cfg *utils.Config, aidaDb ethdb.Database) (uint64, error) {
+func GetUpdateCount(cfg *utils.Config, database db.BaseDB) (uint64, error) {
 	var count uint64
 
-	start := substate.SubstateAllocKey(cfg.First)[2:]
-	iter := aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), start)
+	start := db.SubstateDBBlockPrefix(cfg.First)[2:]
+	iter := database.NewIterator([]byte(db.SubstateDBPrefix), start)
 	defer iter.Release()
 	for iter.Next() {
-		block, err := substate.DecodeUpdateSetKey(iter.Key())
+		block, err := db.DecodeUpdateSetKey(iter.Key())
 		if err != nil {
 			return 0, fmt.Errorf("cannot decode updateset key; %v", err)
 		}
@@ -124,10 +120,10 @@ func GetUpdateCount(cfg *utils.Config, aidaDb ethdb.Database) (uint64, error) {
 }
 
 // GetStateHashCount in given AidaDb
-func GetStateHashCount(cfg *utils.Config, aidaDb ethdb.Database) (uint64, error) {
+func GetStateHashCount(cfg *utils.Config, database db.BaseDB) (uint64, error) {
 	var count uint64
 
-	hashProvider := utils.MakeStateHashProvider(aidaDb)
+	hashProvider := utils.MakeStateHashProvider(database)
 	for i := cfg.First; i <= cfg.Last; i++ {
 		_, err := hashProvider.GetStateHash(int(i))
 		if err != nil {

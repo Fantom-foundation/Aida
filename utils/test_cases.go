@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/substate"
+	substateTypes "github.com/Fantom-foundation/Substate/types"
 )
 
 const testAccountStorageSize = 10
@@ -57,14 +57,14 @@ func GetRandom(rangeLower int, rangeUpper int) int {
 }
 
 // MakeAccountStorage generates randomized account storage with testAccountStorageSize length
-func MakeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
+func MakeAccountStorage(t *testing.T) map[substateTypes.Hash]substateTypes.Hash {
 	// create storage map
-	storage := map[common.Hash]common.Hash{}
+	storage := map[substateTypes.Hash]substateTypes.Hash{}
 
 	// fill the storage map
 	for j := 0; j < testAccountStorageSize; j++ {
-		k := common.BytesToHash(MakeRandomByteSlice(t, 32))
-		storage[k] = common.BytesToHash(MakeRandomByteSlice(t, 32))
+		k := substateTypes.BytesToHash(MakeRandomByteSlice(t, 32))
+		storage[k] = substateTypes.BytesToHash(MakeRandomByteSlice(t, 32))
 	}
 
 	return storage
@@ -97,21 +97,21 @@ func MakeTestConfig(testCase StateDbTestCase) *Config {
 }
 
 // MakeWorldState generates randomized world state containing 100 accounts
-func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
+func MakeWorldState(t *testing.T) (substate.WorldState, []substateTypes.Address) {
 	// create list of addresses
-	var addrList []common.Address
+	var addrList []substateTypes.Address
 
 	// create world state
-	ws := make(substate.SubstateAlloc)
+	ws := make(substate.WorldState)
 
 	for i := 0; i < 100; i++ {
 		// create random address
-		addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
+		addr := substateTypes.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 		// add to address list
 		addrList = append(addrList, addr)
 
-		acc := substate.SubstateAccount{
+		acc := substate.Account{
 			Nonce:   uint64(GetRandom(1, 1000*5000)),
 			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
 			Storage: MakeAccountStorage(t),

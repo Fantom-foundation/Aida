@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,9 +21,9 @@ var CmdEvolveState = cli.Command{
 	ArgsUsage:   "<block> <substate-db> <workers>",
 	Flags: []cli.Flag{
 		&utils.TargetBlockFlag,
-		&substate.SubstateDbFlag,
+		&utils.AidaDbFlag,
 		&utils.ValidateFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 	},
 }
 
@@ -42,10 +42,11 @@ func evolveState(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
-	// try to open sub state DB
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
 	// make logger
 	log := logger.NewLogger(cfg.LogLevel, "evolve")
@@ -65,7 +66,7 @@ func evolveState(ctx *cli.Context) error {
 	}
 
 	// call evolveState with prepared arguments
-	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, cfg.Workers, factoryMakeLogger(startBlock, targetBlock, log), validateLog)
+	finalBlock, err := snapshot.EvolveState(sdb, stateDB, startBlock, targetBlock, cfg.Workers, factoryMakeLogger(startBlock, targetBlock, log), validateLog)
 	if err != nil {
 		log.Errorf("unable to EvolveState; %s", err.Error())
 	}

@@ -5,22 +5,23 @@ import (
 	"fmt"
 	"log"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 )
 
 // SubstateDumpTask dumps substate data
-func SubstateDumpTask(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func SubstateDumpTask(block uint64, tx int, recording *substate.Substate, taskPool *db.SubstateTaskPool) error {
 
-	inputAlloc := recording.InputAlloc
+	InputSubstate := recording.InputSubstate
 	inputEnv := recording.Env
 	inputMessage := recording.Message
 
-	outputAlloc := recording.OutputAlloc
+	outputAlloc := recording.OutputSubstate
 	outputResult := recording.Result
 
 	out := fmt.Sprintf("block: %v Transaction: %v\n", block, tx)
 	var jbytes []byte
-	jbytes, _ = json.MarshalIndent(inputAlloc, "", " ")
+	jbytes, _ = json.MarshalIndent(InputSubstate, "", " ")
 	out += fmt.Sprintf("Recorded input substate:\n%s\n", jbytes)
 	jbytes, _ = json.MarshalIndent(inputEnv, "", " ")
 	out += fmt.Sprintf("Recorded input environmnet:\n%s\n", jbytes)

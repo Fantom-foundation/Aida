@@ -13,13 +13,12 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // TableHash generates a hash for given dbcomponent
-func TableHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
+func TableHash(cfg *utils.Config, base db.BaseDB, log logger.Logger) error {
 	dbComponent, err := dbcomponent.ParseDbComponent(cfg.DbComponent)
 	if err != nil {
 		return err
@@ -27,7 +26,7 @@ func TableHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) erro
 
 	if dbComponent == dbcomponent.Substate || dbComponent == dbcomponent.All {
 		log.Info("Generating Substate hash...")
-		aidaDbSubstateHash, count, err := GetSubstateHash(cfg, aidaDb, log)
+		aidaDbSubstateHash, count, err := GetSubstateHash(cfg, base, log)
 		if err != nil {
 			return err
 		}
@@ -36,7 +35,7 @@ func TableHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) erro
 
 	if dbComponent == dbcomponent.Delete || dbComponent == dbcomponent.All {
 		log.Info("Generating Deletion hash...")
-		aidaDbDeletionHash, count, err := GetDeletionHash(cfg, aidaDb, log)
+		aidaDbDeletionHash, count, err := GetDeletionHash(cfg, base, log)
 		if err != nil {
 			return err
 		}
@@ -45,7 +44,7 @@ func TableHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) erro
 
 	if dbComponent == dbcomponent.Update || dbComponent == dbcomponent.All {
 		log.Info("Generating Updateset hash...")
-		aidaDbUpdateDbHash, count, err := GetUpdateDbHash(cfg, aidaDb, log)
+		aidaDbUpdateDbHash, count, err := GetUpdateDbHash(cfg, base, log)
 		if err != nil {
 			return err
 		}
@@ -54,7 +53,7 @@ func TableHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) erro
 
 	if dbComponent == dbcomponent.StateHash || dbComponent == dbcomponent.All {
 		log.Info("Generating State-Hashes hash...")
-		aidaDbStateHashesHash, count, err := GetStateHashesHash(cfg, aidaDb, log)
+		aidaDbStateHashesHash, count, err := GetStateHashesHash(cfg, base, log)
 		if err != nil {
 			return err
 		}
@@ -82,15 +81,15 @@ func combineJson(in chan any, out chan []byte, errChan chan error) {
 	}
 }
 
-func GetSubstateHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
+func GetSubstateHash(cfg *utils.Config, base db.BaseDB, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
 		defer close(feederChan)
 
-		substate.SetSubstateDbBackend(db)
-		it := substate.NewSubstateIterator(cfg.First, 10)
+		sdb := db.MakeDefaultSubstateDBFromBaseDB(base)
+		it := sdb.NewSubstateIterator(int(cfg.First), 10)
 		defer it.Release()
 
 		for it.Next() {
@@ -116,7 +115,7 @@ func GetSubstateHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 	return parallelHashComputing(feeder)
 }
 
-func GetDeletionHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
+func GetDeletionHash(cfg *utils.Config, aidaDb db.BaseDB, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
@@ -126,11 +125,11 @@ func GetDeletionHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger
 		startingBlockBytes := make([]byte, 8)
 		binary.BigEndian.PutUint64(startingBlockBytes, cfg.First)
 
-		iter := aidaDb.NewIterator([]byte(substate.DestroyedAccountPrefix), startingBlockBytes)
+		iter := aidaDb.NewIterator([]byte(db.DestroyedAccountPrefix), startingBlockBytes)
 		defer iter.Release()
 
 		for iter.Next() {
-			block, _, err := substate.DecodeDestroyedAccountKey(iter.Key())
+			block, _, err := db.DecodeDestroyedAccountKey(iter.Key())
 			if err != nil {
 				errChan <- err
 				return
@@ -139,7 +138,7 @@ func GetDeletionHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger
 				break
 			}
 
-			list, err := substate.DecodeAddressList(iter.Value())
+			list, err := db.DecodeAddressList(iter.Value())
 			if err != nil {
 				errChan <- err
 				return
@@ -162,7 +161,7 @@ func GetDeletionHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger
 				case err = <-errChan:
 					errChan <- err
 					return
-				case feederChan <- address.Hex():
+				case feederChan <- address.String():
 				}
 			}
 		}
@@ -170,15 +169,15 @@ func GetDeletionHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger
 	return parallelHashComputing(feeder)
 }
 
-func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
+func GetUpdateDbHash(cfg *utils.Config, base db.BaseDB, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
 		defer close(feederChan)
 
-		udb := substate.NewUpdateDB(db)
-		iter := substate.NewUpdateSetIterator(udb, cfg.First, cfg.Last)
+		udb := db.MakeDefaultUpdateDBFromBaseDB(base)
+		iter := udb.NewUpdateSetIterator(cfg.First, cfg.Last)
 		defer iter.Release()
 
 		for iter.Next() {
@@ -193,21 +192,21 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 			case err := <-errChan:
 				errChan <- err
 				return
-			case feederChan <- value.UpdateSet:
+			case feederChan <- value:
 			}
 		}
 	}
 	return parallelHashComputing(feeder)
 }
 
-func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
+func GetStateHashesHash(cfg *utils.Config, base db.BaseDB, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
 		defer close(feederChan)
 
-		provider := utils.MakeStateHashProvider(db)
+		provider := utils.MakeStateHashProvider(base)
 
 		var i = cfg.First
 		for ; i <= cfg.Last; i++ {

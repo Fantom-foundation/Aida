@@ -11,7 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
@@ -85,24 +85,26 @@ func printCount(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
-	}
-	defer utildb.MustCloseDB(aidaDb)
-
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Count")
 	log.Noticef("Inspecting database between blocks %v-%v", cfg.First, cfg.Last)
 
+	base, err := db.NewDefaultBaseDB(cfg.AidaDb)
+	if err != nil {
+		return err
+	}
+
+	defer base.Close()
+
 	// print substate count
 	if dbComponent == dbcomponent.Substate || dbComponent == dbcomponent.All {
-		count := utildb.GetSubstateCount(cfg, aidaDb)
+		sdb := db.MakeDefaultSubstateDBFromBaseDB(base)
+		count := utildb.GetSubstateCount(cfg, sdb)
 		log.Noticef("Found %v substates", count)
 	}
 
 	// print update count
 	if dbComponent == dbcomponent.Update || dbComponent == dbcomponent.All {
-		count, err := utildb.GetUpdateCount(cfg, aidaDb)
+		count, err := utildb.GetUpdateCount(cfg, base)
 		if err != nil {
 			log.Warningf("cannot print update count; %v", err)
 		} else {
@@ -112,7 +114,7 @@ func printCount(ctx *cli.Context) error {
 
 	// print deleted count
 	if dbComponent == dbcomponent.Delete || dbComponent == dbcomponent.All {
-		count, err := utildb.GetDeletedCount(cfg, aidaDb)
+		count, err := utildb.GetDeletedCount(cfg, base)
 		if err != nil {
 			log.Warningf("cannot print deleted count; %v", err)
 		} else {
@@ -122,7 +124,7 @@ func printCount(ctx *cli.Context) error {
 
 	// print state hash count
 	if dbComponent == dbcomponent.StateHash || dbComponent == dbcomponent.All {
-		count, err := utildb.GetStateHashCount(cfg, aidaDb)
+		count, err := utildb.GetStateHashCount(cfg, base)
 		if err != nil {
 			log.Warningf("cannot print state hash count; %v", err)
 		} else {
@@ -147,45 +149,58 @@ func printRange(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Range")
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aidaDb", true)
-	if err != nil {
-		return fmt.Errorf("error opening aidaDb %s: %v", cfg.AidaDb, err)
-	}
-	defer utildb.MustCloseDB(aidaDb)
-
 	// print substate range
 	if dbComponent == dbcomponent.Substate || dbComponent == dbcomponent.All {
-		substate.SetSubstateDbBackend(aidaDb)
-		firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
+		sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+		if err != nil {
+			return fmt.Errorf("cannot open aida-db; %w", err)
+		}
+
+		firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate(sdb)
 		if !ok {
 			log.Warning("No substate found")
 		} else {
 			log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
 		}
+		sdb.Close()
 	}
 
 	// print update range
 	if dbComponent == dbcomponent.Update || dbComponent == dbcomponent.All {
-		firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
+		udb, err := db.NewDefaultUpdateDB(cfg.AidaDb)
+		if err != nil {
+			return fmt.Errorf("cannot open update db")
+		}
+		firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(udb)
 		if err != nil {
 			log.Warningf("cannot find updateset range; %v", err)
 		}
 		log.Infof("Updateset block range: %v - %v", firstUsBlock, lastUsBlock)
+		udb.Close()
 	}
 
 	// print deleted range
 	if dbComponent == dbcomponent.Delete || dbComponent == dbcomponent.All {
-		first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
+		ddb, err := db.OpenDestroyedAccountDB(cfg.AidaDb)
+		if err != nil {
+			return fmt.Errorf("cannot open destroyed account db; %w", err)
+		}
+		first, last, err := utildb.FindBlockRangeInDeleted(ddb)
 		if err != nil {
 			log.Warningf("cannot find deleted range; %v", err)
 		} else {
 			log.Infof("Deleted block range: %v - %v", first, last)
 		}
+		ddb.Close()
 	}
 
 	// print state hash range
 	if dbComponent == dbcomponent.StateHash || dbComponent == dbcomponent.All {
-		firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(aidaDb, log)
+		bdb, err := db.NewDefaultBaseDB(cfg.AidaDb)
+		if err != nil {
+			return err
+		}
+		firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(bdb, log)
 		if err != nil {
 			log.Warningf("cannot find state hash range; %v", err)
 		} else {
@@ -204,7 +219,7 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Deleted-Account-Info")
 
-	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	db, err := db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
@@ -236,20 +251,21 @@ func printTableHash(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	database, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return fmt.Errorf("aidaDb %v; %v", cfg.AidaDb, err)
+		return err
 	}
+
+	defer database.Close()
 
 	log := logger.NewLogger(cfg.LogLevel, "printTableHash")
 	log.Info("Inspecting database...")
-	err = utildb.TableHash(cfg, aidaDb, log)
+	err = utildb.TableHash(cfg, database, log)
 	if err != nil {
 		return err
 	}
 	log.Info("Finished")
 
-	utildb.MustCloseDB(aidaDb)
 	return nil
 }
 
@@ -291,12 +307,12 @@ func printPrefixHash(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	database, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return fmt.Errorf("cannot open db; %v", err)
+		return err
 	}
 
-	defer utildb.MustCloseDB(aidaDb)
+	defer database.Close()
 
 	if ctx.Args().Len() == 0 || ctx.Args().Len() >= 2 {
 		return fmt.Errorf("generate-prefix-hash command requires exactly 1 argument")
@@ -304,6 +320,6 @@ func printPrefixHash(ctx *cli.Context) error {
 
 	prefix := ctx.Args().Slice()[0]
 	log.Noticef("Generating hash for prefix %v", prefix)
-	_, err = utildb.GeneratePrefixHash(aidaDb, prefix, "INFO")
+	_, err = utildb.GeneratePrefixHash(database, prefix, "INFO")
 	return err
 }

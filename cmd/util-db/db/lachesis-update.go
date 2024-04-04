@@ -6,7 +6,8 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,8 +18,8 @@ var LachesisUpdateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
-		&substate.SubstateDbFlag,
-		&substate.WorkersFlag,
+		&utils.AidaDbFlag,
+		&utils.WorkersFlag,
 		&utils.WorldStateFlag,
 		&logger.LogLevelFlag,
 	},
@@ -38,9 +39,11 @@ func lachesisUpdate(ctx *cli.Context) error {
 	}
 	log := logger.NewLogger(cfg.LogLevel, "Lachesis Update")
 
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDB()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
 	log.Notice("Load Opera initial world state")
 	opera, err := utildb.LoadOperaWorldState(cfg.WorldStateDb)
@@ -55,9 +58,12 @@ func lachesisUpdate(ctx *cli.Context) error {
 	}
 
 	//check if transition tx exists
-	lastTx, _ := substate.GetLastSubstate()
+	lastTx, err := sdb.GetLastSubstate()
+	if err != nil {
+		return fmt.Errorf("cannot get last substate; %w", err)
+	}
 	lachesisLastBlock := utils.FirstOperaBlock - 1
-	untrackedState := make(substate.SubstateAlloc)
+	untrackedState := make(substate.WorldState)
 
 	if lastTx.Env.Number < lachesisLastBlock {
 		// update untracked changes
@@ -66,11 +72,14 @@ func lachesisUpdate(ctx *cli.Context) error {
 		// create a transition transaction
 		lastTx.Env.Number = lachesisLastBlock
 		transitionTx := substate.NewSubstate(
-			make(substate.SubstateAlloc),
+			make(substate.WorldState),
 			untrackedState,
 			lastTx.Env,
 			lastTx.Message,
-			lastTx.Result)
+			lastTx.Result,
+			lastTx.Block,
+			utils.PseudoTx,
+		)
 		// replace lachesis storage with zeros
 		if err := utildb.FixSfcContract(lachesis, transitionTx); err != nil {
 			return err
@@ -81,7 +90,10 @@ func lachesisUpdate(ctx *cli.Context) error {
 			lachesisLastBlock,
 			utils.PseudoTx,
 			len(untrackedState))
-		substate.PutSubstate(lachesisLastBlock, utils.PseudoTx, transitionTx)
+		err = sdb.PutSubstate(transitionTx)
+		if err != nil {
+			return fmt.Errorf("cannot put lachesis transacition tx into db; %w", err)
+		}
 	} else {
 		log.Warningf("Transition tx has already been produced. Skip writing")
 	}

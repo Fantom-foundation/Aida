@@ -4,19 +4,20 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/world-state/types"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // EvolveState iterates trough Substates between first and target blocks
 // anticipates that SubstateDB is already open
-func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, workers int, progress func(uint64), validate func(error)) (uint64, error) {
+func EvolveState(sdb db.SubstateDB, stateDB *StateDB, firstBlock uint64, targetBlock uint64, workers int, progress func(uint64), validate func(error)) (uint64, error) {
 	// contains last block id
 	var lastProcessedBlock uint64 = 0
 
 	// iterator starting from first block - current block of stateDB
-	iter := substate.NewSubstateIterator(firstBlock, workers)
+	iter := sdb.NewSubstateIterator(int(firstBlock), workers)
 	defer iter.Release()
 
 	// iteration trough substates
@@ -43,22 +44,21 @@ func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, worker
 }
 
 // evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
-func evolveSubstate(tx *substate.Transaction, stateDB *StateDB, validate func(error)) error {
-	sub := tx.Substate
-	// validation of InputAlloc state
+func evolveSubstate(sub *substate.Substate, stateDB *StateDB, validate func(error)) error {
+	// validation of InputSubstate state
 	if validate != nil {
-		for address, substateAccount := range sub.InputAlloc {
-			acc, err := stateDB.Account(address)
+		for address, substateAccount := range sub.InputSubstate {
+			acc, err := stateDB.Account(common.Address(address))
 			if err != nil {
-				validate(fmt.Errorf("%d - %s not found in database", tx.Block, address.String()))
+				validate(fmt.Errorf("%d - %s not found in database", sub.Block, address.String()))
 			}
-			acc.IsDifferentToSubstate(substateAccount, tx.Block, address.String(), validate)
+			acc.IsDifferentToSubstate(substateAccount, sub.Block, address.String(), validate)
 		}
 	}
 
-	for address, substateAccount := range sub.OutputAlloc {
+	for address, substateAccount := range sub.OutputSubstate {
 		// get account stored in state snapshot database
-		acc, err := stateDB.Account(address)
+		acc, err := stateDB.Account(common.Address(address))
 		if err != nil {
 			// account was not found in database therefore we need to create new instance
 			addrHash := crypto.Keccak256Hash(address.Bytes())
@@ -88,7 +88,7 @@ func evolveSubstate(tx *substate.Transaction, stateDB *StateDB, validate func(er
 }
 
 // updateStorage updates account with substateAccount storage records
-func updateStorage(acc *types.Account, substateAccount *substate.SubstateAccount) {
+func updateStorage(acc *types.Account, substateAccount *substate.Account) {
 	// overwriting all changed values in storage
 	for keyRaw, value := range substateAccount.Storage {
 		// generation of key
@@ -96,7 +96,7 @@ func updateStorage(acc *types.Account, substateAccount *substate.SubstateAccount
 		// eg. keyRaw=0x0000000000000000000000000000000000000000000000000000000000000001 (substate record key)
 		// 	   key=0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6 (snapshot record key)
 		key := common.BytesToHash(crypto.Keccak256(keyRaw.Bytes()))
-		if value == ZeroHash {
+		if common.Hash(value) == ZeroHash {
 			if _, found := acc.Storage[key]; found {
 				// removing key with empty value from storage
 				delete(acc.Storage, key)
@@ -104,6 +104,6 @@ func updateStorage(acc *types.Account, substateAccount *substate.SubstateAccount
 			continue
 		}
 		// storing new value or updating old value
-		acc.Storage[key] = value
+		acc.Storage[key] = common.Hash(value)
 	}
 }

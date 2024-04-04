@@ -410,4 +410,10 @@ var (
 		Usage: "list of tx generator application type (\"all\" | <\"erc20\", \"counter\", \"store\", \"uniswap\">)",
 		Value: cli.NewStringSlice("all"),
 	}
+	WorkersFlag = cli.IntFlag{
+		Name:    "workers",
+		Aliases: []string{"w"},
+		Usage:   "determines number of workers",
+		Value:   4,
+	}
 )

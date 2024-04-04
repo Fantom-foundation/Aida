@@ -6,7 +6,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -19,7 +18,7 @@ func main() {
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
 			&utils.RpcRecordingFileFlag,
-			&substate.WorkersFlag,
+			&utils.WorkersFlag,
 
 			// VM
 			&utils.VmImplementation,

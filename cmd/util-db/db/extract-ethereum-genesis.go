@@ -8,22 +8,24 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Substate/types"
+	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/urfave/cli/v2"
 )
 
 var ExtractEthereumGenesisCommand = cli.Command{
 	Action: extractEthereumGenesis,
 	Name:   "extract-ethereum-genesis",
-	Usage:  "Extracts substateAlloc from json into first updateset",
+	Usage:  "Extracts WorldState from json into first updateset",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.UpdateDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Extracts substateAlloc from ethereum genesis.json into first updateset.`}
+Extracts WorldState from ethereum genesis.json into first updateset.`}
 
 func extractEthereumGenesis(ctx *cli.Context) error {
 	// process arguments and flags
@@ -42,20 +44,19 @@ func extractEthereumGenesis(ctx *cli.Context) error {
 		return err
 	}
 
-	udb, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
 	defer udb.Close()
 
 	log.Noticef("PutUpdateSet(0, %v, []common.Address{})", ws)
-	udb.PutUpdateSet(0, &ws, []common.Address{})
 
-	return nil
+	return udb.PutUpdateSet(&updateset.UpdateSet{WorldState: ws, Block: 0}, make([]types.Address, 0))
 }
 
-// loadEthereumGenesisWorldState loads opera initial world state from worldstate-db as SubstateAlloc
-func loadEthereumGenesisWorldState(genesis string) (substate.SubstateAlloc, error) {
+// loadEthereumGenesisWorldState loads opera initial world state from worldstate-db as WorldState
+func loadEthereumGenesisWorldState(genesis string) (substate.WorldState, error) {
 	var jsData map[string]interface{}
 	// Read the content of the JSON file
 	jsonData, err := ioutil.ReadFile(genesis)
@@ -74,15 +75,15 @@ func loadEthereumGenesisWorldState(genesis string) (substate.SubstateAlloc, erro
 		return nil, fmt.Errorf("failed to get alloc field from genesis file")
 	}
 
-	ssAccounts := make(substate.SubstateAlloc)
+	ssAccounts := make(substate.WorldState)
 
 	// loop over all the accounts
 	for k, v := range alloc.(map[string]interface{}) {
 		// Convert the string key back to a common.Address
-		address := common.HexToAddress(k)
+		address := types.HexToAddress(k)
 
 		balance, _ := new(big.Int).SetString(v.(map[string]interface{})["balance"].(string), 10)
-		ssAccounts[address] = substate.NewSubstateAccount(0, balance, []byte{})
+		ssAccounts[address] = substate.NewAccount(0, balance, []byte{})
 	}
 
 	return ssAccounts, err

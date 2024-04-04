@@ -32,8 +32,6 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 	var err error
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
-	//fmt.Printf("Blk: %v Tx: %v\n", state.Block, state.Transaction)
-	//fmt.Printf("%s\n", ctx.ExecutionResult)
 	if err == nil {
 		return nil
 	}
@@ -140,39 +138,6 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		msg       = st.GetMessage()
 		hashError error
 	)
-
-	if block == 1489 {
-		fmt.Errorf("a")
-		//fmt.Println(inputEnv.GetTimestamp())
-		//fmt.Println(inputEnv.GetNumber())
-		//fmt.Println(inputEnv.GetCoinbase())
-		//fmt.Println(inputEnv.GetGasLimit())
-		//fmt.Println(inputEnv.GetBaseFee())
-		fmt.Println("msg.To()")
-		fmt.Println(msg.To())
-		fmt.Println("msg.From()")
-		fmt.Println(msg.From())
-		fmt.Println("msg.Value()")
-		fmt.Println(msg.Value())
-		fmt.Println("len(msg.Data())")
-		fmt.Println(len(msg.Data()))
-		fmt.Println("msg.Gas()")
-		fmt.Println(msg.Gas())
-		fmt.Println("msg.Nonce()")
-		fmt.Println(msg.Nonce())
-		fmt.Println("msg.Gas()")
-		fmt.Println(msg.Gas())
-		fmt.Println("len(msg.AccessList())")
-		fmt.Println(len(msg.AccessList()))
-		fmt.Println("msg.GasTipCap()")
-		fmt.Println(msg.GasTipCap())
-		fmt.Println("msg.GasFeeCap()")
-		fmt.Println(msg.GasFeeCap())
-		fmt.Println("msg.GasPrice()")
-		fmt.Println(msg.GasPrice())
-		fmt.Println("msg.IsFake()")
-		fmt.Println(msg.IsFake())
-	}
 
 	// prepare tx
 	gasPool.AddGas(inputEnv.GetGasLimit())

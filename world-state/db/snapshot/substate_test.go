@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/world-state/types"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substateTypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -19,7 +20,7 @@ func TestStateDB_Substate(t *testing.T) {
 	db, nodes, a2h, s2h := makeTestDB(t)
 	defer MustCloseStateDB(db)
 
-	ssDB, err := db.ToSubstateAlloc(context.Background())
+	ssDB, err := db.ToWorldState(context.Background())
 	if err != nil {
 		t.Fatalf("failed substate test; expected no error, got %s", err.Error())
 	}
@@ -37,7 +38,7 @@ func TestStateDB_Substate(t *testing.T) {
 	}
 }
 
-// TestStateDB_Substate_CtxFail tests ToSubstateAlloc function in the context expiration state
+// TestStateDB_Substate_CtxFail tests ToWorldState function in the context expiration state
 func TestStateDB_Substate_CtxFail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), cCtxNoTime)
 	defer cancel()
@@ -46,15 +47,15 @@ func TestStateDB_Substate_CtxFail(t *testing.T) {
 	db, _, _, _ := makeTestDB(t)
 	defer MustCloseStateDB(db)
 
-	_, err := db.ToSubstateAlloc(ctx)
+	_, err := db.ToWorldState(ctx)
 	if err != context.DeadlineExceeded {
 		t.Errorf("failed substate test on context expiration; expected DeadlineExceeded error, got %s", errorStr(err))
 	}
 }
 
-// compare checks one world state account to one in SubstateAlloc
-func compare(account types.Account, address common.Address, ssDB substate.SubstateAlloc, s2h map[common.Hash]common.Hash) error {
-	ss, found := ssDB[address]
+// compare checks one world state account to one in WorldState
+func compare(account types.Account, address common.Address, ssDB substate.WorldState, s2h map[common.Hash]common.Hash) error {
+	ss, found := ssDB[substateTypes.Address(address)]
 	if !found {
 		return fmt.Errorf("failed to find account %s in substate", address)
 	}
@@ -81,12 +82,12 @@ func compare(account types.Account, address common.Address, ssDB substate.Substa
 			return fmt.Errorf("incorrect translation table for storage hashes")
 		}
 
-		v2, f2 := ss.Storage[us]
+		v2, f2 := ss.Storage[substateTypes.Hash(us)]
 		if !f2 {
 			return fmt.Errorf("incorrect substate storage data")
 		}
 
-		if v != v2 {
+		if v != common.Hash(v2) {
 			return fmt.Errorf("storage values not matching")
 		}
 	}
@@ -99,7 +100,7 @@ func TestStateDB_Substate_Skipping(t *testing.T) {
 	db, nodes, a2h, s2h, errExpected := makeIncompleteTestDB(t)
 	defer MustCloseStateDB(db)
 
-	ssDB, err := db.ToSubstateAlloc(context.Background())
+	ssDB, err := db.ToWorldState(context.Background())
 	if err != nil {
 		t.Fatalf("failed substate test; expected no error, got %s", err.Error())
 	}

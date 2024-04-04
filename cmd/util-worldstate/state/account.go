@@ -17,7 +17,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
@@ -62,8 +62,8 @@ var cmdAccountCollect = cli.Command{
 	ArgsUsage:   "<blockNumFirst> <blockNumLast>",
 	Aliases:     []string{"c"},
 	Flags: []cli.Flag{
-		&substate.SubstateDbFlag,
-		&substate.WorkersFlag,
+		&utils.AidaDbFlag,
+		&utils.WorkersFlag,
 	},
 }
 
@@ -129,17 +129,18 @@ func collectAccounts(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
-	// try to open substate DB
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
 	workers := cfg.Workers
-	iter := substate.NewSubstateIterator(cfg.First, workers)
+	iter := sdb.NewSubstateIterator(int(cfg.First), workers)
 	defer iter.Release()
 
 	// load raw accounts
-	accounts, storage := snapshot.CollectAccounts(ctx.Context, &iter, cfg.Last, workers)
+	accounts, storage := snapshot.CollectAccounts(ctx.Context, iter, cfg.Last, workers)
 
 	// filter uniqueAccount addresses before writing
 	uniqueAccount := make(chan any, cap(accounts))
@@ -150,14 +151,15 @@ func collectAccounts(ctx *cli.Context) error {
 	go snapshot.FilterUnique(ctx.Context, storage, uniqueStorage)
 
 	// write found addresses
-	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", logger.NewLogger(cfg.LogLevel, "addr")), stateDB)
+	//errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", logger.NewLogger(cfg.LogLevel, "addr")), stateDB) todo uncomment
 
 	// write found storage hashes
-	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", logger.NewLogger(cfg.LogLevel, "storage")), stateDB)
+	//errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", logger.NewLogger(cfg.LogLevel, "storage")), stateDB) todo uncomment
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels
-	return getChannelError(errAcc, errStorage)
+	//return getChannelError(errAcc, errStorage) todo uncomment
+	return nil
 }
 
 // collectProgressFactory observes progress in scanning.

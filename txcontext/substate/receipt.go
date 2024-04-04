@@ -4,48 +4,64 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // todo logs
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use NewSubstateResult instead.
-func NewResult(res *substate.SubstateResult) *result {
+func NewReceipt(res *substate.Result) *result {
 	return &result{res}
 }
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use substateResult instead.
 type result struct {
-	*substate.SubstateResult
-}
-
-func (r *result) GetRawResult() ([]byte, error) {
-	// we do not have access to this in substate
-	return nil, nil
+	*substate.Result
 }
 
 func (r *result) GetReceipt() txcontext.Receipt {
-	// result implements both txcontext.Result and txcontext.Receipt
 	return r
+}
+
+func (r *result) GetRawResult() ([]byte, error) {
+	return nil, nil
 }
 
 func (r *result) GetStatus() uint64 {
 	return r.Status
 }
+
 func (r *result) GetBloom() types.Bloom {
-	return r.Bloom
+	return types.Bloom(r.Bloom)
 }
 
 func (r *result) GetLogs() []*types.Log {
-	return r.Logs
+	// todo how to avoid iterating
+	logs := make([]*types.Log, 0)
+	for _, l := range r.Logs {
+		topics := make([]common.Hash, 0)
+		for _, t := range l.Topics {
+			topics = append(topics, common.Hash(t))
+		}
+
+		logs = append(logs, &types.Log{
+			Address:     common.Address(l.Address),
+			Topics:      topics,
+			Data:        l.Data,
+			BlockNumber: l.BlockNumber,
+			TxHash:      common.Hash(l.TxHash),
+			TxIndex:     l.TxIndex,
+			BlockHash:   common.Hash(l.BlockHash),
+			Index:       l.Index,
+			Removed:     l.Removed,
+		})
+	}
+
+	return logs
 }
 
 func (r *result) GetContractAddress() common.Address {
-	return r.ContractAddress
+	return common.Address(r.ContractAddress)
 }
 
 func (r *result) GetGasUsed() uint64 {

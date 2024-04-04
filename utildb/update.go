@@ -19,9 +19,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 const (
@@ -87,11 +85,13 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		substate.SetSubstateDb(cfg.AidaDb)
-		substate.OpenSubstateDBReadOnly()
-		defer substate.CloseSubstateDB()
+		sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+		if err != nil {
+			return 0, 0, err
+		}
+		defer sdb.Close()
 
-		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate()
+		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate(sdb)
 		if !ok {
 			return 0, 0, fmt.Errorf("cannot find blocks in substate; is substate present in given db? %v", cfg.AidaDb)
 		}
@@ -123,7 +123,7 @@ func patchesDownloader(cfg *utils.Config, patches []utils.PatchJson, firstBlock,
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
 	var (
 		err                       error
-		patchDb                   ethdb.Database
+		patchDb                   db.BaseDB
 		targetMD                  *utils.AidaDbMetadata
 		patchDbHash, targetDbHash []byte
 		isNewDb                   bool
@@ -188,7 +188,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					}
 
 					// open targetDB only after there is already first patch or any existing previous data
-					targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+					targetDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 					if err != nil {
 						return fmt.Errorf("can't open aidaDb; %v", err)
 					}
@@ -212,7 +212,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				}
 
 				// merge newly extracted patch
-				patchDb, err = rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
+				patchDb, err = db.NewDefaultBaseDB(extractedPatchPath)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
@@ -226,7 +226,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					}
 				}
 
-				m := NewMerger(cfg, targetMD.Db, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
+				m := NewMerger(cfg, targetMD.Db, []db.BaseDB{patchDb}, []string{extractedPatchPath}, nil)
 
 				err = m.Merge()
 				if err != nil {
@@ -476,12 +476,15 @@ func appendFirstPatch(cfg *utils.Config, availablePatches []utils.PatchJson, pat
 // deleteOperaWorldStateFromUpdateSet when user has already merged second patch, and we are prepending lachesis patch.
 // This situation could happen due to lachesis patch being implemented later than rest of the Db
 func deleteOperaWorldStateFromUpdateSet(dbPath string) error {
-	updateDb, err := substate.OpenUpdateDB(dbPath)
+	updateDb, err := db.NewDefaultUpdateDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("cannot open update-db; %v", err)
 	}
 
-	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock - 1)
+	err = updateDb.DeleteUpdateSet(utils.FirstOperaBlock - 1)
+	if err != nil {
+		return err
+	}
 
 	return updateDb.Close()
 }

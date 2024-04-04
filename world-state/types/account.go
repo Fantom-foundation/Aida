@@ -6,7 +6,7 @@ import (
 	"io"
 	"math/big"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// Account is modification of SubstateAccount in substate/substate.go
+// Account is modification of Account in substate/substate.go
 type Account struct {
 	Hash    common.Hash
 	Storage map[common.Hash]common.Hash
@@ -183,7 +183,7 @@ func (a *Account) IsDifferent(b *Account) error {
 
 // IsDifferentToSubstate compares the substate account
 // and returns an error if and only if the accounts are different.
-func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint64, address string, v func(error)) {
+func (a *Account) IsDifferentToSubstate(b *substate.Account, block uint64, address string, v func(error)) {
 	// nonce must be the same
 	if a.Nonce != b.Nonce {
 		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountNonce, b.Nonce, a.Nonce))
@@ -194,7 +194,7 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint6
 		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountBalance, b.Balance, a.Balance))
 	}
 
-	// storage must be initialized if substateAccount storage is initialized
+	// storage must be initialized if Account storage is initialized
 	if (a.Storage == nil && b.Storage != nil) || (a.Storage != nil && b.Storage == nil) {
 		v(ErrAccountStorage)
 	}
@@ -222,12 +222,12 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint6
 		kk := slotHash(k.Bytes())
 		va, ok := a.Storage[kk]
 		if !ok {
-			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v", block, address, ErrAccountStorageItem, k, vb.Hex()))
+			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v", block, address, ErrAccountStorageItem, k, vb.String()))
 			continue
 		}
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
-			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v, world-state: %v", block, address, ErrAccountStorageValue, k, vb.Hex(), va.Hex()))
+			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v, world-state: %v", block, address, ErrAccountStorageValue, k, vb.String(), va.Hex()))
 		}
 	}
 }

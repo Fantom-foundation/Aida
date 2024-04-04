@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"sync"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -16,7 +16,7 @@ import (
 // SubstateIterator defines an interface of substate iterator we use to collect addresses.
 type SubstateIterator interface {
 	Next() bool
-	Value() *substate.Transaction
+	Value() *substate.Substate
 	Release()
 }
 
@@ -120,7 +120,7 @@ func collectSubStateAccounts(ctx context.Context, in SubstateIterator, toBlock u
 	defer close(outStorage)
 
 	// prepare structures for account collectors
-	work := make(chan *substate.Transaction, workers)
+	work := make(chan *substate.Substate, workers)
 	var wg sync.WaitGroup
 
 	// start account collector workers
@@ -153,7 +153,7 @@ func collectSubStateAccounts(ctx context.Context, in SubstateIterator, toBlock u
 // Found account addresses are sent to an output queue for processing.
 // We do not care about sending unique address from the worker since it's expected to run in parallel,
 // the filtering should be done later down the queue line.
-func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Transaction, outAddr chan<- any, outStorage chan<- any, wg *sync.WaitGroup) {
+func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Substate, outAddr chan<- any, outStorage chan<- any, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	ctxDone := ctx.Done()
@@ -167,22 +167,22 @@ func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Transactio
 			}
 
 			// non-zero env coinbase
-			if tx.Substate.Env != nil && !bytes.Equal(tx.Substate.Env.Coinbase.Bytes(), ZeroAddressBytes) {
-				outAddr <- tx.Substate.Env.Coinbase
+			if tx.Env != nil && !bytes.Equal(tx.Env.Coinbase.Bytes(), ZeroAddressBytes) {
+				outAddr <- tx.Env.Coinbase
 			}
 
 			// message sender and recipient
-			if tx.Substate.Message != nil {
-				outAddr <- tx.Substate.Message.From
+			if tx.Message != nil {
+				outAddr <- tx.Message.From
 
-				if tx.Substate.Message.To != nil {
-					outAddr <- *tx.Substate.Message.To
+				if tx.Message.To != nil {
+					outAddr <- *tx.Message.To
 				}
 			}
 
 			// input alloc
-			if tx.Substate.InputAlloc != nil {
-				for adr, state := range tx.Substate.InputAlloc {
+			if tx.InputSubstate != nil {
+				for adr, state := range tx.InputSubstate {
 					outAddr <- adr
 
 					for hash := range state.Storage {
@@ -192,8 +192,8 @@ func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Transactio
 			}
 
 			// output alloc
-			if tx.Substate.OutputAlloc != nil {
-				for adr, state := range tx.Substate.OutputAlloc {
+			if tx.OutputSubstate != nil {
+				for adr, state := range tx.OutputSubstate {
 					outAddr <- adr
 
 					for hash := range state.Storage {
@@ -203,8 +203,8 @@ func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Transactio
 			}
 
 			// non-zero result contract address
-			if tx.Substate.Result != nil && !bytes.Equal(tx.Substate.Result.ContractAddress.Bytes(), ZeroAddressBytes) {
-				outAddr <- tx.Substate.Result.ContractAddress
+			if tx.Result != nil && !bytes.Equal(tx.Result.ContractAddress.Bytes(), ZeroAddressBytes) {
+				outAddr <- tx.Result.ContractAddress
 			}
 		}
 	}

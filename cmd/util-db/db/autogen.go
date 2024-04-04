@@ -6,7 +6,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -26,7 +25,7 @@ var AutoGenCommand = cli.Command{
 		&utils.TargetEpochFlag,
 		&utils.UpdateBufferSizeFlag,
 		&utils.WorldStateFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `

@@ -2,7 +2,6 @@ package profile
 
 import (
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -14,7 +13,7 @@ var GetAddressStatsCommand = cli.Command{
 	Usage:     "computes usage statistics of addresses",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 	},
@@ -34,11 +33,11 @@ Statistics on the usage of addresses are printed to the console.
 func getAddressStatsAction(ctx *cli.Context) error {
 	return getReferenceStatsAction(ctx, "address-stats", func(info *TransactionInfo) []common.Address {
 		addresses := []common.Address{}
-		for address := range info.st.InputAlloc {
-			addresses = append(addresses, address)
+		for address := range info.st.InputSubstate {
+			addresses = append(addresses, common.Address(address))
 		}
-		for address := range info.st.OutputAlloc {
-			addresses = append(addresses, address)
+		for address := range info.st.OutputSubstate {
+			addresses = append(addresses, common.Address(address))
 		}
 		return addresses
 	})

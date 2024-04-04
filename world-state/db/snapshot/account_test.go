@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -34,7 +35,7 @@ func (i *mockSubstateIterator) Next() bool {
 
 func (i *mockSubstateIterator) Address() common.Address {
 	if i.current >= 0 && i.current < len(i.list) {
-		return i.list[i.current].addr
+		return common.Address(i.list[i.current].addr)
 	}
 	return common.Address{}
 }
@@ -46,32 +47,35 @@ func (i *mockSubstateIterator) Storage() map[common.Hash]common.Hash {
 	return map[common.Hash]common.Hash{}
 }
 
-func (i *mockSubstateIterator) Value() *substate.Transaction {
+func (i *mockSubstateIterator) Value() *substate.Substate {
 	if i.current < 0 || i.current >= len(i.list) {
 		panic("invalid iterator position")
 	}
 
+	storage := make(map[types.Hash]types.Hash)
+	for k, v := range i.list[i.current].storage {
+		storage[types.Hash(k)] = types.Hash(v)
+	}
+
 	// we mention each address as many times as we can (6x)
-	st := substate.Transaction{
+	st := substate.Substate{
 		Block:       uint64(len(i.list)),
 		Transaction: i.current,
-		Substate: &substate.Substate{
-			InputAlloc: map[common.Address]*substate.SubstateAccount{
-				i.list[i.current].addr: {Storage: i.list[i.current].storage},
-			},
-			OutputAlloc: map[common.Address]*substate.SubstateAccount{
-				i.list[i.current].addr: {Storage: i.list[i.current].storage},
-			},
-			Env: &substate.SubstateEnv{
-				Coinbase: i.list[i.current].addr,
-			},
-			Message: &substate.SubstateMessage{
-				From: i.list[i.current].addr,
-				To:   &i.list[i.current].addr,
-			},
-			Result: &substate.SubstateResult{
-				ContractAddress: i.list[i.current].addr,
-			},
+		InputSubstate: map[types.Address]*substate.Account{
+			types.Address(i.list[i.current].addr): {Storage: storage},
+		},
+		OutputSubstate: map[types.Address]*substate.Account{
+			types.Address(i.list[i.current].addr): {Storage: storage},
+		},
+		Env: &substate.Env{
+			Coinbase: types.Address(i.list[i.current].addr),
+		},
+		Message: &substate.Message{
+			From: types.Address(i.list[i.current].addr),
+			To:   (*types.Address)(&i.list[i.current].addr),
+		},
+		Result: &substate.Result{
+			ContractAddress: types.Address(i.list[i.current].addr),
 		},
 	}
 	return &st
@@ -214,7 +218,7 @@ func TestCollectStorages(t *testing.T) {
 
 	count := 0
 	for _, mockSS := range ti.list {
-		// 2 times count since storage is mentioned in both inInputAlloc andOutputAlloc
+		// 2 times count since storage is mentioned in both inInputSubstate andOutputAlloc
 		count += 2 * len(mockSS.storage)
 	}
 

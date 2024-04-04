@@ -13,7 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -134,15 +134,15 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 func makeValidSubstate() txcontext.TxContext {
 	// This Substate is a minimal data that can be successfully processed.
 	sub := &substate.Substate{
-		Env: &substate.SubstateEnv{
+		Env: &substate.Env{
 			GasLimit: 100_000_000,
 		},
-		Message: &substate.SubstateMessage{
+		Message: &substate.Message{
 			Gas:      100_000,
 			GasPrice: big.NewInt(0),
 			Value:    big.NewInt(0),
 		},
-		Result: &substate.SubstateResult{
+		Result: &substate.Result{
 			GasUsed: 1,
 		},
 	}
