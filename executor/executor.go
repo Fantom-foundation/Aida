@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 // ----------------------------------------------------------------------------
@@ -208,7 +208,7 @@ type Context struct {
 	StateDbPath string
 
 	// AidaDb is an optional LevelDb readonly database containing data for testing StateDb (i.e. state hashes).
-	AidaDb ethdb.Database
+	AidaDb db.BaseDB
 
 	// ErrorInput is used if continue-on-failure is enabled or if log-file is definer so that at the end
 	// of the run, we log all errors into a file. This chanel should be only used for processing errors,

@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 // MakeAidaDbManager opens AidaDb if path is given and adds it to the context.
@@ -23,11 +23,11 @@ type AidaDbManager[T any] struct {
 }
 
 func (e *AidaDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
-	db, err := rawdb.NewLevelDBDatabase(e.path, 1024, 100, "", true)
+	database, err := db.NewDefaultBaseDB(e.path)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
-	ctx.AidaDb = db
+	ctx.AidaDb = database
 
 	return nil
 }
