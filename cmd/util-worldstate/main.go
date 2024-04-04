@@ -27,7 +27,7 @@ func main() {
 			&state.CmdCompareState,
 			&state.CmdDumpState,
 			&state.CmdEvolveState,
-			&state.CmdRoot,
+			//&state.CmdRoot, todo uncomment when eth_state is usable
 			&state.CmdInfo,
 			&version.CmdVersion,
 		},
