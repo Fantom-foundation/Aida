@@ -33,28 +33,28 @@ tosca:
 
 aida-rpc: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-rpc \
 	./cmd/aida-rpc
 
 aida-stochastic-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic-sdb \
 	./cmd/aida-stochastic-sdb
 
 aida-vm-adb: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm-adb \
 	./cmd/aida-vm-adb
 
 aida-vm-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm-sdb \
@@ -62,21 +62,21 @@ aida-vm-sdb: carmen tosca
 
 aida-vm: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm \
 	./cmd/aida-vm
 
 aida-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-sdb \
 	./cmd/aida-sdb
 
 aida-profile: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-profile \
