@@ -192,8 +192,8 @@ func (s *carmenHeadState) EndSyncPeriod() {
 func (s *carmenStateDB) GetHash() (common.Hash, error) {
 	var hash common.Hash
 	err := s.db.QueryHeadState(func(ctxt carmen.QueryContext) {
-			hash = common.Hash(ctxt.GetStateHash())
-		})
+		hash = common.Hash(ctxt.GetStateHash())
+	})
 	return hash, err
 }
 
