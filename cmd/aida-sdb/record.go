@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
 )
 
@@ -48,6 +49,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	cfg.ValidateTxState = true
 
 	substate.RecordReplay = true
+	state.EnableRecordReplay()
 	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err

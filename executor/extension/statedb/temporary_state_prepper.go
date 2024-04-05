@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/core/state"
 )
 
 // MakeTemporaryStatePrepper creates an executor.Extension which Makes a fresh StateDb
@@ -23,6 +24,7 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 	default:
 		// offTheChainStateDb is default value
 		substate.RecordReplay = true
+		state.EnableRecordReplay()
 		return &temporaryOffTheChainStatePrepper{
 			cfg: cfg,
 		}
