@@ -234,7 +234,7 @@ func (s *gethStateDB) PrepareSubstate(substate txcontext.WorldState, block uint6
 
 func (s *gethStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	if db, ok := s.db.(*geth.StateDB); ok {
-		return substatecontext.NewWorldState(db.GetSubstatePostAlloc())
+		return substatecontext.NewWorldState(db.GetPostWorldState())
 	}
 
 	return nil
