@@ -2,6 +2,7 @@ package aidadb
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -23,9 +24,17 @@ type AidaDbManager[T any] struct {
 }
 
 func (e *AidaDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
-	database, err := db.NewDefaultBaseDB(e.path)
+	var (
+		database db.BaseDB
+		err      error
+	)
+
+	database, err = db.NewDefaultBaseDB(e.path)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		if !strings.Contains(err.Error(), "resource temporarily unavailable") {
+			return fmt.Errorf("cannot open aida-db; %v", err)
+		}
+		database = executor.Database
 	}
 	ctx.AidaDb = database
 

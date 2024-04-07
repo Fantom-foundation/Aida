@@ -10,6 +10,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var Database db.BaseDB
+
 // ----------------------------------------------------------------------------
 //                              Implementation
 // ----------------------------------------------------------------------------
@@ -20,6 +22,8 @@ func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[txcontex
 	if err != nil {
 		return nil, err
 	}
+
+	Database = db
 
 	return &substateProvider{db, ctxt, cfg.Workers}, nil
 }
