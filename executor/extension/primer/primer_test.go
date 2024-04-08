@@ -119,9 +119,13 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = state.BeginCarmenDbTestContext(sDB)
+			err = sDB.BeginBlock(uint64(2))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = sDB.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
 			}
 
 			// Checks if state DB was primed correctly
@@ -202,6 +206,11 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				t.Fatalf("failed to prime state DB: %v", err)
 			}
 
+			err = state.BeginCarmenDbTestContext(sDB)
+			if err != nil {
+				return
+			}
+
 			// Checks if state DB was primed correctly
 			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 				if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
@@ -228,7 +237,8 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				t.Fatalf("failed to get root hash: %v", err)
 			}
 			// Closing of state DB
-			err = sDB.Close()
+
+			err = state.CloseCarmenDbTestContext(sDB)
 			if err != nil {
 				t.Fatalf("failed to close state DB: %v", err)
 			}
@@ -248,12 +258,21 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 			}
 
 			defer func() {
-				// Closing of state DB
-				err = sDB2.Close()
+				err = state.CloseCarmenDbTestContext(sDB2)
 				if err != nil {
 					t.Fatalf("failed to close state DB: %v", err)
 				}
 			}()
+
+			err = sDB2.BeginBlock(uint64(3))
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+
+			err = sDB2.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
+			}
 
 			// Checks if state DB was primed correctly
 			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
@@ -276,15 +295,35 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				})
 			})
 
+			err = sDB2.EndTransaction()
+			if err != nil {
+				t.Fatalf("cannot end transaction; %v", err)
+			}
+
+			err = sDB2.EndBlock()
+			if err != nil {
+				t.Fatalf("cannot end block sDB2; %v", err)
+			}
+
 			// Generating randomized world state
 			alloc2, _ := utils.MakeWorldState(t)
 			ws2 := substatecontext.NewWorldState(alloc2)
 
-			pc2 := utils.NewPrimeContext(cfg, sDB2, 1, log)
+			pc2 := utils.NewPrimeContext(cfg, sDB2, 4, log)
 			// Priming state DB
 			err = pc2.PrimeStateDB(ws2, sDB2)
 			if err != nil {
 				t.Fatalf("failed to prime state DB2: %v", err)
+			}
+
+			err = sDB2.BeginBlock(uint64(6))
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+
+			err = sDB2.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
 			}
 
 			// Checks if state DB was primed correctly

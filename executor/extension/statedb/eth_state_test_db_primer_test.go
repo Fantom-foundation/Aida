@@ -24,7 +24,11 @@ func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	mockState := state.NewMockStateDB(mockCtrl)
 	mockLoad := state.NewMockBulkLoad(mockCtrl)
 
-	mockState.EXPECT().StartBulkLoad(uint64(0)).Return(mockLoad, nil)
+	mockState.EXPECT().BeginBlock(uint64(0))
+	mockState.EXPECT().BeginTransaction(uint32(0))
+	mockState.EXPECT().EndTransaction()
+	mockState.EXPECT().EndBlock()
+	mockState.EXPECT().StartBulkLoad(uint64(1)).Return(mockLoad, nil)
 	for address, account := range testData.Pre {
 		mockState.EXPECT().Exist(address).Return(false)
 		mockLoad.EXPECT().CreateAccount(address)
@@ -54,7 +58,11 @@ func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t
 	mockState := state.NewMockStateDB(mockCtrl)
 	mockLoad := state.NewMockBulkLoad(mockCtrl)
 
-	mockState.EXPECT().StartBulkLoad(uint64(0)).Return(mockLoad)
+	mockState.EXPECT().BeginBlock(uint64(0))
+	mockState.EXPECT().BeginTransaction(uint32(0))
+	mockState.EXPECT().EndTransaction()
+	mockState.EXPECT().EndBlock()
+	mockState.EXPECT().StartBulkLoad(uint64(1)).Return(mockLoad, nil)
 	for address, account := range testData.Pre {
 		mockState.EXPECT().Exist(address).Return(true)
 		mockLoad.EXPECT().SetBalance(address, account.Balance)

@@ -795,9 +795,14 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = state.BeginCarmenDbTestContext(sDB)
+			err = sDB.BeginBlock(uint64(2))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("cannot begin block; %v", err)
+			}
+
+			err = sDB.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
 			}
 
 			// Call for state DB validation and subsequent check for error
@@ -852,9 +857,13 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			ws[addr] = subAcc
 
-			err = state.BeginCarmenDbTestContext(sDB)
+			err = sDB.BeginBlock(uint64(2))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = sDB.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
 			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly

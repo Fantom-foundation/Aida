@@ -64,7 +64,11 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
-		var err error
+		err := pc.loadExistingAccountsCache(ws)
+		if err != nil {
+			return err
+		}
+
 		pc.load, err = db.StartBulkLoad(pc.Block)
 		if err != nil {
 			return err
@@ -96,23 +100,55 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 	return nil
 }
 
+// loadExistingAccountsCache preloads pc.exist cache with account existence in db
+func (pc *PrimeContext) loadExistingAccountsCache(ws txcontext.WorldState) error {
+	err := pc.db.BeginBlock(pc.Block)
+	if err != nil {
+		return fmt.Errorf("cannot begin block; %w", err)
+	}
+
+	err = pc.db.BeginTransaction(uint32(0))
+	if err != nil {
+		return fmt.Errorf("cannot begin transaction; %w", err)
+	}
+
+	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		found, ok := pc.exist[addr]
+		if !ok || !found {
+			dbExist := pc.db.Exist(addr)
+			if dbExist {
+				pc.exist[addr] = true
+			}
+		}
+	})
+
+	err = pc.db.EndTransaction()
+	if err != nil {
+		return err
+	}
+	err = pc.db.EndBlock()
+	if err != nil {
+		return err
+	}
+	pc.Block++
+	return nil
+}
+
 // primeOneAccount initializes an account on stateDB with substate
 func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Account, pt *ProgressTracker) error {
-	dbExist := pc.db.Exist(addr)
-	if !dbExist {
-		exist, found := pc.exist[addr]
-		// do not create empty accounts
-		if !exist && acc.GetBalance().Sign() == 0 && acc.GetNonce() == 0 && len(acc.GetCode()) == 0 {
-			return nil
-		}
-
-		// if an account was previously primed, skip account creation.
-		if !found || !exist {
-			pc.load.CreateAccount(addr)
-			pc.exist[addr] = true
-			pc.operations++
-		}
+	exist, found := pc.exist[addr]
+	// do not create empty accounts
+	if !exist && acc.GetBalance().Sign() == 0 && acc.GetNonce() == 0 && len(acc.GetCode()) == 0 {
+		return nil
 	}
+
+	// if an account was previously primed, skip account creation.
+	if !found || !exist {
+		pc.load.CreateAccount(addr)
+		pc.exist[addr] = true
+		pc.operations++
+	}
+
 	pc.load.SetBalance(addr, acc.GetBalance())
 	pc.load.SetNonce(addr, acc.GetNonce())
 	pc.load.SetCode(addr, acc.GetCode())
@@ -150,11 +186,16 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	var err error
+	err := pc.loadExistingAccountsCache(ws)
+	if err != nil {
+		return err
+	}
+
 	pc.load, err = pc.db.StartBulkLoad(pc.Block)
 	if err != nil {
 		return err
 	}
+
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws.Get(addr)
