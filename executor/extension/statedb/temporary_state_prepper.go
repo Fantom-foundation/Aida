@@ -35,7 +35,6 @@ type temporaryInMemoryStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
 }
 
-// PreTransaction creates new fresh StateDb
 func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	alloc := state.Data.GetInputState()
 	ctx.State = statedb.MakeInMemoryStateDB(alloc, uint64(state.Block))
@@ -49,7 +48,6 @@ type temporaryOffTheChainStatePrepper struct {
 	cfg *utils.Config
 }
 
-// PreTransaction creates new fresh StateDb
 func (p *temporaryOffTheChainStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	if p.cfg == nil {

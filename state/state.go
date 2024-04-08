@@ -68,8 +68,8 @@ type VmStateDB interface {
 	Snapshot() int
 	RevertToSnapshot(int)
 
-	BeginTransaction(uint32)
-	EndTransaction()
+	BeginTransaction(uint32) error
+	EndTransaction() error
 
 	// ---- Artifacts from Geth dependency ----
 
@@ -98,12 +98,12 @@ type NonCommittableStateDB interface {
 	// GetHash obtains a cryptographic hash certifying the committed content of the
 	// represented state. It does not consider any temporary modifications conducted
 	// through the VmStateDB interface on the state.
-	GetHash() common.Hash
+	GetHash() (common.Hash, error)
 
 	// Release frees resources bound by this view. Release should be called on every
 	// instance once all operations have been completed. Once released, no further
 	// operations on the respective instance are allowed.
-	Release()
+	Release() error
 }
 
 // StateDB is an extension of the VmStateDB interface adding general DB management
@@ -113,8 +113,8 @@ type NonCommittableStateDB interface {
 type StateDB interface {
 	VmStateDB
 
-	BeginBlock(uint64)
-	EndBlock()
+	BeginBlock(uint64) error
+	EndBlock() error
 
 	BeginSyncPeriod(uint64)
 	EndSyncPeriod()
@@ -124,7 +124,7 @@ type StateDB interface {
 	// hash. State implementations are not required to implement any specific hash function
 	// function unless specifically declared to do so. For instance, Geth and Carmen S5 are
 	// expected to produce the same hashes for the same content.
-	GetHash() common.Hash
+	GetHash() (common.Hash, error)
 
 	Error() error
 
@@ -137,7 +137,7 @@ type StateDB interface {
 	// may be active at any time and no other concurrent operations on the StateDB are
 	// while it is alive. Data inserted during a bulk-load will appear as if it was inserted
 	// in a single block.
-	StartBulkLoad(block uint64) BulkLoad
+	StartBulkLoad(block uint64) (BulkLoad, error)
 
 	// GetArchiveState creates a state instance linked to a historic block state in an
 	// optionally present archive. The operation fails if there is no archive or the

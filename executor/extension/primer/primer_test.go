@@ -97,9 +97,9 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				err = sDB.Close()
+				err = state.CloseCarmenDbTestContext(sDB)
 				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(sDB)
 
@@ -109,10 +109,19 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB
-			pc.PrimeStateDB(ws, sDB)
+			err = pc.PrimeStateDB(ws, sDB)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = state.BeginCarmenDbTestContext(sDB)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			// Checks if state DB was primed correctly
 			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+
 				if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
 					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
 				}

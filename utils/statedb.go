@@ -196,9 +196,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDBWithCacheSize(directory, variant, archiveVariant, carmenSchema, cfg.CarmenStateCacheSize, cfg.CarmenNodeCacheSize)
-	case "opera":
-		return state.MakeOperaStateDB(directory, variant, cfg.LogLevel)
+		return state.MakeCarmenStateDBWithCacheSize(directory, variant, carmenSchema, archiveVariant, cfg.CarmenStateCacheSize, cfg.CarmenNodeCacheSize)
 	}
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }

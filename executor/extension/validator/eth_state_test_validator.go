@@ -43,7 +43,10 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 
 func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	want := s.Data.GetStateHash()
-	got := ctx.State.GetHash()
+	got, err := ctx.State.GetHash()
+	if err != nil {
+		return fmt.Errorf("cannot get state hash; %w", err)
+	}
 
 	// cast state.Data to stJSON
 	c := s.Data.(*ethtest.StJSON)

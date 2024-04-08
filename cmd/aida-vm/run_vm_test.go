@@ -76,7 +76,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		db.EXPECT().RevertToSnapshot(19),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
-		// Pseudo transaction do not use snapshots.
+		// Pseudo Tx
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		db.EXPECT().EndTransaction(),
 	)
@@ -261,7 +261,6 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		db.EXPECT().EndTransaction(),
 	)
 
 	// run fails but not on validation
@@ -312,7 +311,6 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		db.EXPECT().EndTransaction(),
 	)
 
 	// run fails but not on validation
@@ -350,11 +348,11 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		})
 
 	gomock.InOrder(
-
 		db.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
@@ -394,6 +392,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)

@@ -15,11 +15,9 @@ func MakeBlockEventEmitter[T any]() executor.Extension[T] {
 }
 
 func (l *blockEventEmitter[T]) PreBlock(state executor.State[T], ctx *executor.Context) error {
-	ctx.State.BeginBlock(uint64(state.Block))
-	return nil
+	return ctx.State.BeginBlock(uint64(state.Block))
 }
 
 func (l *blockEventEmitter[T]) PostBlock(_ executor.State[T], ctx *executor.Context) error {
-	ctx.State.EndBlock()
-	return nil
+	return ctx.State.EndBlock()
 }

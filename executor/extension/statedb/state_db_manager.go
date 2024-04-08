@@ -112,7 +112,10 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		lastProcessedBlock -= 1
 	}
 
-	rootHash := ctx.State.GetHash()
+	rootHash, err := ctx.State.GetHash()
+	if err != nil {
+		return fmt.Errorf("cannot get state hash; %w", err)
+	}
 	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, lastProcessedBlock, rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}

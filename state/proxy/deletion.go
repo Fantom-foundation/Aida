@@ -214,8 +214,7 @@ func (r *DeletionProxy) AddPreimage(addr common.Hash, image []byte) {
 
 // ForEachStorage performs a function over all storage locations in a contract.
 func (r *DeletionProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	err := r.db.ForEachStorage(addr, fn)
-	return err
+	return r.db.ForEachStorage(addr, fn)
 }
 
 // Prepare sets the current transaction hash and index.
@@ -239,7 +238,7 @@ func (r *DeletionProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return r.db.Commit(deleteEmptyObjects)
 }
 
-func (r *DeletionProxy) GetHash() common.Hash {
+func (r *DeletionProxy) GetHash() (common.Hash, error) {
 	return r.db.GetHash()
 }
 
@@ -256,20 +255,20 @@ func (r *DeletionProxy) PrepareSubstate(substate txcontext.WorldState, block uin
 	r.db.PrepareSubstate(substate, block)
 }
 
-func (r *DeletionProxy) BeginTransaction(number uint32) {
-	r.db.BeginTransaction(number)
+func (r *DeletionProxy) BeginTransaction(number uint32) error {
+	return r.db.BeginTransaction(number)
 }
 
-func (r *DeletionProxy) EndTransaction() {
-	r.db.EndTransaction()
+func (r *DeletionProxy) EndTransaction() error {
+	return r.db.EndTransaction()
 }
 
-func (r *DeletionProxy) BeginBlock(number uint64) {
-	r.db.BeginBlock(number)
+func (r *DeletionProxy) BeginBlock(number uint64) error {
+	return r.db.BeginBlock(number)
 }
 
-func (r *DeletionProxy) EndBlock() {
-	r.db.EndBlock()
+func (r *DeletionProxy) EndBlock() error {
+	return r.db.EndBlock()
 }
 
 func (r *DeletionProxy) BeginSyncPeriod(number uint64) {
@@ -292,9 +291,9 @@ func (r *DeletionProxy) Close() error {
 	return r.db.Close()
 }
 
-func (r *DeletionProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (r *DeletionProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	r.log.Fatal("StartBulkLoad not supported by DeletionProxy")
-	return nil
+	return nil, nil
 }
 
 func (r *DeletionProxy) GetMemoryUsage() *state.MemoryUsage {

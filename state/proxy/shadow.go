@@ -58,7 +58,10 @@ type snapshotPair struct {
 }
 
 func (s *shadowVmStateDb) CreateAccount(addr common.Address) {
-	s.run("CreateAccount", func(s state.VmStateDB) { s.CreateAccount(addr) })
+	s.run("CreateAccount", func(s state.VmStateDB) error {
+		s.CreateAccount(addr)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) Exist(addr common.Address) bool {
@@ -82,11 +85,17 @@ func (s *shadowVmStateDb) GetBalance(addr common.Address) *big.Int {
 }
 
 func (s *shadowVmStateDb) AddBalance(addr common.Address, value *big.Int) {
-	s.run("AddBalance", func(s state.VmStateDB) { s.AddBalance(addr, value) })
+	s.run("AddBalance", func(s state.VmStateDB) error {
+		s.AddBalance(addr, value)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) SubBalance(addr common.Address, value *big.Int) {
-	s.run("SubBalance", func(s state.VmStateDB) { s.SubBalance(addr, value) })
+	s.run("SubBalance", func(s state.VmStateDB) error {
+		s.SubBalance(addr, value)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) GetNonce(addr common.Address) uint64 {
@@ -94,10 +103,14 @@ func (s *shadowVmStateDb) GetNonce(addr common.Address) uint64 {
 }
 
 func (s *shadowVmStateDb) SetNonce(addr common.Address, value uint64) {
-	s.run("SetNonce", func(s state.VmStateDB) { s.SetNonce(addr, value) })
+	s.run("SetNonce", func(s state.VmStateDB) error {
+		s.SetNonce(addr, value)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
+	// error here cannot happen
 	return s.getHash("GetCommittedState", func(s state.VmStateDB) common.Hash { return s.GetCommittedState(addr, key) }, addr, key)
 }
 
@@ -106,7 +119,10 @@ func (s *shadowVmStateDb) GetState(addr common.Address, key common.Hash) common.
 }
 
 func (s *shadowVmStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	s.run("SetState", func(s state.VmStateDB) { s.SetState(addr, key, value) })
+	s.run("SetState", func(s state.VmStateDB) error {
+		s.SetState(addr, key, value)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) GetCode(addr common.Address) []byte {
@@ -122,7 +138,10 @@ func (s *shadowVmStateDb) GetCodeHash(addr common.Address) common.Hash {
 }
 
 func (s *shadowVmStateDb) SetCode(addr common.Address, code []byte) {
-	s.run("SetCode", func(s state.VmStateDB) { s.SetCode(addr, code) })
+	s.run("SetCode", func(s state.VmStateDB) error {
+		s.SetCode(addr, code)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) Snapshot() int {
@@ -142,41 +161,51 @@ func (s *shadowVmStateDb) RevertToSnapshot(id int) {
 	s.shadow.RevertToSnapshot(s.snapshots[id].shadow)
 }
 
-func (s *shadowVmStateDb) BeginTransaction(tx uint32) {
+func (s *shadowVmStateDb) BeginTransaction(tx uint32) error {
 	s.snapshots = s.snapshots[0:0]
-	s.run("BeginTransaction", func(s state.VmStateDB) { s.BeginTransaction(tx) })
+	return s.run("BeginTransaction", func(s state.VmStateDB) error { return s.BeginTransaction(tx) })
 }
 
-func (s *shadowVmStateDb) EndTransaction() {
-	s.run("EndTransaction", func(s state.VmStateDB) { s.EndTransaction() })
+func (s *shadowVmStateDb) EndTransaction() error {
+	return s.run("EndTransaction", func(s state.VmStateDB) error { return s.EndTransaction() })
 }
 
-func (s *shadowStateDb) BeginBlock(blk uint64) {
-	s.run("BeginBlock", func(s state.StateDB) { s.BeginBlock(blk) })
+func (s *shadowStateDb) BeginBlock(blk uint64) error {
+	return s.run("BeginBlock", func(s state.StateDB) error { return s.BeginBlock(blk) })
 }
 
-func (s *shadowStateDb) EndBlock() {
-	s.run("EndBlock", func(s state.StateDB) { s.EndBlock() })
+func (s *shadowStateDb) EndBlock() error {
+	return s.run("EndBlock", func(s state.StateDB) error { return s.EndBlock() })
 }
 
 func (s *shadowStateDb) BeginSyncPeriod(number uint64) {
-	s.run("BeginSyncPeriod", func(s state.StateDB) { s.BeginSyncPeriod(number) })
+	s.run("BeginSyncPeriod", func(s state.StateDB) error {
+		s.BeginSyncPeriod(number)
+		return nil
+	})
 }
 
 func (s *shadowStateDb) EndSyncPeriod() {
-	s.run("EndSyncPeriod", func(s state.StateDB) { s.EndSyncPeriod() })
+	s.run("EndSyncPeriod", func(s state.StateDB) error {
+		s.EndSyncPeriod()
+		return nil
+	})
 }
 
-func (s *shadowStateDb) GetHash() common.Hash {
+func (s *shadowStateDb) GetHash() (common.Hash, error) {
 	if s.compareStateHash {
-		return s.getHash("GetHash", func(s state.StateDB) common.Hash { return s.GetHash() })
+		return s.getHash("GetHash", func(s state.StateDB) (common.Hash, error) {
+			return s.GetHash()
+		})
 	}
 	return s.prime.GetHash()
 }
 
-func (s *shadowNonCommittableStateDb) GetHash() common.Hash {
+func (s *shadowNonCommittableStateDb) GetHash() (common.Hash, error) {
 	if s.compareStateHash {
-		return s.getHash("GetHash", func(s state.NonCommittableStateDB) common.Hash { return s.GetHash() })
+		return s.getHash("GetHash", func(s state.NonCommittableStateDB) (common.Hash, error) {
+			return s.GetHash()
+		})
 	}
 	return s.prime.GetHash()
 }
@@ -185,18 +214,25 @@ func (s *shadowStateDb) Close() error {
 	return s.getError("Close", func(s state.StateDB) error { return s.Close() })
 }
 
-func (s *shadowNonCommittableStateDb) Release() {
+func (s *shadowNonCommittableStateDb) Release() error {
 	s.run("Release", func(s state.NonCommittableStateDB) { s.Release() })
+	return nil
 }
 
 func (s *shadowVmStateDb) AddRefund(amount uint64) {
-	s.run("AddRefund", func(s state.VmStateDB) { s.AddRefund(amount) })
+	s.run("AddRefund", func(s state.VmStateDB) error {
+		s.AddRefund(amount)
+		return nil
+	})
 	// check that the update value is the same
 	s.getUint64("AddRefund", func(s state.VmStateDB) uint64 { return s.GetRefund() })
 }
 
 func (s *shadowVmStateDb) SubRefund(amount uint64) {
-	s.run("SubRefund", func(s state.VmStateDB) { s.SubRefund(amount) })
+	s.run("SubRefund", func(s state.VmStateDB) error {
+		s.SubRefund(amount)
+		return nil
+	})
 	// check that the update value is the same
 	s.getUint64("SubRefund", func(s state.VmStateDB) uint64 { return s.GetRefund() })
 }
@@ -206,7 +242,10 @@ func (s *shadowVmStateDb) GetRefund() uint64 {
 }
 
 func (s *shadowVmStateDb) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.run("PrepareAccessList", func(s state.VmStateDB) { s.PrepareAccessList(sender, dest, precompiles, txAccesses) })
+	s.run("PrepareAccessList", func(s state.VmStateDB) error {
+		s.PrepareAccessList(sender, dest, precompiles, txAccesses)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) AddressInAccessList(addr common.Address) bool {
@@ -218,15 +257,24 @@ func (s *shadowVmStateDb) SlotInAccessList(addr common.Address, slot common.Hash
 }
 
 func (s *shadowVmStateDb) AddAddressToAccessList(addr common.Address) {
-	s.run("AddAddressToAccessList", func(s state.VmStateDB) { s.AddAddressToAccessList(addr) })
+	s.run("AddAddressToAccessList", func(s state.VmStateDB) error {
+		s.AddAddressToAccessList(addr)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) AddSlotToAccessList(addr common.Address, slot common.Hash) {
-	s.run("AddSlotToAccessList", func(s state.VmStateDB) { s.AddSlotToAccessList(addr, slot) })
+	s.run("AddSlotToAccessList", func(s state.VmStateDB) error {
+		s.AddSlotToAccessList(addr, slot)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) AddLog(log *types.Log) {
-	s.run("AddLog", func(s state.VmStateDB) { s.AddLog(log) })
+	s.run("AddPreimage", func(s state.VmStateDB) error {
+		s.AddLog(log)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
@@ -250,7 +298,10 @@ func (s *shadowVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*ty
 }
 
 func (s *shadowStateDb) Finalise(deleteEmptyObjects bool) {
-	s.run("Finalise", func(s state.StateDB) { s.Finalise(deleteEmptyObjects) })
+	s.run("Finalise", func(s state.StateDB) error {
+		s.Finalise(deleteEmptyObjects)
+		return nil
+	})
 }
 
 func (s *shadowStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
@@ -274,11 +325,17 @@ func (s *shadowVmStateDb) Error() error {
 }
 
 func (s *shadowVmStateDb) Prepare(thash common.Hash, ti int) {
-	s.run("Prepare", func(s state.VmStateDB) { s.Prepare(thash, ti) })
+	s.run("AddPreimage", func(s state.VmStateDB) error {
+		s.Prepare(thash, ti)
+		return nil
+	})
 }
 
 func (s *shadowStateDb) PrepareSubstate(substate txcontext.WorldState, block uint64) {
-	s.run("PrepareSubstate", func(s state.StateDB) { s.PrepareSubstate(substate, block) })
+	s.run("PrepareSubstate", func(s state.StateDB) error {
+		s.PrepareSubstate(substate, block)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) GetSubstatePostAlloc() txcontext.WorldState {
@@ -288,7 +345,10 @@ func (s *shadowVmStateDb) GetSubstatePostAlloc() txcontext.WorldState {
 }
 
 func (s *shadowVmStateDb) AddPreimage(hash common.Hash, plain []byte) {
-	s.run("AddPreimage", func(s state.VmStateDB) { s.AddPreimage(hash, plain) })
+	s.run("AddPreimage", func(s state.VmStateDB) error {
+		s.AddPreimage(hash, plain)
+		return nil
+	})
 }
 
 func (s *shadowVmStateDb) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
@@ -296,8 +356,16 @@ func (s *shadowVmStateDb) ForEachStorage(common.Address, func(common.Hash, commo
 	panic("ForEachStorage not implemented")
 }
 
-func (s *shadowStateDb) StartBulkLoad(block uint64) state.BulkLoad {
-	return &shadowBulkLoad{s.prime.StartBulkLoad(block), s.shadow.StartBulkLoad(block)}
+func (s *shadowStateDb) StartBulkLoad(block uint64) (state.BulkLoad, error) {
+	pbl, err := s.prime.StartBulkLoad(block)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start prime bulkload; %w", err)
+	}
+	sbl, err := s.shadow.StartBulkLoad(block)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start shadow bulkload; %w", err)
+	}
+	return &shadowBulkLoad{pbl, sbl}, nil
 }
 
 func (s *shadowStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
@@ -420,9 +488,15 @@ func (l *shadowBulkLoad) Close() error {
 	)
 }
 
-func (s *shadowVmStateDb) run(opName string, op func(s state.VmStateDB)) {
-	op(s.prime)
-	op(s.shadow)
+func (s *shadowVmStateDb) run(opName string, op func(s state.VmStateDB) error) error {
+	if err := op(s.prime); err != nil {
+		return fmt.Errorf("prime: %w", err)
+	}
+	if err := op(s.shadow); err != nil {
+		return fmt.Errorf("shadow: %w", err)
+	}
+
+	return nil
 }
 
 func (s *shadowNonCommittableStateDb) run(opName string, op func(s state.NonCommittableStateDB)) {
@@ -430,9 +504,15 @@ func (s *shadowNonCommittableStateDb) run(opName string, op func(s state.NonComm
 	op(s.shadow)
 }
 
-func (s *shadowStateDb) run(opName string, op func(s state.StateDB)) {
-	op(s.prime)
-	op(s.shadow)
+func (s *shadowStateDb) run(opName string, op func(s state.StateDB) error) error {
+	if err := op(s.prime); err != nil {
+		return fmt.Errorf("prime: %w", err)
+	}
+	if err := op(s.shadow); err != nil {
+		return fmt.Errorf("shadow: %w", err)
+	}
+
+	return nil
 }
 
 func (s *shadowVmStateDb) getBool(opName string, op func(s state.VmStateDB) bool, args ...any) bool {
@@ -475,24 +555,54 @@ func (s *shadowVmStateDb) getUint64(opName string, op func(s state.VmStateDB) ui
 	return resP
 }
 
-func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) common.Hash, args ...any) common.Hash {
-	resP := op(s.prime)
-	resS := op(s.shadow)
+func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+	resP, err := op(s.prime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	resS, err := op(s.shadow)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	if resP != resS {
 		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+		return common.Hash{}, s.err
 	}
-	return resP
+	return resP, nil
 }
 
-func (s *shadowNonCommittableStateDb) getHash(opName string, op func(s state.NonCommittableStateDB) common.Hash, args ...any) common.Hash {
-	resP := op(s.prime)
-	resS := op(s.shadow)
+func (s *shadowNonCommittableStateDb) getHash(opName string, op func(s state.NonCommittableStateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+	resP, err := op(s.prime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	resS, err := op(s.shadow)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if resP != resS {
+		s.logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+		return common.Hash{}, s.err
+	}
+	return resP, fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+}
+
+func (s *shadowVmStateDb) getStateHash(opName string, op func(s state.VmStateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+	resP, err := op(s.prime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	resS, err := op(s.shadow)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	if resP != resS {
 		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
-	return resP
+	return resP, nil
 }
 
 func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) common.Hash, args ...any) common.Hash {
