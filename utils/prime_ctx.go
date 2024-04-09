@@ -12,14 +12,14 @@ import (
 )
 
 func NewPrimeContext(cfg *Config, db state.StateDB, block uint64, log logger.Logger) *PrimeContext {
-	return &PrimeContext{cfg: cfg, log: log, Block: block, db: db, exist: make(map[common.Address]bool)}
+	return &PrimeContext{cfg: cfg, log: log, block: block, db: db, exist: make(map[common.Address]bool)}
 }
 
 // PrimeContext structure keeps context used over iterations of priming
 type PrimeContext struct {
 	cfg        *Config
 	log        logger.Logger
-	Block      uint64
+	block      uint64
 	load       state.BulkLoad
 	db         state.StateDB
 	exist      map[common.Address]bool // account exists in db
@@ -34,10 +34,10 @@ func (pc *PrimeContext) mayApplyBulkLoad() error {
 		if err := pc.load.Close(); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
-		pc.Block++
+		pc.block++
 
 		var err error
-		pc.load, err = pc.db.StartBulkLoad(pc.Block)
+		pc.load, err = pc.db.StartBulkLoad(pc.block)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 			return err
 		}
 
-		pc.load, err = db.StartBulkLoad(pc.Block)
+		pc.load, err = db.StartBulkLoad(pc.block)
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 		if err := pc.load.Close(); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
-		pc.Block++
+		pc.block++
 	}
 	pc.log.Debugf("\t\tPriming completed ...")
 	return nil
@@ -102,7 +102,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 
 // loadExistingAccountsCache preloads pc.exist cache with account existence in db
 func (pc *PrimeContext) loadExistingAccountsCache(ws txcontext.WorldState) error {
-	err := pc.db.BeginBlock(pc.Block)
+	err := pc.db.BeginBlock(pc.block)
 	if err != nil {
 		return fmt.Errorf("cannot begin block; %w", err)
 	}
@@ -130,7 +130,7 @@ func (pc *PrimeContext) loadExistingAccountsCache(ws txcontext.WorldState) error
 	if err != nil {
 		return err
 	}
-	pc.Block++
+	pc.block++
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 		return err
 	}
 
-	pc.load, err = pc.db.StartBulkLoad(pc.Block)
+	pc.load, err = pc.db.StartBulkLoad(pc.block)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 
 	}
 	err = pc.load.Close()
-	pc.Block++
+	pc.block++
 	return err
 }
 
@@ -217,7 +217,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
 	count := 0
 	db.BeginSyncPeriod(0)
-	db.BeginBlock(pc.Block)
+	db.BeginBlock(pc.block)
 	db.BeginTransaction(0)
 	for _, addr := range accounts {
 		if db.Exist(addr) {
@@ -230,6 +230,10 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 	db.EndTransaction()
 	db.EndBlock()
 	db.EndSyncPeriod()
-	pc.Block++
+	pc.block++
 	pc.log.Infof("\t\t %v suicided accounts were removed from statedb (before priming).", count)
+}
+
+func (pc *PrimeContext) GetBlock() uint64 {
+	return pc.block
 }

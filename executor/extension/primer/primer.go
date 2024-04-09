@@ -81,9 +81,9 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 // block		current block position
 func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	var (
-		totalSize uint64        // total size of unprimed update set
-		hasPrimed bool          // if true, db has been primed
-		block     = p.ctx.Block // current block priming position
+		totalSize uint64             // total size of unprimed update set
+		hasPrimed bool               // if true, db has been primed
+		block     = p.ctx.GetBlock() // current block priming position
 	)
 
 	// load pre-computed update-set from update-set db
