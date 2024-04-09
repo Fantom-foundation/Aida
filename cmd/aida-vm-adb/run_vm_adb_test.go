@@ -12,7 +12,7 @@ import (
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -578,7 +578,7 @@ var emptyTx = &substate.Substate{
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputSubstate: substate.WorldState{substateTypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
 	Env:           &substate.Env{},
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),

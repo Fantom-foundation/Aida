@@ -10,7 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -55,7 +55,7 @@ func TestStateDB_Substate_CtxFail(t *testing.T) {
 
 // compare checks one world state account to one in WorldState
 func compare(account types.Account, address common.Address, ssDB substate.WorldState, s2h map[common.Hash]common.Hash) error {
-	ss, found := ssDB[substateTypes.Address(address)]
+	ss, found := ssDB[substatetypes.Address(address)]
 	if !found {
 		return fmt.Errorf("failed to find account %s in substate", address)
 	}
@@ -82,7 +82,7 @@ func compare(account types.Account, address common.Address, ssDB substate.WorldS
 			return fmt.Errorf("incorrect translation table for storage hashes")
 		}
 
-		v2, f2 := ss.Storage[substateTypes.Hash(us)]
+		v2, f2 := ss.Storage[substatetypes.Hash(us)]
 		if !f2 {
 			return fmt.Errorf("incorrect substate storage data")
 		}

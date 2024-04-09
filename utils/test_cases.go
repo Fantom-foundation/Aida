@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const testAccountStorageSize = 10
@@ -57,14 +57,14 @@ func GetRandom(rangeLower int, rangeUpper int) int {
 }
 
 // MakeAccountStorage generates randomized account storage with testAccountStorageSize length
-func MakeAccountStorage(t *testing.T) map[substateTypes.Hash]substateTypes.Hash {
+func MakeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
 	// create storage map
-	storage := map[substateTypes.Hash]substateTypes.Hash{}
+	storage := map[common.Hash]common.Hash{}
 
 	// fill the storage map
 	for j := 0; j < testAccountStorageSize; j++ {
-		k := substateTypes.BytesToHash(MakeRandomByteSlice(t, 32))
-		storage[k] = substateTypes.BytesToHash(MakeRandomByteSlice(t, 32))
+		k := common.BytesToHash(MakeRandomByteSlice(t, 32))
+		storage[k] = common.BytesToHash(MakeRandomByteSlice(t, 32))
 	}
 
 	return storage
@@ -97,27 +97,27 @@ func MakeTestConfig(testCase StateDbTestCase) *Config {
 }
 
 // MakeWorldState generates randomized world state containing 100 accounts
-func MakeWorldState(t *testing.T) (substate.WorldState, []substateTypes.Address) {
+func MakeWorldState(t *testing.T) (txcontext.AidaWorldState, []common.Address) {
 	// create list of addresses
-	var addrList []substateTypes.Address
+	var addrList []common.Address
 
 	// create world state
-	ws := make(substate.WorldState)
+	ws := make(map[common.Address]txcontext.Account)
 
 	for i := 0; i < 100; i++ {
 		// create random address
-		addr := substateTypes.BytesToAddress(MakeRandomByteSlice(t, 40))
+		addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 		// add to address list
 		addrList = append(addrList, addr)
 
-		acc := substate.Account{
-			Nonce:   uint64(GetRandom(1, 1000*5000)),
-			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
-			Storage: MakeAccountStorage(t),
-			Code:    MakeRandomByteSlice(t, 2048),
-		}
-		ws[addr] = &acc
+		acc := txcontext.NewAccount(
+			MakeRandomByteSlice(t, 2048),
+			MakeAccountStorage(t),
+			big.NewInt(int64(GetRandom(1, 1000*5000))),
+			uint64(GetRandom(1, 1000*5000)),
+		)
+		ws[addr] = acc
 
 		// create account
 

@@ -15,7 +15,7 @@ import (
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
@@ -784,8 +784,7 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			alloc, _ := utils.MakeWorldState(t)
-			ws := substatecontext.NewWorldState(alloc)
+			ws, _ := utils.MakeWorldState(t)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -838,20 +837,20 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			// Create new prime context
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
-			pc.PrimeStateDB(substatecontext.NewWorldState(ws), sDB)
+			pc.PrimeStateDB(ws, sDB)
 
 			// create new random address
 			addr := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
 
 			// create new account
-			subAcc := &substate.Account{
-				Nonce:   uint64(utils.GetRandom(1, 1000*5000)),
-				Balance: big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
-				Storage: utils.MakeAccountStorage(t),
-				Code:    utils.MakeRandomByteSlice(t, 2048),
-			}
+			subAcc := txcontext.NewAccount(
+				utils.MakeRandomByteSlice(t, 2048),
+				utils.MakeAccountStorage(t),
+				big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
+				uint64(utils.GetRandom(1, 1000*5000)),
+			)
 
-			ws[substateTypes.Address(addr)] = subAcc
+			ws[addr] = subAcc
 
 			err = state.BeginCarmenDbTestContext(sDB)
 			if err != nil {
@@ -859,29 +858,29 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
-			err = doSubsetValidation(substatecontext.NewWorldState(ws), sDB, true)
+			err = doSubsetValidation(ws, sDB, true)
 			if err == nil {
 				t.Fatalf("failed to throw errors while validating state DB: %v", err)
 			}
 
-			acc := ws[substateTypes.Address(addr)]
-			if sDB.GetBalance(addr).Cmp(acc.Balance) != 0 {
-				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.Balance)
+			acc := ws[addr]
+			if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
+				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
 			}
 
-			if sDB.GetNonce(addr) != acc.Nonce {
-				t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), acc.Nonce)
+			if sDB.GetNonce(addr) != acc.GetNonce() {
+				t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), acc.GetNonce())
 			}
 
-			if bytes.Compare(sDB.GetCode(addr), acc.Code) != 0 {
-				t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), acc.Code)
+			if bytes.Compare(sDB.GetCode(addr), acc.GetCode()) != 0 {
+				t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), acc.GetCode())
 			}
 
-			for keyHash, valueHash := range acc.Storage {
-				if sDB.GetState(addr, common.Hash(keyHash)) != common.Hash(valueHash) {
+			acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+				if sDB.GetState(addr, keyHash) != valueHash {
 					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, common.Hash(keyHash)), valueHash)
 				}
-			}
+			})
 
 		})
 	}
@@ -906,7 +905,7 @@ func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 
 	// test negative
 	// mismatched contract
-	sub.Result.ContractAddress = substateTypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
+	sub.Result.ContractAddress = substatetypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
 	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
@@ -993,10 +992,10 @@ func getIncorrectTestWorldState() txcontext.TxContext {
 
 func getIncorrectWorldState() substate.WorldState {
 	alloc := make(substate.WorldState)
-	alloc[substateTypes.Address{0}] = &substate.Account{
+	alloc[substatetypes.Address{0}] = &substate.Account{
 		Nonce:   0,
 		Balance: new(big.Int),
-		Storage: make(map[substateTypes.Hash]substateTypes.Hash),
+		Storage: make(map[substatetypes.Hash]substatetypes.Hash),
 		Code:    make([]byte, 0),
 	}
 
@@ -1005,8 +1004,8 @@ func getIncorrectWorldState() substate.WorldState {
 
 func getDummyResult() *substate.Result {
 	r := &substate.Result{
-		Logs:            []*substateTypes.Log{},
-		ContractAddress: substateTypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
+		Logs:            []*substatetypes.Log{},
+		ContractAddress: substatetypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
 		GasUsed:         1000000,
 		Status:          types.ReceiptStatusSuccessful,
 	}

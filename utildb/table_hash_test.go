@@ -13,7 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -246,7 +246,7 @@ func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 	numDestroyedAccounts := rand.Intn(5) + 6
 
 	for i := 0; i < numDestroyedAccounts; i++ {
-		err := ddb.SetDestroyedAccounts(uint64(i), 0, []substateTypes.Address{substateTypes.BytesToAddress(utils.MakeRandomByteSlice(t, 40))}, []substateTypes.Address{})
+		err := ddb.SetDestroyedAccounts(uint64(i), 0, []substatetypes.Address{substatetypes.BytesToAddress(utils.MakeRandomByteSlice(t, 40))}, []substatetypes.Address{})
 		if err != nil {
 			t.Fatalf("error setting destroyed accounts: %v", err)
 		}
@@ -260,7 +260,7 @@ func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 	for i := 0; i < numUpdates; i++ {
 		sa := new(substate.Account)
 		sa.Balance = big.NewInt(int64(utils.GetRandom(1, 1000*5000)))
-		randomAddress := substateTypes.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
+		randomAddress := substatetypes.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
 		worldState := substate.WorldState{
 
 			randomAddress: sa,
@@ -268,7 +268,7 @@ func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 		err := udb.PutUpdateSet(&updateset.UpdateSet{
 			WorldState: worldState,
 			Block:      uint64(i),
-		}, []substateTypes.Address{})
+		}, []substatetypes.Address{})
 		if err != nil {
 			t.Fatal(err)
 		}

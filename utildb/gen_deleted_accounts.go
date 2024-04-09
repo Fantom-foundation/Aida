@@ -11,7 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -92,13 +92,13 @@ func genDeletedAccountsTask(
 		// if transaction completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
 		if tx.Result.Status == types.ReceiptStatusSuccessful {
-			var destroyed, resurrected []substateTypes.Address
+			var destroyed, resurrected []substatetypes.Address
 			for _, addr := range des {
-				destroyed = append(destroyed, substateTypes.Address(addr))
+				destroyed = append(destroyed, substatetypes.Address(addr))
 			}
 
 			for _, addr := range res {
-				resurrected = append(destroyed, substateTypes.Address(addr))
+				resurrected = append(destroyed, substatetypes.Address(addr))
 			}
 			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, destroyed, resurrected)
 			if err != nil {

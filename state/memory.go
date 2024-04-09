@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Substate/substate"
-	substateTypes "github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -364,7 +364,7 @@ func (db *inMemoryStateDB) getEffects() substate.WorldState {
 		cur.Nonce = db.GetNonce(addr)
 		cur.Balance = db.GetBalance(addr)
 		cur.Code = db.GetCode(addr)
-		cur.Storage = make(map[substateTypes.Hash]substateTypes.Hash)
+		cur.Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 
 		reported := map[common.Hash]int{}
 		for state := db.state; state != nil; state = state.parent {
@@ -373,13 +373,13 @@ func (db *inMemoryStateDB) getEffects() substate.WorldState {
 					_, exist := reported[key.key]
 					if !exist {
 						reported[key.key] = 0
-						cur.Storage[substateTypes.Hash(key.key)] = substateTypes.Hash(value)
+						cur.Storage[substatetypes.Hash(key.key)] = substatetypes.Hash(value)
 					}
 				}
 			}
 		}
 
-		res[substateTypes.Address(addr)] = cur
+		res[substatetypes.Address(addr)] = cur
 	}
 
 	return res
@@ -390,11 +390,11 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// rn the inMemoryDb is broken and unused anyway, when fixed this should be reworked
 	res := make(substate.WorldState)
 	db.ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
-		storage := make(map[substateTypes.Hash]substateTypes.Hash)
+		storage := make(map[substatetypes.Hash]substatetypes.Hash)
 		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
-			storage[substateTypes.Hash(keyHash)] = substateTypes.Hash(valueHash)
+			storage[substatetypes.Hash(keyHash)] = substatetypes.Hash(valueHash)
 		})
-		res[substateTypes.Address(addr)] = &substate.Account{
+		res[substatetypes.Address(addr)] = &substate.Account{
 			Nonce:   acc.GetNonce(),
 			Balance: acc.GetBalance(),
 			Storage: storage,
@@ -419,9 +419,9 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	}
 	for state := db.state; state != nil; state = state.parent {
 		for slot := range state.touchedSlots {
-			if _, exist := res[substateTypes.Address(slot.addr)]; exist {
-				if _, contain := res[substateTypes.Address(slot.addr)].Storage[substateTypes.Hash(slot.key)]; !contain {
-					res[substateTypes.Address(slot.addr)].Storage[substateTypes.Hash(slot.key)] = substateTypes.Hash{}
+			if _, exist := res[substatetypes.Address(slot.addr)]; exist {
+				if _, contain := res[substatetypes.Address(slot.addr)].Storage[substatetypes.Hash(slot.key)]; !contain {
+					res[substatetypes.Address(slot.addr)].Storage[substatetypes.Hash(slot.key)] = substatetypes.Hash{}
 				}
 			}
 		}

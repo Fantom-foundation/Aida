@@ -1,39 +1,33 @@
 // Package state implements executable entry points to the world state generator app.
 package state
 
-import (
-	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/urfave/cli/v2"
-)
-
 // CmdDumpState defines a CLI command for dumping world state from a source database.
 // We export all accounts (including contracts) with:
 //   - Balance
 //   - Nonce
 //   - Code (hash + separate storage)
 //   - Contract Storage
-var CmdDumpState = cli.Command{
-	Action:  nil,
-	Name:    "dump",
-	Aliases: []string{"d"},
-	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
-	Description: `The dump creates a snapshot of all accounts state (including contracts) exporting:
-		- Balance
-		- Nonce
-		- Code (separate storage slot is used to store code data)
-		- Contract Storage`,
-	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
-	Flags: []cli.Flag{
-		&utils.OperaDbFlag,
-		&utils.StateDbVariantFlag,
-		&utils.SourceTableNameFlag,
-		&utils.TrieRootHashFlag,
-		&utils.WorkersFlag,
-		&utils.TargetBlockFlag,
-		&logger.LogLevelFlag,
-	},
-}
+//var CmdDumpState = cli.Command{
+//	Action:  nil,
+//	Name:    "dump",
+//	Aliases: []string{"d"},
+//	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
+//	Description: `The dump creates a snapshot of all accounts state (including contracts) exporting:
+//		- Balance
+//		- Nonce
+//		- Code (separate storage slot is used to store code data)
+//		- Contract Storage`,
+//	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
+//	Flags: []cli.Flag{
+//		&utils.OperaDbFlag,
+//		&utils.StateDbVariantFlag,
+//		&utils.SourceTableNameFlag,
+//		&utils.TrieRootHashFlag,
+//		&utils.WorkersFlag,
+//		&utils.TargetBlockFlag,
+//		&logger.LogLevelFlag,
+//	},
+//}
 
 // todo uncomment when go-ethereum-substate issue is resolved
 //// DumpState dumps state from given EVM trie into an output account-state database
