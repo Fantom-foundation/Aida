@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
@@ -15,6 +15,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,22 +28,19 @@ func RunSubstate(ctx *cli.Context) error {
 
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return runSubstates(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return runSubstates(cfg, substateIterator, nil, executor.MakeLiveDbTxProcessor(cfg), nil, aidaDb)
 }
 
-func runSubstates(
-	cfg *utils.Config,
-	provider executor.Provider[txcontext.TxContext],
-	stateDb state.StateDB,
-	processor executor.Processor[txcontext.TxContext],
-	extra []executor.Extension[txcontext.TxContext],
-) error {
+func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxContext], stateDb state.StateDB, processor executor.Processor[txcontext.TxContext], extra []executor.Extension[txcontext.TxContext], aidaDb db.BaseDB) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
@@ -67,7 +65,6 @@ func runSubstates(
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.
 		profiler.MakeThreadLocker[txcontext.TxContext](),
-		aidadb.MakeAidaDbManager[txcontext.TxContext](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
@@ -101,5 +98,6 @@ func runSubstates(
 		},
 		processor,
 		extensionList,
+		aidaDb,
 	)
 }

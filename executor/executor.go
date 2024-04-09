@@ -77,7 +77,7 @@ type Executor[T any] interface {
 	// PostXXX events are delivered in reverse order. If any of the extensions
 	// reports an error during processing of an event, the same event is still
 	// delivered to the remaining extensions before processing is aborted.
-	Run(params Params, processor Processor[T], extensions []Extension[T]) error
+	Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) error
 }
 
 // NewExecutor creates a new executor based on the given provider.
@@ -229,9 +229,9 @@ type executor[T any] struct {
 	log      logger.Logger
 }
 
-func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) (err error) {
+func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) (err error) {
 	state := State[T]{}
-	ctx := Context{State: params.State}
+	ctx := Context{State: params.State, AidaDb: aidaDb}
 
 	defer func() {
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee

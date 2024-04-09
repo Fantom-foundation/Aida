@@ -61,11 +61,11 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 	p.log.Noticef("Priming to block %v...", p.cfg.First-1)
 	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
 
-	return p.prime(ctx.State)
+	return p.prime(ctx.State, ctx.AidaDb)
 }
 
 // prime the stateDb to given first block.
-func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
+func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error {
 	var (
 		totalSize uint64 // total size of unprimed update set
 		block     uint64 // current block position
@@ -73,12 +73,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	)
 
 	// load pre-computed update-set from update-set db
-	udb, err := db.NewDefaultUpdateDB(p.cfg.UpdateDb)
-	if err != nil {
-		return err
-	}
-
-	defer udb.Close()
+	udb := db.MakeDefaultUpdateDBFromBaseDB(aidaDb)
 	updateIter := udb.NewUpdateSetIterator(block, p.cfg.First-1)
 	update := make(substate.WorldState)
 
@@ -94,7 +89,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 		// Prime StateDB
 		if totalSize+incrementalSize > p.cfg.UpdateBufferSize {
 			p.log.Infof("\tPriming...")
-			if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
+			if err := p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
 				return fmt.Errorf("cannot prime state-db; %v", err)
 			}
 
@@ -123,7 +118,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 
 	// if update set is not empty, prime the remaining
 	if len(update) > 0 {
-		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
+		if err := p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
 			return fmt.Errorf("cannot prime state-db; %v", err)
 		}
 		update = make(substate.WorldState)
@@ -135,7 +130,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	// if the first block is 1, target must prime the genesis block
 	if block < p.cfg.First-1 || p.cfg.First-1 == 0 {
 		log.Infof("\tPriming using substate from %v to %v", block, p.cfg.First-1)
-		update, deletedAccounts, err := utils.GenerateUpdateSet(block, p.cfg.First-1, p.cfg)
+		update, deletedAccounts, err := utils.GenerateUpdateSet(block, p.cfg.First-1, p.cfg, aidaDb)
 		if err != nil {
 			return fmt.Errorf("cannot generate update-set; %v", err)
 		}
@@ -150,7 +145,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	p.log.Noticef("Delete destroyed accounts until block %v", p.cfg.First-1)
 
 	// remove destroyed accounts until one block before the first block
-	err = utils.DeleteDestroyedAccountsFromStateDB(stateDb, p.cfg, p.cfg.First-1)
+	err := utils.DeleteDestroyedAccountsFromStateDB(stateDb, p.cfg, p.cfg.First-1, aidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot delete destroyed accounts from state-db; %v", err)
 	}

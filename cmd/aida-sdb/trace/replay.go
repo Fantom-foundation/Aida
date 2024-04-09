@@ -1,6 +1,8 @@
 package trace
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
@@ -10,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -34,17 +37,17 @@ func ReplayTrace(ctx *cli.Context) error {
 		profiler.MakeReplayProfiler[[]operation.Operation](cfg, rCtx),
 	}
 
+	var aidaDb db.BaseDB
 	// we need to open substate if we are priming
 	if cfg.First > 0 && !cfg.SkipPriming {
-		substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+		aidaDb, err = db.NewDefaultBaseDB(cfg.AidaDb)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot open aida-db; %w", err)
 		}
-
-		defer substateDb.Close()
+		defer aidaDb.Close()
 	}
 
-	return replay(cfg, operationProvider, processor, extra)
+	return replay(cfg, operationProvider, processor, extra, aidaDb)
 }
 
 type operationProcessor struct {
@@ -66,12 +69,7 @@ func (p operationProcessor) runTransaction(block uint64, operations []operation.
 	}
 }
 
-func replay(
-	cfg *utils.Config,
-	provider executor.Provider[[]operation.Operation],
-	processor executor.Processor[[]operation.Operation],
-	extra []executor.Extension[[]operation.Operation],
-) error {
+func replay(cfg *utils.Config, provider executor.Provider[[]operation.Operation], processor executor.Processor[[]operation.Operation], extra []executor.Extension[[]operation.Operation], aidaDb db.BaseDB) error {
 	var extensionList = []executor.Extension[[]operation.Operation]{
 		profiler.MakeCpuProfiler[[]operation.Operation](cfg),
 		logger.MakeProgressLogger[[]operation.Operation](cfg, 0),
@@ -90,5 +88,6 @@ func replay(
 		},
 		processor,
 		extensionList,
+		aidaDb,
 	)
 }

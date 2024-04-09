@@ -4,28 +4,20 @@ package executor
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/Aida/txcontext/substate"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
-var Database db.BaseDB
-
 // ----------------------------------------------------------------------------
 //                              Implementation
 // ----------------------------------------------------------------------------
 
-// OpenSubstateDb opens a substate database as configured in the given parameters.
-func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[txcontext.TxContext], err error) {
-	db, err := db.NewDefaultSubstateDB(cfg.AidaDb)
-	if err != nil {
-		return nil, err
-	}
-
-	Database = db
-
-	return &substateProvider{db, ctxt, cfg.Workers}, nil
+// OpenSubstateProvider opens a substate database as configured in the given parameters.
+func OpenSubstateProvider(cfg *utils.Config, ctxt *cli.Context, aidaDb db.BaseDB) Provider[txcontext.TxContext] {
+	substateDb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
+	return &substateProvider{substateDb, ctxt, cfg.Workers}
 }
 
 // substateProvider is an adapter of Aida's SubstateProvider interface defined above to the
@@ -43,7 +35,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substate.NewTxContext(tx)}); err != nil {
+		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx)}); err != nil {
 			return err
 		}
 	}
@@ -54,5 +46,5 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 }
 
 func (s substateProvider) Close() {
-	s.db.Close()
+	// ignored, database is opened it top-most level
 }

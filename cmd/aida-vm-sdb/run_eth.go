@@ -115,5 +115,6 @@ func runEth(
 		},
 		processor,
 		extensionList,
+		nil,
 	)
 }

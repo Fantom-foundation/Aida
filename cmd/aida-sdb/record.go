@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
@@ -10,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
 )
@@ -50,13 +53,16 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 
 	substate.RecordReplay = true
 	state.EnableRecordReplay()
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return record(cfg, substateDb, executor.MakeLiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return record(cfg, substateIterator, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func record(
@@ -84,5 +90,6 @@ func record(
 		},
 		processor,
 		extensions,
+		nil,
 	)
 }

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
@@ -10,33 +9,21 @@ import (
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Substate/types"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // GenerateUpdateSet generates an update set for a block range.
-func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.WorldState, []types.Address, error) {
+func GenerateUpdateSet(first uint64, last uint64, cfg *Config, aidaDb db.BaseDB) (substate.WorldState, []types.Address, error) {
 	var (
 		deletedAccountDB *db.DestroyedAccountDB
 		deletedAccounts  []types.Address
-		err              error
 	)
-	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot open aida-db; %w", err)
-	}
-	defer sdb.Close()
-
+	sdb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
 	stateIter := sdb.NewSubstateIterator(int(first), cfg.Workers)
 	update := make(substate.WorldState)
 	defer stateIter.Release()
 
 	// Todo rewrite in wrapping functions
-	deletedAccountDB, err = db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer deletedAccountDB.Close()
-
+	deletedAccountDB = db.MakeDestroyedAccountDBFromBaseDB(aidaDb)
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		// exceeded block range?
@@ -47,7 +34,7 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.WorldSt
 		// if this transaction has suicided accounts, clear their states.
 		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
 
-		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
+		if err != nil {
 			return update, deletedAccounts, fmt.Errorf("failed to get deleted account. %v", err)
 		}
 		// reset storagea
@@ -93,7 +80,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.WorldS
 	updateIter.Release()
 
 	// advance from the latest precomputed updateset to the target block
-	update, _, err := GenerateUpdateSet(block, target, cfg)
+	update, _, err := GenerateUpdateSet(block, target, cfg, udb)
 	if err != nil {
 		return nil, err
 	}

@@ -226,14 +226,10 @@ func DeleteDestroyedAccountsFromWorldState(ws txcontext.WorldState, cfg *Config,
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-func DeleteDestroyedAccountsFromStateDB(sdb state.StateDB, cfg *Config, target uint64) error {
+func DeleteDestroyedAccountsFromStateDB(sdb state.StateDB, cfg *Config, target uint64, aidaDb db.BaseDB) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src, err := db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
+	src := db.MakeDestroyedAccountDBFromBaseDB(aidaDb)
 	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
@@ -244,14 +240,26 @@ func DeleteDestroyedAccountsFromStateDB(sdb state.StateDB, cfg *Config, target u
 		return nil
 	}
 	sdb.BeginSyncPeriod(0)
-	sdb.BeginBlock(target)
-	sdb.BeginTransaction(0)
+	err = sdb.BeginBlock(target)
+	if err != nil {
+		return err
+	}
+	err = sdb.BeginTransaction(0)
+	if err != nil {
+		return err
+	}
 	for _, addr := range accounts {
 		sdb.Suicide(common.Address(addr))
 		log.Debugf("Perform suicide on %v", addr)
 	}
-	sdb.EndTransaction()
-	sdb.EndBlock()
+	err = sdb.EndTransaction()
+	if err != nil {
+		return err
+	}
+	err = sdb.EndBlock()
+	if err != nil {
+		return err
+	}
 	sdb.EndSyncPeriod()
 	return nil
 }

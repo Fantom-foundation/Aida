@@ -14,16 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestSubstateProvider_OpeningANonExistingDbResultsInAnError(t *testing.T) {
-	cfg := utils.Config{}
-	cfg.AidaDb = t.TempDir()
-	// Important: the following code does not panic.
-	_, err := OpenSubstateDb(&cfg, nil)
-	if err == nil {
-		t.Errorf("attempting to open a non-existing substate DB should fail")
-	}
-}
-
 func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockTxConsumer(ctrl)
@@ -35,10 +25,7 @@ func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -63,10 +50,7 @@ func TestSubstateProvider_LowerBoundIsInclusive(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -91,10 +75,7 @@ func TestSubstateProvider_UpperBoundIsExclusive(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -118,10 +99,7 @@ func TestSubstateProvider_RangeCanBeEmpty(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path)
 	defer provider.Close()
 
 	if err := provider.Run(5, 10, toSubstateConsumer(consumer)); err != nil {
@@ -140,10 +118,7 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path)
 	defer provider.Close()
 
 	stop := errors.New("stop!")
@@ -157,11 +132,11 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 }
 
-func openSubstateDb(path string) (Provider[txcontext.TxContext], error) {
+func openSubstateDb(path string) Provider[txcontext.TxContext] {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1
-	return OpenSubstateDb(&cfg, nil)
+	return OpenSubstateProvider(&cfg, nil, nil)
 }
 
 func createSubstateDb(t *testing.T, path string) error {

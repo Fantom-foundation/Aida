@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -11,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,13 +23,16 @@ func RunVm(ctx *cli.Context) error {
 		return err
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return run(cfg, substateIterator, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
@@ -76,5 +81,6 @@ func run(
 		},
 		processor,
 		extensions,
+		nil,
 	)
 }
