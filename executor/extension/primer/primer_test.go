@@ -29,7 +29,7 @@ func TestStateDbPrimerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
 
 }
 
-func TestStateDbPrimerExtension_PrimingDExistingStateDbMissingDbInfo(t *testing.T) {
+func TestStateDbPrimerExtension_PrimingExistingStateDbMissingDbInfo(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
