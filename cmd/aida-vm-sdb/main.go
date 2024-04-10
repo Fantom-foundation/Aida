@@ -9,6 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Carmen/go/database/mpt"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
@@ -167,7 +168,7 @@ func main() {
 
 	go func() {
 		counter := 0
-		fmt.Printf("MU, heap, mallocs, frees, live, sys, gcruns\n")
+		fmt.Printf("MU, heap, mallocs, frees, live, sys, gcruns, cur_nodes, max_nodes\n")
 		for {
 			ticker := time.NewTicker(time.Second)
 			select {
@@ -175,13 +176,15 @@ func main() {
 				var stats runtime.MemStats
 				runtime.ReadMemStats(&stats)
 				fmt.Printf(
-					"MU, %d, %d, %d, %d, %d, %d\n",
+					"MU, %d, %d, %d, %d, %d, %d, %d, %d\n",
 					stats.HeapAlloc,
 					stats.Mallocs,
 					stats.Frees,
 					stats.Mallocs-stats.Frees,
 					stats.Sys,
 					stats.NumGC,
+					mpt.GetCurrentNodeCount(),
+					mpt.GetMaxNodeCount(),
 				)
 				if counter%10 == 0 {
 					name := fmt.Sprintf("logs/heap_profile_%06d.dat", counter/10)
