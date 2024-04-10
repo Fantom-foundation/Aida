@@ -13,7 +13,6 @@ require (
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.13.14
-	github.com/fatih/color v1.15.0
 	github.com/go-echarts/go-echarts/v2 v2.2.5
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/gogo/protobuf v1.3.2
@@ -22,7 +21,6 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/klauspost/compress v1.15.15
 	github.com/mattn/go-sqlite3 v1.14.17
-	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/gomega v1.19.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/paulmach/orb v0.9.0
@@ -33,7 +31,6 @@ require (
 	github.com/urfave/cli/v2 v2.25.7
 	go.uber.org/mock v0.4.0
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
-	golang.org/x/text v0.14.0
 	gonum.org/v1/gonum v0.12.0
 )
 
@@ -75,10 +72,10 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -103,6 +100,7 @@ require (
 	golang.org/x/image v0.11.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6 // indirect
@@ -121,9 +119,9 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 
 // todo remove
-replace github.com/Fantom-foundation/Substate => /Users/petrhanzl/Projects/Work/Substate
+replace github.com/Fantom-foundation/Substate => github.com/Fantom-foundation/Substate v0.0.0-20240409103719-e6c9b7defe48
 
-replace github.com/ethereum/go-ethereum => /Users/petrhanzl/Projects/Work/go-ethereum-substate
+replace github.com/ethereum/go-ethereum => github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v0.0.0-20240402081641-433e313aa881
 

@@ -46,6 +46,8 @@ github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec h1:1Qb69m
 github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec/go.mod h1:CD8UlnlLDiqb36L110uqiP2iSflVjx9g/3U9hCI4q2U=
 github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0 h1:BkwXZsFZvfy9a0GyCTBm/Hs31zjCfmgQVCXy3FQyBaU=
 github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0/go.mod h1:NLvaNtS7elcJ9Q/Ypz7ZzA2DuQqd+UC+Bccue2EVRWk=
+github.com/Fantom-foundation/Substate v0.0.0-20240409103719-e6c9b7defe48 h1:JvIjJGOH+r0Uyco82bW7vV1UUvZRMsA0DW3ieLuVOnQ=
+github.com/Fantom-foundation/Substate v0.0.0-20240409103719-e6c9b7defe48/go.mod h1:A8OgQx7x4vKxVu81ea9XNyxtAj8La4od6wd+ZNTCWMw=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00 h1:yw5QaA7u4t2/j7VIGrMt640Kuhsx6pEIHM3bj10glWc=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00/go.mod h1:Ogv5etzSmM2rQ4eN3OfmyitwWaaPjd4EIDiW/NAbYGk=
 github.com/Fantom-foundation/sonic v0.0.0-20240402081641-433e313aa881 h1:w0j7uKcwW/mtBf0nV67Un2K5umvjV7FgYivGRfiQjpQ=
@@ -168,9 +170,9 @@ github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1m
 github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d/go.mod h1:cXg6YxExXjJnVBQHBLXeUAgxn2UodCpnH306RInaBQk=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/etcd-io/bbolt v1.3.3/go.mod h1:ZF2nL25h33cCyBtcyWeZ2/I3HQOfTP+0PIEvHjkjCrw=
+github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0 h1:/hI9fBSJCzjJ5yE1XzObYsyBnK0Hb6mruqzU4bPG/Jk=
+github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0/go.mod h1:3GuIYSft1VR8gPm8cDgwUPH+jm52A2R6vbzvbYxIhG0=
 github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072/go.mod h1:duJ4Jxv5lDcvg4QuQr0oowTf7dz4/CR8NtyCooz9HL8=
-github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
-github.com/fatih/color v1.15.0/go.mod h1:0h5ZqXfHYED7Bhv2ZJamyIOUej9KtShiJESRwBDUSsw=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
@@ -404,7 +406,6 @@ github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hd
 github.com/mattn/go-isatty v0.0.9/go.mod h1:YNRxwqDuOph6SZLI9vUUz6OYw3QyUt7WiY2yME+cCiQ=
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-isatty v0.0.14/go.mod h1:7GGIvUiUoEMVVmxf/4nioHXj79iQHKdU27kJ6hsGG94=
-github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-isatty v0.0.17 h1:BTarxUcIeDqL27Mc+vyvdWYSL28zpIhv3RoTdsLMPng=
 github.com/mattn/go-isatty v0.0.17/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-runewidth v0.0.9/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
