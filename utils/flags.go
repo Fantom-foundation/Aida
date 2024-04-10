@@ -232,10 +232,6 @@ var (
 		Usage: "select VM implementation",
 		Value: "geth",
 	}
-	WorldStateFlag = cli.PathFlag{
-		Name:  "world-state",
-		Usage: "world state snapshot database path",
-	}
 	MaxNumTransactionsFlag = cli.IntFlag{
 		Name:  "max-tx",
 		Usage: "limit the maximum number of processed transactions, default: unlimited",
@@ -300,18 +296,9 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
-	SourceTableNameFlag = cli.StringFlag{
-		Name:  "source-table",
-		Usage: "name of the database table to be used",
-		Value: "main",
-	}
 	TargetDbFlag = cli.PathFlag{
 		Name:  "target-db",
 		Usage: "target database path",
-	}
-	TrieRootHashFlag = cli.StringFlag{
-		Name:  "root",
-		Usage: "state trie root hash to be analysed",
 	}
 	IncludeStorageFlag = cli.BoolFlag{
 		Name:  "include-storage",
@@ -347,12 +334,6 @@ var (
 		Name:  "update-buffer-size",
 		Usage: "buffer size for holding update set in MB",
 		Value: 1_000_000,
-	}
-	TargetBlockFlag = cli.Uint64Flag{
-		Name:    "target-block",
-		Aliases: []string{"block", "blk"},
-		Usage:   "target block ID",
-		Value:   0,
 	}
 	TargetEpochFlag = cli.Uint64Flag{
 		Name:    "target-epoch",
