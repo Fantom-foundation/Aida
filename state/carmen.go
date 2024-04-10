@@ -47,6 +47,10 @@ func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, arch
 		Archive: archiveType,
 	}
 
+	// For testing, do not commit
+	liveDbCacheSize = 1_000_000_000
+	archiveCacheSize = 1_000_000_000
+
 	properties := make(carmen.Properties)
 	if liveDbCacheSize > 0 {
 		properties.SetInteger(carmen.LiveDBCache, liveDbCacheSize)

@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
+	"runtime/pprof"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -161,6 +164,42 @@ the inclusive range of blocks.`,
 
 // main implements vm-sdb cli.
 func main() {
+
+	go func() {
+		counter := 0
+		fmt.Printf("MU, heap, mallocs, frees, live, sys, gcruns\n")
+		for {
+			ticker := time.NewTicker(time.Second)
+			select {
+			case <-ticker.C:
+				var stats runtime.MemStats
+				runtime.ReadMemStats(&stats)
+				fmt.Printf(
+					"MU, %d, %d, %d, %d, %d, %d\n",
+					stats.HeapAlloc,
+					stats.Mallocs,
+					stats.Frees,
+					stats.Mallocs-stats.Frees,
+					stats.Sys,
+					stats.NumGC,
+				)
+				if counter%10 == 0 {
+					name := fmt.Sprintf("logs/heap_profile_%06d.dat", counter/10)
+					f, err := os.Create(name)
+					if err != nil {
+						fmt.Printf("Failed to create heap profile: %v\n", err)
+						continue
+					}
+					pprof.WriteHeapProfile(f)
+					f.Close()
+					fmt.Printf("Created profile %s\n", name)
+				}
+				counter++
+			}
+		}
+
+	}()
+
 	if err := RunVMApp.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
