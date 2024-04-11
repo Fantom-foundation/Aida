@@ -10,7 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/urfave/cli/v2"
@@ -115,7 +115,7 @@ func generateUpdateSet(ctx *cli.Context) error {
 func GenUpdateSet(cfg *utils.Config, sdb db.SubstateDB, udb db.UpdateDB, ddb *db.DestroyedAccountDB, first, last uint64, interval uint64) error {
 	var (
 		err               error
-		destroyedAccounts []types.Address
+		destroyedAccounts []substatetypes.Address
 		log               = logger.NewLogger(cfg.LogLevel, "Generate Update Set")
 	)
 

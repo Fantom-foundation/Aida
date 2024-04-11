@@ -37,7 +37,7 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction_TransactionLevelParalle
 	)
 
 	executor := NewExecutor[any](ss, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: TransactionLevel}, processor, nil); err != nil {
+	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: TransactionLevel}, processor, nil, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -66,7 +66,7 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction_BlockLevelParallelism(t
 	)
 
 	executor := NewExecutor[any](ss, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: BlockLevel}, processor, nil); err != nil {
+	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: BlockLevel}, processor, nil, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -94,7 +94,7 @@ func TestProcessor_FailingProcessorStopsExecution_TransactionLevelParallelism(t 
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, nil), stop; !errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, nil, nil), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not produce expected error, wanted %v, got %v", got, want)
 	}
 }
@@ -122,7 +122,7 @@ func TestProcessor_FailingProcessorStopsExecution_BlockLevelParallelism(t *testi
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, nil), stop; !errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, nil, nil), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not produce expected error, wanted %v, got %v", got, want)
 	}
 }
@@ -165,7 +165,7 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents_TransactionLevelParallelism(
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -212,7 +212,7 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents_BlockLevelParallelism(t *tes
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 12, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -243,7 +243,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered_T
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension}), stop; !errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension}, nil), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not fail as expected, wanted %v, got %v", want, got)
 	}
 }
@@ -275,7 +275,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered_B
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension}), stop; !errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension}, nil), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not fail as expected, wanted %v, got %v", want, got)
 	}
 }
@@ -294,7 +294,7 @@ func TestProcessor_EmptyIntervalEmitsNoEvents_TransactionLevelParallelism(t *tes
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 10, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 10, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -313,7 +313,7 @@ func TestProcessor_EmptyIntervalEmitsNoEvents_BlockLevelParallelism(t *testing.T
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 10, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 10, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -357,7 +357,7 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder_TransactionLevelParallel
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 11, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension1, extension2}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 11, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension1, extension2}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -407,7 +407,7 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder_BlockLevelParallelism(t 
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if err := executor.Run(Params{From: 10, To: 11, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension1, extension2}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 11, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension1, extension2}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -430,7 +430,7 @@ func TestProcessor_FailingExtensionPreEventCausesExecutionToStop_TransactionLeve
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension1, extension2}), resultError; errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension1, extension2}, nil), resultError; errors.Is(got, want) {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
 }
@@ -453,7 +453,7 @@ func TestProcessor_FailingExtensionPreEventCausesExecutionToStop_BlockLevelParal
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension1, extension2}), resultError; errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension1, extension2}, nil), resultError; errors.Is(got, want) {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
 }
@@ -494,7 +494,7 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop_TransactionLev
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension1, extension2}), stop; strings.Compare(got.Error(), want.Error()) != 0 {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: TransactionLevel}, processor, []Extension[any]{extension1, extension2}, nil), stop; strings.Compare(got.Error(), want.Error()) != 0 {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
 }
@@ -538,7 +538,7 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop_BlockLevelPara
 	)
 
 	executor := NewExecutor[any](substate, "DEBUG")
-	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension1, extension2}), stop; strings.Compare(got.Error(), want.Error()) != 0 {
+	if got, want := executor.Run(Params{From: 10, To: 20, ParallelismGranularity: BlockLevel}, processor, []Extension[any]{extension1, extension2}, nil), stop; strings.Compare(got.Error(), want.Error()) != 0 {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
 }
@@ -576,6 +576,7 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions_Transaction
 		Params{From: 10, To: 11, State: state, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -617,6 +618,7 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions_BlockLevelP
 		Params{From: 10, To: 11, State: state, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -661,6 +663,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun_T
 		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -709,6 +712,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun_B
 		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -743,6 +747,7 @@ func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested_Transa
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		nil,
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -776,6 +781,7 @@ func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested_BlockL
 	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
+		nil,
 		nil,
 	)
 	if err != nil {
@@ -843,6 +849,7 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution_TransactionLevelPara
 		Params{From: 10, To: 12, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -904,6 +911,7 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution_BlockLevelParallelis
 		Params{From: 10, To: 12, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -934,6 +942,7 @@ func TestProcessor_ProcessErrorAbortsProcessing_TransactionLevelParallelism(t *t
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		nil,
+		nil,
 	)
 	if got, want := err, stop; !errors.Is(got, want) {
 		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
@@ -963,6 +972,7 @@ func TestProcessor_ProcessErrorAbortsProcessing_BlockLevelParallelism(t *testing
 	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
+		nil,
 		nil,
 	)
 	if got, want := err, stop; !errors.Is(got, want) {
@@ -1001,6 +1011,7 @@ func TestProcessor_PreEventErrorAbortsProcessing_TransactionLevelParallelism(t *
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if got, want := err, stop; !errors.Is(got, want) {
 		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
@@ -1040,6 +1051,7 @@ func TestProcessor_PreEventErrorAbortsProcessing_BlockLevelParallelism(t *testin
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if got, want := err, stop; !errors.Is(got, want) {
 		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
@@ -1077,6 +1089,7 @@ func TestProcessor_PostEventErrorAbortsProcessing_TransactionLevelParallelism(t 
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if got, want := err, stop; !errors.Is(got, want) {
 		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
@@ -1116,6 +1129,7 @@ func TestProcessor_PostEventErrorAbortsProcessing_BlockLevelParallelism(t *testi
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if got, want := err, stop; !errors.Is(got, want) {
 		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
@@ -1162,6 +1176,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensions_Transactio
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[*substate.Substate]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -1204,6 +1219,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensions_BlockLevel
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[*substate.Substate]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -1243,6 +1259,7 @@ func TestProcessor_APanicInAnExecutorSkipsPostRunActions_TransactionLevelParalle
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 }
 
@@ -1280,6 +1297,7 @@ func TestProcessor_APanicInAnExecutorSkipsPostRunActions_BlockLevelParallelism(t
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 }
 
@@ -1325,6 +1343,7 @@ func TestProcessor_SingleBlockRun_BlockLevelParallelism(t *testing.T) {
 		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
+		nil,
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
@@ -1372,7 +1391,7 @@ func TestProcessor_MultipleBlocksRun_BlockLevelParallelism(t *testing.T) {
 	executor := NewExecutor[any](substate, "DEBUG")
 	if err := executor.Run(Params{From: 10, To: 12, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1400,7 +1419,7 @@ func TestProcessor_PanicCaughtInPreRunIsProperlyLogged_TransactionLevelParalleli
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{ParallelismGranularity: TransactionLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1428,7 +1447,7 @@ func TestProcessor_PanicCaughtInPreRunIsProperlyLogged_BlockLevelParallelism(t *
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1469,7 +1488,7 @@ func TestProcessor_PanicCaughtInPreBlockIsProperlyLogged_BlockLevelParallelism(t
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1510,7 +1529,7 @@ func TestProcessor_PanicCaughtInPreTransactionIsProperlyLogged_TransactionLevelP
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1552,7 +1571,7 @@ func TestProcessor_PanicCaughtInPreTransactionIsProperlyLogged_BlockLevelParalle
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1595,7 +1614,7 @@ func TestProcessor_PanicCaughtInPostTransactionIsProperlyLogged_TransactionLevel
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1639,7 +1658,7 @@ func TestProcessor_PanicCaughtInPostTransactionIsProperlyLogged_BlockLevelParall
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1684,7 +1703,7 @@ func TestProcessor_PanicCaughtInPostBlockIsProperlyLogged_BlockLevelParallelism(
 	executor := newExecutor[any](substate, log)
 	if err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension}); err != nil {
+		[]Extension[any]{extension}, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -1721,7 +1740,7 @@ func TestProcessor_PanicCaughtInPostRunIsReturned_TransactionLevelParallelism(t 
 	executor := newExecutor[any](substate, log)
 	err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
-		[]Extension[any]{extension})
+		[]Extension[any]{extension}, nil)
 	if err == nil {
 		t.Error("run must return an error")
 	}
@@ -1767,7 +1786,7 @@ func TestProcessor_PanicCaughtInPostRunIsReturned_BlockLevelParallelism(t *testi
 	executor := newExecutor[any](substate, log)
 	err := executor.Run(Params{From: 1, To: 2, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
-		[]Extension[any]{extension})
+		[]Extension[any]{extension}, nil)
 	if err == nil {
 		t.Error("run must return an error")
 	}

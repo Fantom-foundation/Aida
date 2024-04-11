@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -36,12 +36,12 @@ func (db *StateDB) ToWorldState(ctx context.Context) (substate.WorldState, error
 			//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())
 			continue
 		}
-		storage := make(map[types.Hash]types.Hash, len(acc.Storage))
+		storage := make(map[substatetypes.Hash]substatetypes.Hash, len(acc.Storage))
 		for h, v := range acc.Storage {
 			// We use the hashed keys in the first iteration, before resolving them in a bulk fetch
 			// from the DB and rewritting them below.
 			needed[h] = true
-			storage[types.Hash(h)] = types.Hash(v)
+			storage[substatetypes.Hash(h)] = substatetypes.Hash(v)
 		}
 
 		ss := substate.Account{
@@ -51,7 +51,7 @@ func (db *StateDB) ToWorldState(ctx context.Context) (substate.WorldState, error
 			Code:    acc.Code,
 		}
 
-		ssAccounts[types.Address(address)] = &ss
+		ssAccounts[substatetypes.Address(address)] = &ss
 	}
 
 	if iter.Error() != nil {
@@ -66,11 +66,11 @@ func (db *StateDB) ToWorldState(ctx context.Context) (substate.WorldState, error
 
 	// Rewrite storage keys according to resolved keys.
 	for _, value := range ssAccounts {
-		storage := make(map[types.Hash]types.Hash, len(value.Storage))
+		storage := make(map[substatetypes.Hash]substatetypes.Hash, len(value.Storage))
 		for h, v := range value.Storage {
 			s, found := resolved[common.Hash(h)]
 			if found {
-				storage[types.Hash(s)] = v
+				storage[substatetypes.Hash(s)] = v
 			} else {
 				// not all storage addresses are currently exportable - missing pre genesis data
 				//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())

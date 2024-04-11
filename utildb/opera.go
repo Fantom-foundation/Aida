@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/cmd/util-worldstate/state"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	wsOpera "github.com/Fantom-foundation/Aida/world-state/db/opera"
@@ -144,9 +143,9 @@ func (opera *aidaOpera) prepareDumpCliContext() error {
 	}()
 	opera.cfg.OperaDb = filepath.Join(opera.cfg.OperaDb, "chaindata/leveldb-fsh/")
 	opera.cfg.DbVariant = "ldb"
-	err := state.DumpState(opera.ctx, opera.cfg)
-	if err != nil {
-		return err
-	}
+	//err := state.DumpState(opera.ctx, opera.cfg) todo uncomment when worldstate is resolved
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }

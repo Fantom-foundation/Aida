@@ -52,7 +52,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 	}
 
 	log.Notice("Generate Lachesis world state")
-	lachesis, err := utildb.CreateLachesisWorldState(cfg)
+	lachesis, err := utildb.CreateLachesisWorldState(cfg, sdb)
 	if err != nil {
 		return err
 	}

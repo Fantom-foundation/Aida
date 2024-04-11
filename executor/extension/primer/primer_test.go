@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
@@ -104,8 +103,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			alloc, _ := utils.MakeWorldState(t)
-			ws := substatecontext.NewWorldState(alloc)
+			ws, _ := utils.MakeWorldState(t)
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB

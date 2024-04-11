@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -36,7 +36,7 @@ func GetTxType(to *common.Address, alloc substate.WorldState) string {
 	if to == nil {
 		return "create"
 	}
-	account, hasReceiver := alloc[types.Address(*to)]
+	account, hasReceiver := alloc[substatetypes.Address(*to)]
 	if to != nil && (!hasReceiver || len(account.Code) == 0) {
 		return "transfer"
 	}

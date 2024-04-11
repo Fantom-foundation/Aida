@@ -8,7 +8,6 @@ import (
 	statedb "github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/state"
 )
 
@@ -23,7 +22,6 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 		fallthrough
 	default:
 		// offTheChainStateDb is default value
-		substate.RecordReplay = true
 		state.EnableRecordReplay()
 		return &temporaryOffTheChainStatePrepper{
 			cfg: cfg,

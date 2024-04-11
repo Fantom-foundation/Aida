@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -34,18 +34,18 @@ Output log format: (block, timestamp, transaction, account, storage update size,
 }
 
 // computeStorageSize computes the number of non-zero storage entries
-func computeStorageSizes(inUpdateSet map[types.Hash]types.Hash, outUpdateSet map[types.Hash]types.Hash) (int64, uint64, uint64) {
+func computeStorageSizes(inUpdateSet map[substatetypes.Hash]substatetypes.Hash, outUpdateSet map[substatetypes.Hash]substatetypes.Hash) (int64, uint64, uint64) {
 	deltaSize := int64(0)
 	inUpdateSize := uint64(0)
 	outUpdateSize := uint64(0)
 	wordSize := uint64(32) //bytes
 	for address, outValue := range outUpdateSet {
 		if inValue, found := inUpdateSet[address]; found {
-			if (inValue == types.Hash{} && outValue != types.Hash{}) {
+			if (inValue == substatetypes.Hash{} && outValue != substatetypes.Hash{}) {
 				// storage increases by one new cell
 				// (cell is empty in in-storage)
 				deltaSize++
-			} else if (inValue != types.Hash{} && outValue == types.Hash{}) {
+			} else if (inValue != substatetypes.Hash{} && outValue == substatetypes.Hash{}) {
 				// storage shrinks by one new cell
 				// (cell is empty in out-storage)
 				deltaSize--
@@ -53,12 +53,12 @@ func computeStorageSizes(inUpdateSet map[types.Hash]types.Hash, outUpdateSet map
 		} else {
 			// storage increases by one new cell
 			// (cell is not found in in-storage but found in out-storage)
-			if (outValue != types.Hash{}) {
+			if (outValue != substatetypes.Hash{}) {
 				deltaSize++
 			}
 		}
 		// compute update size
-		if (outValue != types.Hash{}) {
+		if (outValue != substatetypes.Hash{}) {
 			outUpdateSize++
 		}
 	}
@@ -66,11 +66,11 @@ func computeStorageSizes(inUpdateSet map[types.Hash]types.Hash, outUpdateSet map
 		if _, found := outUpdateSet[address]; !found {
 			// storage shrinks by one cell
 			// (The cell does not exist for an address in in-storage)
-			if (inValue != types.Hash{}) {
+			if (inValue != substatetypes.Hash{}) {
 				deltaSize--
 			}
 		}
-		if (inValue != types.Hash{}) {
+		if (inValue != substatetypes.Hash{}) {
 			inUpdateSize++
 		}
 	}
@@ -92,14 +92,14 @@ func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskP
 			deltaSize, inUpdateSize, outUpdateSize = computeStorageSizes(inputAccount.Storage, outputAccount.Storage)
 			// account exists in output substate but not input substate
 		} else {
-			deltaSize, inUpdateSize, outUpdateSize = computeStorageSizes(map[types.Hash]types.Hash{}, outputAccount.Storage)
+			deltaSize, inUpdateSize, outUpdateSize = computeStorageSizes(map[substatetypes.Hash]substatetypes.Hash{}, outputAccount.Storage)
 		}
 		fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n", block, timestamp, tx, wallet.String(), deltaSize, inUpdateSize, outUpdateSize)
 	}
 	// account exists in input substate but not output substate
 	for wallet, inputAccount := range st.InputSubstate {
 		if _, found := st.OutputSubstate[wallet]; !found {
-			deltaSize, inUpdateSize, outUpdateSize := computeStorageSizes(inputAccount.Storage, map[types.Hash]types.Hash{})
+			deltaSize, inUpdateSize, outUpdateSize := computeStorageSizes(inputAccount.Storage, map[substatetypes.Hash]substatetypes.Hash{})
 			fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n", block, timestamp, tx, wallet.String(), deltaSize, inUpdateSize, outUpdateSize)
 		}
 	}

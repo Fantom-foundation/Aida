@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -52,30 +52,30 @@ func (i *mockSubstateIterator) Value() *substate.Substate {
 		panic("invalid iterator position")
 	}
 
-	storage := make(map[types.Hash]types.Hash)
+	storage := make(map[substatetypes.Hash]substatetypes.Hash)
 	for k, v := range i.list[i.current].storage {
-		storage[types.Hash(k)] = types.Hash(v)
+		storage[substatetypes.Hash(k)] = substatetypes.Hash(v)
 	}
 
 	// we mention each address as many times as we can (6x)
 	st := substate.Substate{
 		Block:       uint64(len(i.list)),
 		Transaction: i.current,
-		InputSubstate: map[types.Address]*substate.Account{
-			types.Address(i.list[i.current].addr): {Storage: storage},
+		InputSubstate: map[substatetypes.Address]*substate.Account{
+			substatetypes.Address(i.list[i.current].addr): {Storage: storage},
 		},
-		OutputSubstate: map[types.Address]*substate.Account{
-			types.Address(i.list[i.current].addr): {Storage: storage},
+		OutputSubstate: map[substatetypes.Address]*substate.Account{
+			substatetypes.Address(i.list[i.current].addr): {Storage: storage},
 		},
 		Env: &substate.Env{
-			Coinbase: types.Address(i.list[i.current].addr),
+			Coinbase: substatetypes.Address(i.list[i.current].addr),
 		},
 		Message: &substate.Message{
-			From: types.Address(i.list[i.current].addr),
-			To:   (*types.Address)(&i.list[i.current].addr),
+			From: substatetypes.Address(i.list[i.current].addr),
+			To:   (*substatetypes.Address)(&i.list[i.current].addr),
 		},
 		Result: &substate.Result{
-			ContractAddress: types.Address(i.list[i.current].addr),
+			ContractAddress: substatetypes.Address(i.list[i.current].addr),
 		},
 	}
 	return &st

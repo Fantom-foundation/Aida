@@ -5,7 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -26,12 +26,12 @@ func (a *account) GetBalance() *big.Int {
 }
 
 func (a *account) HasStorageAt(key common.Hash) bool {
-	_, ok := a.Storage[types.Hash(key)]
+	_, ok := a.Storage[substatetypes.Hash(key)]
 	return ok
 }
 
 func (a *account) GetStorageAt(hash common.Hash) common.Hash {
-	return common.Hash(a.Storage[types.Hash(hash)])
+	return common.Hash(a.Storage[substatetypes.Hash(hash)])
 }
 
 func (a *account) GetCode() []byte {

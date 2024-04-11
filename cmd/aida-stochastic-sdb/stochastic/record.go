@@ -12,7 +12,6 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/Substate/db"
 	gethstate "github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
@@ -42,7 +41,6 @@ last block for recording events.`,
 
 // stochasticRecordAction implements recording of events.
 func stochasticRecordAction(ctx *cli.Context) error {
-	substate.RecordReplay = true
 	gethstate.EnableRecordReplay()
 	var err error
 
@@ -67,7 +65,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
 	defer sdb.Close()
-	iter := sdb.NewSubstateIterator(int(cfg.First), ctx.Int(utils.WorkersFlag.Name))
+	iter := sdb.NewSubstateIterator(int(cfg.First), cfg.Workers)
 	defer iter.Release()
 	oldBlock := uint64(math.MaxUint64) // set to an infeasible block
 	var (

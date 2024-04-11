@@ -11,7 +11,6 @@ import (
 	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
@@ -51,7 +50,6 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	substate.RecordReplay = true
 	state.EnableRecordReplay()
 	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {

@@ -25,7 +25,7 @@ func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider := openSubstateDb(path)
+	provider := openSubstateDb(path, t)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -50,7 +50,7 @@ func TestSubstateProvider_LowerBoundIsInclusive(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider := openSubstateDb(path)
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -75,7 +75,7 @@ func TestSubstateProvider_UpperBoundIsExclusive(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider := openSubstateDb(path)
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -99,7 +99,7 @@ func TestSubstateProvider_RangeCanBeEmpty(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider := openSubstateDb(path)
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	if err := provider.Run(5, 10, toSubstateConsumer(consumer)); err != nil {
@@ -118,7 +118,7 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider := openSubstateDb(path)
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	stop := errors.New("stop!")
@@ -132,11 +132,15 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 }
 
-func openSubstateDb(path string) Provider[txcontext.TxContext] {
+func openSubstateDb(path string, t *testing.T) Provider[txcontext.TxContext] {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1
-	return OpenSubstateProvider(&cfg, nil, nil)
+	aidaDb, err := db.NewDefaultBaseDB(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return OpenSubstateProvider(&cfg, nil, aidaDb)
 }
 
 func createSubstateDb(t *testing.T, path string) error {

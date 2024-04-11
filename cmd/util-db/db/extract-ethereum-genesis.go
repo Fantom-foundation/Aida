@@ -10,7 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/urfave/cli/v2"
 )
@@ -52,7 +52,7 @@ func extractEthereumGenesis(ctx *cli.Context) error {
 
 	log.Noticef("PutUpdateSet(0, %v, []common.Address{})", ws)
 
-	return udb.PutUpdateSet(&updateset.UpdateSet{WorldState: ws, Block: 0}, make([]types.Address, 0))
+	return udb.PutUpdateSet(&updateset.UpdateSet{WorldState: ws, Block: 0}, make([]substatetypes.Address, 0))
 }
 
 // loadEthereumGenesisWorldState loads opera initial world state from worldstate-db as WorldState
@@ -80,7 +80,7 @@ func loadEthereumGenesisWorldState(genesis string) (substate.WorldState, error) 
 	// loop over all the accounts
 	for k, v := range alloc.(map[string]interface{}) {
 		// Convert the string key back to a common.Address
-		address := types.HexToAddress(k)
+		address := substatetypes.HexToAddress(k)
 
 		balance, _ := new(big.Int).SetString(v.(map[string]interface{})["balance"].(string), 10)
 		ssAccounts[address] = substate.NewAccount(0, balance, []byte{})

@@ -8,14 +8,14 @@ import (
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
-	"github.com/Fantom-foundation/Substate/types"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 )
 
 // GenerateUpdateSet generates an update set for a block range.
-func GenerateUpdateSet(first uint64, last uint64, cfg *Config, aidaDb db.BaseDB) (substate.WorldState, []types.Address, error) {
+func GenerateUpdateSet(first uint64, last uint64, cfg *Config, aidaDb db.BaseDB) (substate.WorldState, []substatetypes.Address, error) {
 	var (
 		deletedAccountDB *db.DestroyedAccountDB
-		deletedAccounts  []types.Address
+		deletedAccounts  []substatetypes.Address
 	)
 	sdb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
 	stateIter := sdb.NewSubstateIterator(int(first), cfg.Workers)
@@ -90,10 +90,10 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.WorldS
 }
 
 // ClearAccountStorage clears storage of all input accounts.
-func ClearAccountStorage(update substate.WorldState, accounts []types.Address) {
+func ClearAccountStorage(update substate.WorldState, accounts []substatetypes.Address) {
 	for _, addr := range accounts {
 		if _, found := update[addr]; found {
-			update[addr].Storage = make(map[types.Hash]types.Hash)
+			update[addr].Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 		}
 	}
 }

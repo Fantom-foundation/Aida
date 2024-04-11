@@ -407,7 +407,7 @@ func TestUtilsConfig_setChainIdFromFlag(t *testing.T) {
 }
 
 // TestUtilsConfig_getDefaultChainId tests if unknown chainID will be replaced with the mainnet chainID
-func TestUtilsConafig_setDefaultChainId(t *testing.T) {
+func TestUtilsConfig_setDefaultChainId(t *testing.T) {
 	// prepare components
 	var (
 		err      error
