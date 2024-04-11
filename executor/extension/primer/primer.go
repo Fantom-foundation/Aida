@@ -53,7 +53,7 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 		return nil
 	}
 
-	if p.cfg.First == 0 || primingStartBlock == p.cfg.First {
+	if primingStartBlock == p.cfg.First {
 		p.log.Debugf("skipping priming; first priming block %v; first block %v", primingStartBlock-1, p.cfg.First)
 		return nil
 	}
@@ -76,9 +76,7 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 	return p.prime(ctx.State)
 }
 
-// prime the stateDb to given first block.
-// stateDb		state-db to prime
-// block		current block position
+// prime advances stateDb to given first block
 func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 	var (
 		totalSize uint64             // total size of unprimed update set

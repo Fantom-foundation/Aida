@@ -64,7 +64,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
-		err := pc.loadExistingAccountsCache(ws)
+		err := pc.loadExistingAccountsIntoCache(ws)
 		if err != nil {
 			return err
 		}
@@ -100,8 +100,9 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 	return nil
 }
 
-// loadExistingAccountsCache preloads pc.exist cache with account existence in db
-func (pc *PrimeContext) loadExistingAccountsCache(ws txcontext.WorldState) error {
+// loadExistingAccountsIntoCache checks whether accounts to be primed already exists in the statedb.
+// If so, it preloads pc.exist cache with the account existence.
+func (pc *PrimeContext) loadExistingAccountsIntoCache(ws txcontext.WorldState) error {
 	err := pc.db.BeginBlock(pc.block)
 	if err != nil {
 		return fmt.Errorf("cannot begin block; %w", err)
@@ -186,7 +187,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	err := pc.loadExistingAccountsCache(ws)
+	err := pc.loadExistingAccountsIntoCache(ws)
 	if err != nil {
 		return err
 	}
