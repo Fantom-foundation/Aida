@@ -1,11 +1,9 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"

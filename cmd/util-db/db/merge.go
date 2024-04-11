@@ -7,8 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,13 +46,13 @@ func merge(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
 
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	targetDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
 	var (
-		dbs []ethdb.Database
+		dbs []db.BaseDB
 		md  *utils.AidaDbMetadata
 	)
 

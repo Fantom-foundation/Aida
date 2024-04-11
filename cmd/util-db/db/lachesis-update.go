@@ -69,7 +69,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 	if lastTx.Env.Number < lachesisLastBlock {
 		// update untracked changes
 		log.Notice("Calculate difference set")
-		untrackedState = opera.Diff(lachesis)
+		untrackedState = opera.WorldState.Diff(lachesis)
 		// create a transition transaction
 		lastTx.Env.Number = lachesisLastBlock
 		transitionTx := substate.NewSubstate(

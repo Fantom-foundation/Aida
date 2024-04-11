@@ -5,18 +5,17 @@ import (
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/updateset"
 )
 
 // address of sfc contract in Hex
 const sfcAddrHex = "0xFC00FACE00000000000000000000000000000000"
 
 // LoadOperaWorldState loads opera initial world state from worldstate-db as SubstateAlloc
-func LoadOperaWorldState(path string) (substate.WorldState, error) {
+func LoadOperaWorldState(path string) (*updateset.UpdateSet, error) {
 	//TODO: the initial world state is expected to be in updateset format
 	udb, err := db.NewDefaultUpdateDB(path)
 	if err != nil {
