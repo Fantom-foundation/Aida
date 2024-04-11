@@ -188,13 +188,11 @@ type Config struct {
 	SkipPriming            bool           // skip priming of the state DB
 	SkipStateHashScrapping bool           // if enabled, then state-hashes are not loaded from rpc
 	SnapshotDepth          int            // depth of snapshot history
-	SourceTableName        string         // represents the name of a source DB table
 	SrcDbReadonly          bool           // if false, make a copy the source statedb
 	StateDbSrc             string         // directory to load an existing State DB data
 	StateValidationMode    ValidationMode // state validation mode
 	SubstateDb             string         // substate directory
 	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
-	TargetBlock            uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	TargetDb               string         // represents the path of a target DB
 	TargetEpoch            uint64         // represents the ID of target epoch to be reached by autogen patch generator
 	Trace                  bool           // trace flag
@@ -202,7 +200,6 @@ type Config struct {
 	TraceFile              string         // name of trace file
 	TrackProgress          bool           // enables track progress logging
 	TransactionLength      uint64         // determines indirectly the length of a transaction
-	TrieRootHash           string         // represents a hash of a state trie root to be decoded
 	UpdateBufferSize       uint64         // cache size in Bytes
 	UpdateDb               string         // update-set directory
 	UpdateOnFailure        bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
@@ -213,7 +210,6 @@ type Config struct {
 	ValuesNumber           int64          // number of values to generate
 	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
-	WorldStateDb           string         // path to worldstate
 	TxGeneratorType        []string       // type of the application used for transaction generation
 }
 

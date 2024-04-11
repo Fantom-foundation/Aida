@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"context"
+	"errors"
 	"fmt"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
@@ -96,15 +96,4 @@ func ClearAccountStorage(update substate.WorldState, accounts []substatetypes.Ad
 			update[addr].Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 		}
 	}
-}
-
-// GenerateFirstOperaWorldState generates an initial world-state for a block.
-func GenerateFirstOperaWorldState(worldStateDbDir string, cfg *Config) (substate.WorldState, error) {
-	worldStateDB, err := snapshot.OpenStateDB(worldStateDbDir)
-	if err != nil {
-		return nil, err
-	}
-	defer snapshot.MustCloseStateDB(worldStateDB)
-	ws, err := worldStateDB.ToWorldState(context.Background())
-	return ws, err
 }

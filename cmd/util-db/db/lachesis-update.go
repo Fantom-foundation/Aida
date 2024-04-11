@@ -19,8 +19,8 @@ var LachesisUpdateCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&utils.AidaDbFlag,
+		&utils.UpdateDbFlag,
 		&utils.WorkersFlag,
-		&utils.WorldStateFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -45,8 +45,9 @@ func lachesisUpdate(ctx *cli.Context) error {
 	}
 	defer sdb.Close()
 
+	// load initial opera initial state in updateset format
 	log.Notice("Load Opera initial world state")
-	opera, err := utildb.LoadOperaWorldState(cfg.WorldStateDb)
+	opera, err := utildb.LoadOperaWorldState(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}

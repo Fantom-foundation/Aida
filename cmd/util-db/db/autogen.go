@@ -24,7 +24,6 @@ var AutoGenCommand = cli.Command{
 		&utils.OutputFlag,
 		&utils.TargetEpochFlag,
 		&utils.UpdateBufferSizeFlag,
-		&utils.WorldStateFlag,
 		&utils.WorkersFlag,
 		&logger.LogLevelFlag,
 	},

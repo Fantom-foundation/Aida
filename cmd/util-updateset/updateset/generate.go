@@ -3,7 +3,6 @@ package updateset
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -29,7 +28,6 @@ var GenUpdateSetCommand = cli.Command{
 		&utils.UpdateDbFlag,
 		&utils.UpdateBufferSizeFlag,
 		&utils.ValidateFlag,
-		&utils.WorldStateFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -126,30 +124,7 @@ func GenUpdateSet(cfg *utils.Config, sdb db.SubstateDB, udb db.UpdateDB, ddb *db
 		return err
 	}
 
-	skipOperaWorldState := true
-	// legacy support if a user wants to generate update set from the first opera world state
-	// store world state if a path is provided
-	worldState := cfg.WorldStateDb
-	if _, err := os.Stat(worldState); err == nil {
-		skipOperaWorldState = false
-	}
-
 	update := make(substate.WorldState)
-	if !skipOperaWorldState {
-		first = utils.FirstOperaBlock
-		log.Notice("Load initial worldstate and store its WorldState")
-		ws, err := utils.GenerateFirstOperaWorldState(worldState, cfg)
-		if err != nil {
-			return err
-		}
-		size := update.EstimateIncrementalSize(ws)
-		log.Infof("Write block %v to updateDB", first-1)
-		err = udb.PutUpdateSet(&updateset.UpdateSet{WorldState: ws, Block: first - 1}, destroyedAccounts)
-		if err != nil {
-			return fmt.Errorf("cannot put updateset; %w", err)
-		}
-		log.Infof("\tAccounts: %v, Size: %v", len(ws), size)
-	}
 
 	iter := sdb.NewSubstateIterator(int(first), cfg.Workers)
 	defer iter.Release()

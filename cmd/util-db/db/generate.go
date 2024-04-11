@@ -18,7 +18,6 @@ var GenerateCommand = cli.Command{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&utils.OperaDbFlag,
-		&utils.WorldStateFlag,
 		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
 		&utils.DbTmpFlag,
