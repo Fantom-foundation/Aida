@@ -17,8 +17,8 @@ var LachesisUpdateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
+		&utils.UpdateDbFlag,
 		&substate.SubstateDbFlag,
-		&substate.UpdateDbFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
