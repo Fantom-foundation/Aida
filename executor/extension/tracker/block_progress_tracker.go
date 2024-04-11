@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-redis/redis"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -28,9 +30,16 @@ func MakeBlockProgressTracker(cfg *utils.Config, reportFrequency int) executor.E
 }
 
 func makeBlockProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logger) *blockProgressTracker {
+
+	var pub *RedisPublisher
+	if cfg.RegisterRun != "" {
+		pub, _ = MakeRedisPublisher("95.217.204.177", 6379, "aida")
+	}
+
 	return &blockProgressTracker{
 		progressTracker:   newProgressTracker[txcontext.TxContext](cfg, reportFrequency, log),
 		lastReportedBlock: int(cfg.First) - (int(cfg.First) % reportFrequency),
+		pub: pub,
 	}
 }
 
@@ -41,6 +50,8 @@ type blockProgressTracker struct {
 	overallInfo       substateProcessInfo
 	lastIntervalInfo  substateProcessInfo
 	lastReportedBlock int
+
+	pub	*RedisPublisher
 }
 
 type substateProcessInfo struct {
@@ -105,8 +116,67 @@ func (t *blockProgressTracker) PostBlock(state executor.State[txcontext.TxContex
 		overallBlkRate, overallTxRate, overallGasRate,
 	)
 
+	if t.pub != nil {
+		t.pub.Publish( map[string]any{
+			"start": boundary,
+			"end": boundary + t.reportFrequency,
+			"memory": memory,
+			"txCount": intervalTxRate,
+			"gas": intervalGasRate,
+			"totalTxCount": overallTxRate,
+			"totalGas": overallGasRate,
+			"lDisk": disk,
+			"aDisk": 0,
+		})
+	}
+
 	t.lastReportedBlock = boundary
 	t.startOfLastInterval = now
 
 	return nil
+}
+
+
+type Message map[string]any
+type Publisher interface {
+	Publish(Message) error
+}
+
+type NilPublisher struct {}
+func (_ *NilPublisher) Publish(m Message) error {
+	return nil
+}
+
+type RedisPublisher struct {
+	NilPublisher
+	r *redis.Client
+	topic string
+	log logger.Logger
+}
+
+func MakeRedisPublisher(addr string, port int, topic string) (*RedisPublisher, error) {
+	log := logger.NewLogger("Error", "RedisPublisher")
+
+	r := redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf("%s:%d", addr, port),
+	})
+
+	_, err := r.Ping().Result()
+	if err != nil {
+		log.Fatalf("Unable to connect to Redis, %s", err)
+		return nil, err
+	}
+
+	log.Noticef("Connected to Redis server, %s:%d", addr, port)
+
+	return &RedisPublisher{r: r, topic: topic, log: log}, nil
+}
+
+func (pub *RedisPublisher) Publish(m Message) error {
+	err := pub.r.XAdd(&redis.XAddArgs{
+		Stream: pub.topic,
+		Values: m,
+	}).Err()
+
+	return err
 }
