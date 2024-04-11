@@ -1,12 +1,10 @@
 package utils
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -102,15 +100,4 @@ func ClearAccountStorage(update substate.SubstateAlloc, accounts []common.Addres
 			update[addr].Storage = make(map[common.Hash]common.Hash)
 		}
 	}
-}
-
-// GenerateFirstOperaWorldState generates an initial world-state for a block.
-func GenerateFirstOperaWorldState(worldStateDbDir string, cfg *Config) (substate.SubstateAlloc, error) {
-	worldStateDB, err := snapshot.OpenStateDB(worldStateDbDir)
-	if err != nil {
-		return nil, err
-	}
-	defer snapshot.MustCloseStateDB(worldStateDB)
-	ws, err := worldStateDB.ToSubstateAlloc(context.Background())
-	return ws, err
 }
