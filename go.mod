@@ -13,6 +13,7 @@ require (
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/fatih/color v1.15.0
 	github.com/go-echarts/go-echarts/v2 v2.2.5
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/martian v2.1.0+incompatible

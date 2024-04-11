@@ -39,7 +39,7 @@ func makeBlockProgressTracker(cfg *utils.Config, reportFrequency int, log logger
 	return &blockProgressTracker{
 		progressTracker:   newProgressTracker[txcontext.TxContext](cfg, reportFrequency, log),
 		lastReportedBlock: int(cfg.First) - (int(cfg.First) % reportFrequency),
-		pub: pub,
+		pub:               pub,
 	}
 }
 
@@ -51,7 +51,7 @@ type blockProgressTracker struct {
 	lastIntervalInfo  substateProcessInfo
 	lastReportedBlock int
 
-	pub	*RedisPublisher
+	pub *RedisPublisher
 }
 
 type substateProcessInfo struct {
@@ -117,16 +117,16 @@ func (t *blockProgressTracker) PostBlock(state executor.State[txcontext.TxContex
 	)
 
 	if t.pub != nil {
-		t.pub.Publish( map[string]any{
-			"start": boundary,
-			"end": boundary + t.reportFrequency,
-			"memory": memory,
-			"txCount": intervalTxRate,
-			"gas": intervalGasRate,
+		t.pub.Publish(map[string]any{
+			"start":        boundary,
+			"end":          boundary + t.reportFrequency,
+			"memory":       memory,
+			"txCount":      intervalTxRate,
+			"gas":          intervalGasRate,
 			"totalTxCount": overallTxRate,
-			"totalGas": overallGasRate,
-			"lDisk": disk,
-			"aDisk": 0,
+			"totalGas":     overallGasRate,
+			"lDisk":        disk,
+			"aDisk":        0,
 		})
 	}
 
@@ -136,22 +136,22 @@ func (t *blockProgressTracker) PostBlock(state executor.State[txcontext.TxContex
 	return nil
 }
 
-
 type Message map[string]any
 type Publisher interface {
 	Publish(Message) error
 }
 
-type NilPublisher struct {}
+type NilPublisher struct{}
+
 func (_ *NilPublisher) Publish(m Message) error {
 	return nil
 }
 
 type RedisPublisher struct {
 	NilPublisher
-	r *redis.Client
+	r     *redis.Client
 	topic string
-	log logger.Logger
+	log   logger.Logger
 }
 
 func MakeRedisPublisher(addr string, port int, topic string) (*RedisPublisher, error) {
