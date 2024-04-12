@@ -17,7 +17,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-var testingAddress = substatetypes.Address{1}
+var testingAddress = common.Address{1}
 
 func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -267,7 +267,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	// run fails but not on validation
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
-		t.Errorf("run must fail")
+		t.Fatal("run must fail")
 	}
 
 	// we expected error with low gas, which means the validation passed
@@ -423,7 +423,7 @@ var emptyTx = &substate.Substate{
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputSubstate: substate.WorldState{testingAddress: substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
 	Env:           &substate.Env{},
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),

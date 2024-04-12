@@ -12,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -46,6 +47,7 @@ func TestStateDbPrimerExtension_PrimingDoesNotTriggerForExistingStateDb(t *testi
 func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
+	aidaDbPath := t.TempDir() + "aidadb"
 
 	cfg := &utils.Config{}
 	cfg.SkipPriming = false
@@ -59,7 +61,12 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 
 	ext := makeStateDbPrimer[any](cfg, log)
 
-	ext.PreRun(executor.State[any]{}, &executor.Context{})
+	aidaDb, err := db.NewDefaultBaseDB(aidaDbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ext.PreRun(executor.State[any]{}, &executor.Context{AidaDb: aidaDb})
 }
 
 func TestStateDbPrimerExtension_AttemptToPrimeBlockZeroDoesNotFail(t *testing.T) {
