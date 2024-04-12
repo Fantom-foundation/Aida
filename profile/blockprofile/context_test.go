@@ -11,10 +11,9 @@ import (
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/Fantom-foundation/Substate/substate"
 )
 
 // checkContext returns true if the context is consistent; otherwise false.

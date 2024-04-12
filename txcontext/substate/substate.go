@@ -33,6 +33,7 @@ func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 }
 
 func (t *substateData) GetMessage() core.Message {
+	// todo remove iteration once fantom types are created
 	var list types.AccessList
 	for _, tuple := range t.Message.AccessList {
 		var keys []common.Hash

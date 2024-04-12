@@ -36,7 +36,7 @@ func (r *result) GetBloom() types.Bloom {
 }
 
 func (r *result) GetLogs() []*types.Log {
-	// todo how to avoid iterating
+	// todo remove iteration once fantom types are created
 	logs := make([]*types.Log, 0)
 	for _, l := range r.Logs {
 		topics := make([]common.Hash, 0)

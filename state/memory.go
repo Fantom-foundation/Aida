@@ -419,9 +419,11 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	}
 	for state := db.state; state != nil; state = state.parent {
 		for slot := range state.touchedSlots {
-			if _, exist := res[substatetypes.Address(slot.addr)]; exist {
-				if _, contain := res[substatetypes.Address(slot.addr)].Storage[substatetypes.Hash(slot.key)]; !contain {
-					res[substatetypes.Address(slot.addr)].Storage[substatetypes.Hash(slot.key)] = substatetypes.Hash{}
+			typedAddr := substatetypes.Address(slot.addr)
+			typedKey := substatetypes.Hash(slot.key)
+			if _, exist := res[typedAddr]; exist {
+				if _, contain := res[typedAddr].Storage[typedKey]; !contain {
+					res[typedAddr].Storage[typedKey] = substatetypes.Hash{}
 				}
 			}
 		}
