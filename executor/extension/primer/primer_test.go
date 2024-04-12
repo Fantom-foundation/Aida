@@ -2,6 +2,7 @@ package primer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -47,6 +48,7 @@ func TestStateDbPrimerExtension_PrimingDoesNotTriggerForExistingStateDb(t *testi
 func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
+	stateDb := state.NewMockStateDB(ctrl)
 	aidaDbPath := t.TempDir() + "aidadb"
 
 	cfg := &utils.Config{}
@@ -57,6 +59,8 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 	gomock.InOrder(
 		log.EXPECT().Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize),
 		log.EXPECT().Noticef("Priming to block %v...", cfg.First-1),
+		log.EXPECT().Debugf("\tLoading %d accounts with %d values ..", 0, 0),
+		stateDb.EXPECT().StartBulkLoad(uint64(0)).Return(nil, errors.New("stop")),
 	)
 
 	ext := makeStateDbPrimer[any](cfg, log)
@@ -66,7 +70,16 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 		t.Fatal(err)
 	}
 
-	ext.PreRun(executor.State[any]{}, &executor.Context{AidaDb: aidaDb})
+	err = ext.PreRun(executor.State[any]{}, &executor.Context{AidaDb: aidaDb, State: stateDb})
+	if err == nil {
+		t.Fatal("run must fail")
+	}
+
+	want := "cannot prime state-db; stop"
+
+	if err.Error() != want {
+		t.Fatalf("unexpected error\ngot: %v\nwant: %v", err, want)
+	}
 }
 
 func TestStateDbPrimerExtension_AttemptToPrimeBlockZeroDoesNotFail(t *testing.T) {
