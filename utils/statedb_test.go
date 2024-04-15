@@ -123,11 +123,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 				t.Fatalf("failed to set destroyed accounts into DB: %v", err)
 			}
 
-			// Closing destroyed accounts DB
-			err = daDB.Close()
-			if err != nil {
-				t.Fatalf("failed to close destroyed accounts DB: %v", err)
-			}
+			defer daDB.Close()
 
 			// Initialization of state DB
 			sDB, _, err := PrepareStateDB(cfg)
@@ -135,20 +131,15 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
 
-			// Closing of state DB
-			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
-				}
-			}(sDB)
-
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
 			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
-			pc.PrimeStateDB(ws, sDB)
+			err = pc.PrimeStateDB(ws, sDB)
+			if err != nil {
+				t.Fatalf("cannot prime statedb; %v", err)
+			}
 
 			// Call for removal of destroyed accounts from state DB
 			err = DeleteDestroyedAccountsFromStateDB(sDB, cfg, 5, base)
@@ -156,11 +147,21 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 				t.Fatalf("failed to delete accounts from the state DB: %v", err)
 			}
 
+			err = state.BeginCarmenDbTestContext(sDB)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			// check if accounts are not present anymore
 			for _, da := range destroyedAccounts {
 				if sDB.Exist(common.Address(da)) {
 					t.Fatalf("failed to delete destroyed accounts from the state DB")
 				}
+			}
+
+			err = state.CloseCarmenDbTestContext(sDB)
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

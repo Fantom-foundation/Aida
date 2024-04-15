@@ -85,7 +85,7 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+		sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -212,7 +212,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				}
 
 				// merge newly extracted patch
-				patchDb, err = db.NewDefaultBaseDB(extractedPatchPath)
+				patchDb, err = db.NewReadOnlyBaseDB(extractedPatchPath)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}

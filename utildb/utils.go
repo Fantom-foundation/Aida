@@ -34,7 +34,7 @@ func OpenSourceDatabases(sourceDbPaths []string) ([]db.BaseDB, error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("source database %s; doesn't exist\n", path)
 		}
-		db, err := db.NewDefaultBaseDB(path)
+		db, err := db.NewReadOnlyBaseDB(path)
 		if err != nil {
 			return nil, fmt.Errorf("source database %s; error: %v", path, err)
 		}
@@ -351,7 +351,7 @@ func GetDbSize(db db.BaseDB) uint64 {
 // PrintMetadata from given AidaDb
 func PrintMetadata(pathToDb string) error {
 	log := logger.NewLogger("INFO", "Print-Metadata")
-	base, err := db.NewDefaultBaseDB(pathToDb)
+	base, err := db.NewReadOnlyBaseDB(pathToDb)
 	if err != nil {
 		return err
 	}

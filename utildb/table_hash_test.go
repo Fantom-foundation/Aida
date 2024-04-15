@@ -220,6 +220,7 @@ func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 	sdb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
 	// Generate a random number between 1 and 5
 	numSubstates := rand.Intn(5) + 1
+	acc := substate.NewAccount(1, big.NewInt(1), []byte{1})
 
 	for i := 0; i < numSubstates; i++ {
 		state := substate.Substate{
@@ -229,8 +230,8 @@ func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 			Message: &substate.Message{
 				Value: big.NewInt(int64(rand.Intn(100))),
 			},
-			InputSubstate:  substate.WorldState{},
-			OutputSubstate: substate.WorldState{},
+			InputSubstate:  substate.WorldState{substatetypes.Address{0x0}: acc},
+			OutputSubstate: substate.WorldState{substatetypes.Address{0x0}: acc},
 			Result:         &substate.Result{},
 		}
 

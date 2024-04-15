@@ -167,6 +167,8 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
+	aidaDbPath := t.TempDir() + "aidadb"
+	stateDb := state.NewMockStateDB(ctrl)
 
 	cfg := &utils.Config{}
 	cfg.SkipPriming = false
@@ -183,7 +185,23 @@ func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
 		log.EXPECT().Infof("Randomized Priming enabled; Seed: %v, threshold: %v", int64(111), 10),
 		log.EXPECT().Infof("Update buffer size: %v bytes", uint64(1024)),
 		log.EXPECT().Noticef("Priming to block %v...", uint64(9)),
+		log.EXPECT().Debugf("\tLoading %d accounts with %d values ..", 0, 0),
+		stateDb.EXPECT().StartBulkLoad(uint64(0)).Return(nil, errors.New("stop")),
 	)
 
-	ext.PreRun(executor.State[any]{}, &executor.Context{})
+	aidaDb, err := db.NewDefaultBaseDB(aidaDbPath)
+	if err != nil {
+		t.Fatalf("cannot open test aida-db; %v", err)
+	}
+
+	err = ext.PreRun(executor.State[any]{}, &executor.Context{AidaDb: aidaDb, State: stateDb})
+	if err == nil {
+		t.Fatal("run must fail")
+	}
+
+	want := "cannot prime state-db; failed to prime StateDB: stop"
+
+	if err.Error() != want {
+		t.Fatalf("unexpected error\ngot: %v\nwant: %v", err, want)
+	}
 }

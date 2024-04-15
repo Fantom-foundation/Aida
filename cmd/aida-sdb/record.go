@@ -51,7 +51,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	cfg.ValidateTxState = true
 
 	state.EnableRecordReplay()
-	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}

@@ -136,7 +136,7 @@ func openSubstateDb(path string, t *testing.T) Provider[txcontext.TxContext] {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1
-	aidaDb, err := db.NewDefaultBaseDB(path)
+	aidaDb, err := db.NewReadOnlyBaseDB(path)
 	if err != nil {
 		t.Fatal(err)
 	}

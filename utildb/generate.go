@@ -364,7 +364,7 @@ func (g *Generator) createPatch() (string, error) {
 	g.Cfg.First = g.Opera.firstBlock
 	g.Cfg.Last = g.Opera.lastBlock
 
-	patchDb, err := db.NewDefaultBaseDB(g.Cfg.TargetDb)
+	patchDb, err := db.NewReadOnlyBaseDB(g.Cfg.TargetDb)
 	if err != nil {
 		return "", fmt.Errorf("cannot open patch db; %v", err)
 	}

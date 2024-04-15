@@ -36,6 +36,10 @@ func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
+	if stateRoot == nil {
+		return common.Hash{}, nil
+	}
+
 	return common.Hash(stateRoot), nil
 }
 

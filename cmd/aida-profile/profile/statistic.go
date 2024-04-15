@@ -116,7 +116,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	// TODO this print has not been working ever since this functionality was introduced to aidaDb
 	//log.Infof("contract-db: %v\n", cfg.Db)
 
-	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}

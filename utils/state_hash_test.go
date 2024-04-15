@@ -27,7 +27,7 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 		t.Fatalf("error closing stateHash leveldb %s: %v", tmpDir, err)
 	}
 
-	database, err = db.NewDefaultBaseDB(tmpDir)
+	database, err = db.NewReadOnlyBaseDB(tmpDir)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
@@ -69,7 +69,7 @@ func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 		t.Fatalf("error closing stateHash leveldb %s: %v", tmpDir, err)
 	}
 
-	database, err = db.NewDefaultBaseDB(tmpDir)
+	database, err = db.NewReadOnlyBaseDB(tmpDir)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}

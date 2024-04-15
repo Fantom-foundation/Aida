@@ -485,7 +485,7 @@ func OpenCloningDbs(aidaDbPath, targetDbPath string) (db.BaseDB, db.BaseDB, erro
 	var aidaDb, cloneDb db.BaseDB
 
 	// open db
-	aidaDb, err = db.NewDefaultBaseDB(aidaDbPath)
+	aidaDb, err = db.NewReadOnlyBaseDB(aidaDbPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("aidaDb %v; %v", aidaDbPath, err)
 	}

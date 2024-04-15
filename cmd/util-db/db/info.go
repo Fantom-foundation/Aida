@@ -88,7 +88,7 @@ func printCount(ctx *cli.Context) error {
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Count")
 	log.Noticef("Inspecting database between blocks %v-%v", cfg.First, cfg.Last)
 
-	base, err := db.NewDefaultBaseDB(cfg.AidaDb)
+	base, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func printRange(ctx *cli.Context) error {
 
 	// print substate range
 	if dbComponent == dbcomponent.Substate || dbComponent == dbcomponent.All {
-		sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+		sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
 		if err != nil {
 			return fmt.Errorf("cannot open aida-db; %w", err)
 		}
@@ -167,7 +167,7 @@ func printRange(ctx *cli.Context) error {
 
 	// print update range
 	if dbComponent == dbcomponent.Update || dbComponent == dbcomponent.All {
-		udb, err := db.NewDefaultUpdateDB(cfg.AidaDb)
+		udb, err := db.NewReadOnlyUpdateDB(cfg.AidaDb)
 		if err != nil {
 			return fmt.Errorf("cannot open update db")
 		}
@@ -196,7 +196,7 @@ func printRange(ctx *cli.Context) error {
 
 	// print state hash range
 	if dbComponent == dbcomponent.StateHash || dbComponent == dbcomponent.All {
-		bdb, err := db.NewDefaultBaseDB(cfg.AidaDb)
+		bdb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func printTableHash(ctx *cli.Context) error {
 		return err
 	}
 
-	database, err := db.NewDefaultBaseDB(cfg.AidaDb)
+	database, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func printPrefixHash(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	database, err := db.NewDefaultBaseDB(cfg.AidaDb)
+	database, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
 		return err
 	}

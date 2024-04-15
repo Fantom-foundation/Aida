@@ -441,7 +441,7 @@ func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, error) {
 	}
 
 	// read meta data
-	aidaDb, err := db.NewDefaultBaseDB(cc.cfg.AidaDb)
+	aidaDb, err := db.NewReadOnlyBaseDB(cc.cfg.AidaDb)
 	if err != nil {
 		cc.log.Warningf("Cannot open AidaDB; %v", err)
 		return defaultFirst, defaultLast, defaultLastPatch, nil

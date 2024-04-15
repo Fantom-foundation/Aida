@@ -60,7 +60,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	processor := executor.MakeLiveDbTxProcessor(cfg)
 
 	// iterate through subsets in sequence
-	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}

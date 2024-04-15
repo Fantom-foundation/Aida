@@ -45,7 +45,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
 	}
 
-	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}

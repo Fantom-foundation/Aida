@@ -87,7 +87,7 @@ func getCodeSizeAction(ctx *cli.Context) error {
 
 	fmt.Printf("chain-id: %v\n", cfg.ChainID)
 
-	sdb, err := db.NewDefaultSubstateDB(cfg.AidaDb)
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}

@@ -24,7 +24,7 @@ func ReplaySubstate(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)
 	}

@@ -17,7 +17,7 @@ const sfcAddrHex = "0xFC00FACE00000000000000000000000000000000"
 // LoadOperaWorldState loads opera initial world state from worldstate-db as SubstateAlloc
 func LoadOperaWorldState(path string) (*updateset.UpdateSet, error) {
 	//TODO: the initial world state is expected to be in updateset format
-	udb, err := db.NewDefaultUpdateDB(path)
+	udb, err := db.NewReadOnlyUpdateDB(path)
 	if err != nil {
 		return nil, err
 	}
