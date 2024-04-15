@@ -149,9 +149,12 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, sDB, log)
+			pc := NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB with given world state
-			pc.PrimeStateDB(ws, sDB)
+			err = pc.PrimeStateDB(ws, sDB)
+			if err != nil {
+				return
+			}
 
 			// Call for removal of destroyed accounts from state DB
 			err = DeleteDestroyedAccountsFromStateDB(sDB, cfg, 5)

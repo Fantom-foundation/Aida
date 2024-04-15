@@ -62,9 +62,15 @@ func (c *liveDbBlockChecker[T]) PreRun(executor.State[T], *executor.Context) err
 		lastBlock = primeDbInfo.Block
 	}
 
-	// first block must be exactly +1 so data aligns correctly
-	if lastBlock+1 != c.cfg.First {
-		return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be last block of live-db + 1, in your case %v", lastBlock+1)
+	// ethereum doesn't support priming
+	if c.cfg.ChainID == 1 {
+		// first block must be exactly +1 so data aligns correctly
+		if lastBlock+1 != c.cfg.First {
+			return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be last block of live-db + 1, in your case %v", lastBlock+1)
+		}
+	} else if lastBlock >= c.cfg.First {
+		// user incorrectly tries to prime data into database even tho database is already advanced further
+		return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be higher than last block of live-db, in your case %v", lastBlock+1)
 	}
 
 	return nil
