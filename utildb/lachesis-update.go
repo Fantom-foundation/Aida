@@ -1,12 +1,10 @@
 package utildb
 
 import (
-	"context"
 	"fmt"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -15,14 +13,15 @@ import (
 const sfcAddrHex = "0xFC00FACE00000000000000000000000000000000"
 
 // LoadOperaWorldState loads opera initial world state from worldstate-db as SubstateAlloc
-func LoadOperaWorldState(path string) (substate.SubstateAlloc, error) {
-	worldStateDB, err := snapshot.OpenStateDB(path)
+func LoadOperaWorldState(path string) (*substate.SubstateAlloc, error) {
+	//TODO: the initial world state is expected to be in updateset format
+	udb, err := substate.OpenUpdateDB(path)
 	if err != nil {
 		return nil, err
 	}
-	defer snapshot.MustCloseStateDB(worldStateDB)
-	opera, err := worldStateDB.ToSubstateAlloc(context.Background())
-	return opera, err
+	defer udb.Close()
+
+	return udb.GetUpdateSet(utils.FirstOperaBlock), nil
 }
 
 // CreateLachesisWorldState creates update-set from block 0 to the last lachesis block

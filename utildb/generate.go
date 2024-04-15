@@ -289,12 +289,16 @@ func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, ui
 		// generating for next block
 		nextUpdateSetStart += 1
 	} else {
-		g.Opera.isNew = true
-		g.Log.Infof("Previous UpdateSet not found - generating from %v", nextUpdateSetStart)
-		_, err = os.Stat(g.Cfg.WorldStateDb)
-		if os.IsNotExist(err) {
-			return nil, nil, 0, fmt.Errorf("you need to specify worldstate extracted before the starting block (--%v)", utils.WorldStateFlag.Name)
-		}
+		// TODO resolve dependencies
+		g.Log.Error("Error: Previous UpdateSet not found")
+		/*
+			g.Opera.isNew = true
+			g.Log.Infof("Previous UpdateSet not found - generating from %v", nextUpdateSetStart)
+			_, err = os.Stat(g.Cfg.WorldStateDb)
+			if os.IsNotExist(err) {
+				return nil, nil, 0, fmt.Errorf("you need to specify worldstate extracted before the starting block (--%v)", utils.WorldStateFlag.Name)
+			}
+		*/
 	}
 
 	return deleteDb, updateDb, nextUpdateSetStart, err

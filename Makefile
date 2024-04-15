@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test carmen tosca
 
-all: aida-rpc aida-sdb aida-vm-adb aida-vm-sdb aida-stochastic-sdb aida-vm aida-profile util-worldstate util-updateset util-db
+all: aida-rpc aida-sdb aida-vm-adb aida-vm-sdb aida-stochastic-sdb aida-vm aida-profile util-updateset util-db
 
 
 carmen:
@@ -93,13 +93,6 @@ util-db: carmen tosca
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/util-db \
 	./cmd/util-db
-
-util-worldstate: carmen tosca
-	@go build \
-		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
-		-o $(GO_BIN)/util-worldstate \
-		-v \
-		./cmd/util-worldstate
 
 test: carmen tosca
 	@go test ./...

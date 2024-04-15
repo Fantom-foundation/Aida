@@ -17,9 +17,9 @@ var LachesisUpdateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
+		&utils.UpdateDbFlag,
 		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
-		&utils.WorldStateFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -42,8 +42,9 @@ func lachesisUpdate(ctx *cli.Context) error {
 	substate.OpenSubstateDB()
 	defer substate.CloseSubstateDB()
 
+	// load initial opera initial state in updateset format
 	log.Notice("Load Opera initial world state")
-	opera, err := utildb.LoadOperaWorldState(cfg.WorldStateDb)
+	opera, err := utildb.LoadOperaWorldState(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
