@@ -1,5 +1,6 @@
 package state
 
+//go:generate mockgen -source cache.go -destination cache_mocks.go -package state
 import (
 	"sync"
 
@@ -7,16 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// NewCodeCache creates new instance of CodeCache that stores already retrieved code hashes.
-func NewCodeCache(capacity int) *CodeCache {
-	if capacity <= 0 {
-		return &CodeCache{}
-	}
-
-	return &CodeCache{
-		cache: cc.NewLruCache[CodeKey, common.Hash](capacity),
-		mutex: sync.Mutex{},
-	}
+// CodeCache serves a cache for hashed address code.
+type CodeCache interface {
+	// Get returns code hash for given addr and code.
+	Get(addr common.Address, code []byte) common.Hash
 }
 
 // CodeKey represents the key for CodeCache.
@@ -25,7 +20,18 @@ type CodeKey struct {
 	code string
 }
 
-type CodeCache struct {
+// NewCodeCache creates new instance of CodeCache that stores already retrieved code hashes.
+func NewCodeCache(capacity int) CodeCache {
+	if capacity <= 0 {
+		return &codeCache{}
+	}
+	return &codeCache{
+		cache: cc.NewLruCache[CodeKey, common.Hash](capacity),
+		mutex: sync.Mutex{},
+	}
+}
+
+type codeCache struct {
 	cache cc.Cache[CodeKey, common.Hash]
 	mutex sync.Mutex
 }
@@ -33,7 +39,7 @@ type CodeCache struct {
 // Get returns code hash for given addr and code.
 // If hash does not exist within the cache, it is created and stored.
 // This operation is thread-safe.
-func (c *CodeCache) Get(addr common.Address, code []byte) common.Hash {
+func (c *codeCache) Get(addr common.Address, code []byte) common.Hash {
 	// cache capacity is nil, hence we do not store anything
 	if c.cache == nil {
 		return common.Hash(cc.Keccak256(code))
@@ -51,6 +57,6 @@ func (c *CodeCache) Get(addr common.Address, code []byte) common.Hash {
 	return h
 }
 
-func (c *CodeCache) set(k CodeKey, v common.Hash) {
+func (c *codeCache) set(k CodeKey, v common.Hash) {
 	c.cache.Set(k, v)
 }

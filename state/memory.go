@@ -20,7 +20,7 @@ func MakeEmptyGethInMemoryStateDB(variant string, cacheSize int) (StateDB, error
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
 // captured by the provided Substate allocation.
-func MakeInMemoryStateDB(ws txcontext.WorldState, block uint64, cache *CodeCache) StateDB {
+func MakeInMemoryStateDB(ws txcontext.WorldState, block uint64, cache CodeCache) StateDB {
 	return &inMemoryStateDB{ws: ws, state: makeSnapshot(nil, 0), blockNum: block, cache: cache}
 }
 
@@ -31,7 +31,7 @@ type inMemoryStateDB struct {
 	state            *snapshot
 	snapshot_counter int
 	blockNum         uint64
-	cache            *CodeCache
+	cache            CodeCache
 }
 
 type slot struct {

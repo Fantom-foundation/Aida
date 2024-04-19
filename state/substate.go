@@ -98,7 +98,7 @@ func NewOffTheChainStateDB() *state.StateDB {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with ws
-func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit, cache *CodeCache) (StateDB, error) {
+func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit, cache CodeCache) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		code := acc.GetCode()

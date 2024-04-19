@@ -34,7 +34,7 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 // StateDB instance before each transaction execution.
 type temporaryInMemoryStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
-	cache *statedb.CodeCache
+	cache statedb.CodeCache
 }
 
 func (p *temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -48,7 +48,7 @@ func (p *temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txco
 type temporaryOffTheChainStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg     *utils.Config
-	cache   *statedb.CodeCache
+	cache   statedb.CodeCache
 	conduit *statedb.ChainConduit
 }
 
