@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sync"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -99,36 +97,12 @@ func NewOffTheChainStateDB() *state.StateDB {
 	return statedb
 }
 
-type code_key struct {
-	addr common.Address
-	code string
-}
-
-// todo remove globals in upcoming PR!
-var code_hashes_lock = sync.Mutex{}
-var code_hashes = map[code_key]common.Hash{}
-
-func getHash(addr common.Address, code []byte) common.Hash {
-	key := code_key{addr, string(code)}
-	code_hashes_lock.Lock()
-	res, exists := code_hashes[key]
-	code_hashes_lock.Unlock()
-	if exists {
-		return res
-	}
-	res = crypto.Keccak256Hash(code)
-	code_hashes_lock.Lock()
-	code_hashes[key] = res
-	code_hashes_lock.Unlock()
-	return res
-}
-
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with ws
-func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit) (StateDB, error) {
+func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit, cache *CodeCache) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		code := acc.GetCode()
-		statedb.SetPrehashedCode(addr, getHash(addr, code), code)
+		statedb.SetPrehashedCode(addr, cache.Get(addr, code), code)
 		statedb.SetNonce(addr, acc.GetNonce())
 		statedb.SetBalance(addr, acc.GetBalance())
 		// DON'T USE SetStorage because it makes REVERT and dirtyStorage unavailble
@@ -145,10 +119,4 @@ func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainCondu
 
 	blk := new(big.Int).SetUint64(block)
 	return &gethStateDB{db: statedb, block: blk, chainConduit: chainConduit}, nil
-}
-
-func ReleaseCache() {
-	code_hashes_lock.Lock()
-	code_hashes = map[code_key]common.Hash{}
-	code_hashes_lock.Unlock()
 }

@@ -11,17 +11,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
+func MakeEmptyGethInMemoryStateDB(variant string, cacheSize int) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
-	return MakeInMemoryStateDB(substatecontext.NewWorldState(make(substate.SubstateAlloc)), 0), nil
+	return MakeInMemoryStateDB(substatecontext.NewWorldState(make(substate.SubstateAlloc)), 0, nil), nil
 }
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
 // captured by the provided Substate allocation.
-func MakeInMemoryStateDB(ws txcontext.WorldState, block uint64) StateDB {
-	return &inMemoryStateDB{ws: ws, state: makeSnapshot(nil, 0), blockNum: block}
+func MakeInMemoryStateDB(ws txcontext.WorldState, block uint64, cache *CodeCache) StateDB {
+	return &inMemoryStateDB{ws: ws, state: makeSnapshot(nil, 0), blockNum: block, cache: cache}
 }
 
 // inMemoryStateDB implements the interface of a state.StateDB and can be
@@ -31,6 +31,7 @@ type inMemoryStateDB struct {
 	state            *snapshot
 	snapshot_counter int
 	blockNum         uint64
+	cache            *CodeCache
 }
 
 type slot struct {
@@ -135,7 +136,7 @@ func (db *inMemoryStateDB) GetCodeHash(addr common.Address) common.Hash {
 	if !db.Exist(addr) {
 		return common.Hash{}
 	}
-	return getHash(addr, db.GetCode(addr))
+	return db.cache.Get(addr, db.GetCode(addr))
 }
 
 func (db *inMemoryStateDB) GetCode(addr common.Address) []byte {

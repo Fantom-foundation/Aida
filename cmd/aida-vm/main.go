@@ -39,6 +39,7 @@ func main() {
 			&utils.ErrorLoggingFlag,
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbLoggingFlag,
+			&utils.CacheFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

@@ -15,17 +15,18 @@ import (
 // after each txcontext. Default is offTheChainStateDb.
 // NOTE: inMemoryStateDb currently does not work for block 67m onwards.
 func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	cache := statedb.NewCodeCache(cfg.Cache)
+
 	switch cfg.DbImpl {
 	case "in-memory", "memory":
-		return temporaryInMemoryStatePrepper{}
+		return &temporaryInMemoryStatePrepper{cache: cache}
 	case "off-the-chain":
 		fallthrough
 	default:
 		// offTheChainStateDb is default value
 		substate.RecordReplay = true
-		return &temporaryOffTheChainStatePrepper{
-			cfg: cfg,
-		}
+		conduit := statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID))
+		return &temporaryOffTheChainStatePrepper{cfg: cfg, cache: cache, conduit: conduit}
 	}
 }
 
@@ -33,11 +34,12 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 // StateDB instance before each transaction execution.
 type temporaryInMemoryStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
+	cache *statedb.CodeCache
 }
 
-func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (p *temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	alloc := state.Data.GetInputState()
-	ctx.State = statedb.MakeInMemoryStateDB(alloc, uint64(state.Block))
+	ctx.State = statedb.MakeInMemoryStateDB(alloc, uint64(state.Block), p.cache)
 	return nil
 }
 
@@ -45,7 +47,9 @@ func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txconte
 // StateDB instance before each transaction execution.
 type temporaryOffTheChainStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg *utils.Config
+	cfg     *utils.Config
+	cache   *statedb.CodeCache
+	conduit *statedb.ChainConduit
 }
 
 func (p *temporaryOffTheChainStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -53,6 +57,6 @@ func (p *temporaryOffTheChainStatePrepper) PreTransaction(state executor.State[t
 	if p.cfg == nil {
 		return fmt.Errorf("temporaryOffTheChainStatePrepper: cfg is nil")
 	}
-	ctx.State, err = statedb.MakeOffTheChainStateDB(state.Data.GetInputState(), uint64(state.Block), statedb.NewChainConduit(p.cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)))
+	ctx.State, err = statedb.MakeOffTheChainStateDB(state.Data.GetInputState(), uint64(state.Block), p.conduit, p.cache)
 	return err
 }
