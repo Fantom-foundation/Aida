@@ -31,7 +31,6 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config, aidaDb db.BaseDB)
 
 		// if this transaction has suicided accounts, clear their states.
 		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
-
 		if err != nil {
 			return update, deletedAccounts, fmt.Errorf("failed to get deleted account. %v", err)
 		}
