@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
-	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
-	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
+	ProgressLoggerDefaultReportFrequency     = 15 * time.Second // how often will ticker trigger
+	progressLoggerReportFormat               = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
+	finalSummaryProgressReportFormat         = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
+	progressLoggerReportFormatWithDays       = "Elapsed time: %vd%v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
+	finalSummaryProgressReportFormatWithDays = "Total elapsed time: %vd%v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
@@ -102,8 +104,15 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx) / elapsed.Seconds()
 		gasRate := float64(totalGas) / elapsed.Seconds()
+		days := 0
+		if elapsed.Hours() >= 24 {
+			days = int(elapsed.Hours() / 24)
+			elapsed.Truncate(time.Duration(days * 24))
+			l.log.Noticef(finalSummaryProgressReportFormatWithDays, days, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
+		} else {
+			l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
+		}
 
-		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
 	}()
 
 	var (
@@ -135,8 +144,14 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 			elapsed := now.Sub(start)
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
-
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
+			days := 0
+			if elapsed.Hours() >= 24 {
+				days = int(elapsed.Hours() / 24)
+				elapsed = elapsed - (time.Duration(days*24) * time.Hour)
+				l.log.Infof(progressLoggerReportFormatWithDays, days, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
+			} else {
+				l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
+			}
 
 			lastReport = now
 
