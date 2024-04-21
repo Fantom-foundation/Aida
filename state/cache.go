@@ -14,8 +14,8 @@ type CodeCache interface {
 	Get(addr common.Address, code []byte) common.Hash
 }
 
-// CodeKey represents the key for CodeCache.
-type CodeKey struct {
+// codeKey represents the key for CodeCache.
+type codeKey struct {
 	addr common.Address
 	code string
 }
@@ -26,13 +26,13 @@ func NewCodeCache(capacity int) CodeCache {
 		return &codeCache{}
 	}
 	return &codeCache{
-		cache: cc.NewLruCache[CodeKey, common.Hash](capacity),
+		cache: cc.NewLruCache[codeKey, common.Hash](capacity),
 		mutex: sync.Mutex{},
 	}
 }
 
 type codeCache struct {
-	cache cc.Cache[CodeKey, common.Hash]
+	cache cc.Cache[codeKey, common.Hash]
 	mutex sync.Mutex
 }
 
@@ -40,11 +40,7 @@ type codeCache struct {
 // If hash does not exist within the cache, it is created and stored.
 // This operation is thread-safe.
 func (c *codeCache) Get(addr common.Address, code []byte) common.Hash {
-	// cache capacity is nil, hence we do not store anything
-	if c.cache == nil {
-		return common.Hash(cc.Keccak256(code))
-	}
-	k := CodeKey{addr: addr, code: string(code)}
+	k := codeKey{addr: addr, code: string(code)}
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	h, exists := c.cache.Get(k)
@@ -52,11 +48,15 @@ func (c *codeCache) Get(addr common.Address, code []byte) common.Hash {
 		return h
 	}
 
-	h = common.Hash(cc.Keccak256(code))
+	h = createCodeHash(code)
 	c.set(k, h)
 	return h
 }
 
-func (c *codeCache) set(k CodeKey, v common.Hash) {
+func (c *codeCache) set(k codeKey, v common.Hash) {
 	c.cache.Set(k, v)
+}
+
+func createCodeHash(code []byte) common.Hash {
+	return common.Hash(cc.Keccak256(code))
 }

@@ -98,11 +98,11 @@ func NewOffTheChainStateDB() *state.StateDB {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with ws
-func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit, cache CodeCache) (StateDB, error) {
+func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		code := acc.GetCode()
-		statedb.SetPrehashedCode(addr, cache.Get(addr, code), code)
+		statedb.SetPrehashedCode(addr, createCodeHash(code), code)
 		statedb.SetNonce(addr, acc.GetNonce())
 		statedb.SetBalance(addr, acc.GetBalance())
 		// DON'T USE SetStorage because it makes REVERT and dirtyStorage unavailble

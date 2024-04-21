@@ -188,7 +188,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenSchema int, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
 	switch impl {
 	case "memory":
-		return state.MakeEmptyGethInMemoryStateDB(variant, cfg.Cache)
+		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
 		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode, state.NewChainConduit(cfg.ChainID == EthereumChainID, GetChainConfig(cfg.ChainID)))
 	case "carmen":
