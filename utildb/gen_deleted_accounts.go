@@ -1,6 +1,8 @@
 package utildb
 
 import (
+	"errors"
+	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -16,11 +18,17 @@ import (
 
 const channelSize = 100000 // size of deletion channel
 
+type txLivelinessResult struct {
+	liveliness []proxy.ContractLiveliness
+	tx         *substate.Transaction
+}
+
 // readAccounts reads contracts which were suicided or created and adds them to lists
-func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Address]bool) ([]common.Address, []common.Address) {
+func readAccounts(cllArr []proxy.ContractLiveliness, deleteHistory *map[common.Address]bool) ([]common.Address, []common.Address) {
 	des := make(map[common.Address]bool)
 	res := make(map[common.Address]bool)
-	for contract := range ch {
+
+	for _, contract := range cllArr {
 		addr := contract.Addr
 		if contract.IsDeleted {
 			// if a contract was resurrected before suicided in the same tx,
@@ -59,13 +67,7 @@ func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Ad
 
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
-func genDeletedAccountsTask(
-	tx *substate.Transaction,
-	processor *executor.TxProcessor,
-	ddb *substate.DestroyedAccountDB,
-	deleteHistory *map[common.Address]bool,
-	cfg *utils.Config,
-) error {
+func genDeletedAccountsTask(tx *substate.Transaction, processor executor.TxProcessor, cfg *utils.Config) ([]proxy.ContractLiveliness, error) {
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
@@ -73,7 +75,7 @@ func genDeletedAccountsTask(
 
 	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputState(), tx.Block, state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(cfg.ChainID)))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//wrapper
@@ -81,78 +83,268 @@ func genDeletedAccountsTask(
 
 	_, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, ss)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 
 	close(ch)
-	des, res := readAccounts(ch, deleteHistory)
-	if len(des)+len(res) > 0 {
-		// if transaction completed successfully, put destroyed accounts
-		// and resurrected accounts to a database
-		if tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
-			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, des, res)
-			if err != nil {
-				return err
-			}
-		}
+
+	livelinessArr := make([]proxy.ContractLiveliness, 0)
+	for liveliness := range ch {
+		livelinessArr = append(livelinessArr, liveliness)
 	}
 
-	return nil
+	return livelinessArr, nil
 }
 
 // GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
+// Uses round-robin task assignment system to workers to keep order while utilizing parallelism.
 func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountDB, firstBlock uint64, lastBlock uint64) error {
-	var err error
-
-	err = utils.StartCPUProfile(cfg)
+	err := utils.StartCPUProfile(cfg)
 	if err != nil {
 		return err
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Generate Deleted Accounts")
-
 	log.Noticef("Generate deleted accounts from block %v to block %v", firstBlock, lastBlock)
 
-	start := time.Now()
-	sec := time.Since(start).Seconds()
-	lastSec := time.Since(start).Seconds()
-	txCount := uint64(0)
-	lastTxCount := uint64(0)
-	var deleteHistory = make(map[common.Address]bool)
+	processor := executor.MakeTxProcessor(cfg)
+
+	wg := sync.WaitGroup{}
+	stopChan := make(chan struct{})
+	errChan := make(chan error)
 
 	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
 	defer iter.Release()
 
-	processor := executor.MakeTxProcessor(cfg)
+	//error handling routine
+	encounteredErrors := errorHandler(stopChan, errChan)
 
-	for iter.Next() {
-		tx := iter.Value()
-		if tx.Block > lastBlock {
-			break
-		}
+	// feeder to send tasks to workers
+	workerInputChannels := taskFeeder(&wg, cfg, iter, lastBlock, stopChan, log)
 
-		if tx.Transaction < utils.PseudoTx {
-			err = genDeletedAccountsTask(tx, processor, ddb, &deleteHistory, cfg)
-			if err != nil {
-				return err
-			}
+	// prepare workers to process transactions
+	workerOutputChannels := launchWorkers(&wg, cfg, workerInputChannels, processor, stopChan, errChan)
 
-			txCount++
-			sec = time.Since(start).Seconds()
-			diff := sec - lastSec
-			if diff >= 30 {
-				numTx := txCount - lastTxCount
-				lastTxCount = txCount
-				log.Infof("aida-vm: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)", sec, tx.Block, float64(numTx)/diff)
-				lastSec = sec
-			}
-		}
-	}
+	// collect results from workers and orders them
+	orderedResults := resultCollector(&wg, cfg, workerOutputChannels, stopChan)
+
+	// process ordered txLivelinessResults
+	resolveDeletionsAndResurrections(ddb, orderedResults, stopChan, errChan)
+
+	// wait until feeder, workers and collector are done
+	wg.Wait()
+
+	// notify error handler to stop
+	close(errChan)
 
 	utils.StopCPUProfile(cfg)
 
-	// explicitly set to nil to release memory as soon as possible
-	deleteHistory = nil
-
+	// retrieve encounteredErrors from error handler
+	err = <-encounteredErrors
 	return err
+}
+
+// resolveDeletionsAndResurrections reads txLivelinessResults and resolves deletions and resurrections.
+func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedResults chan txLivelinessResult, stopChan chan struct{}, errChan chan error) {
+	var deleteHistory = make(map[common.Address]bool)
+	defer func() {
+		// explicitly set to nil to release memory as soon as possible
+		deleteHistory = nil
+	}()
+
+	for {
+		select {
+		case <-stopChan:
+			return
+		case contract, ok := <-orderedResults:
+			{
+				if !ok {
+					return
+				}
+				des, res := readAccounts(contract.liveliness, &deleteHistory)
+				if len(des)+len(res) > 0 {
+					err := ddb.SetDestroyedAccounts(contract.tx.Block, contract.tx.Transaction, des, res)
+					if err != nil {
+						errChan <- err
+						return
+					}
+				}
+			}
+		}
+	}
+}
+
+// resultCollector collects results from workers in round-robin fashion and sends them to a single channel.
+func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels map[int]chan txLivelinessResult, stopChan chan struct{}) chan txLivelinessResult {
+	orderedResults := make(chan txLivelinessResult, cfg.Workers)
+	wg.Add(1)
+	go func() {
+		defer close(orderedResults)
+		defer wg.Done()
+
+		// round-robin to collect results from workers
+		for {
+			for i := 0; i < cfg.Workers; i++ {
+				select {
+				case <-stopChan:
+					return
+				case res, ok := <-workerOutputChannels[i]:
+					if !ok {
+						return
+					}
+
+					// filter out txs with no liveliness actions
+					if res.liveliness != nil && len(res.liveliness) > 0 {
+						orderedResults <- res
+					}
+				}
+			}
+		}
+	}()
+	return orderedResults
+}
+
+// launchWorkers lauches workers to process transactions in parallel.
+func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[int]chan *substate.Transaction, processor executor.TxProcessor, stopChan chan struct{}, errChan chan error) map[int]chan txLivelinessResult {
+	// channel for each worker to send results
+	workerOutputChannels := make(map[int]chan txLivelinessResult)
+	for i := 0; i < cfg.Workers; i++ {
+		workerOutputChannels[i] = make(chan txLivelinessResult)
+	}
+
+	for i := 0; i < cfg.Workers; i++ {
+		wg.Add(1)
+		go func(workerId int) {
+			defer func() {
+				close(workerOutputChannels[workerId])
+				wg.Done()
+			}()
+
+			for {
+				select {
+				case <-stopChan:
+					return
+				case tx, ok := <-workerInputChannels[workerId]:
+					if !ok {
+						return
+					}
+					// Process sorted transactions
+					livelinessArr, err := genDeletedAccountsTask(tx, processor, cfg)
+					if err != nil {
+						errChan <- err
+						return
+					}
+
+					select {
+					case <-stopChan:
+						return
+					case workerOutputChannels[workerId] <- txLivelinessResult{livelinessArr, tx}:
+					}
+				}
+			}
+		}(i)
+	}
+
+	return workerOutputChannels
+}
+
+// taskFeeder feeds tasks to workers in round-robin fashion.
+func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIterator, lastBlock uint64, stopChan chan struct{}, log logger.Logger) map[int]chan *substate.Transaction {
+	wg.Add(1)
+
+	// channel for each worker to get tasks for processing
+	workerInputChannels := make(map[int]chan *substate.Transaction)
+	for i := 0; i < cfg.Workers; i++ {
+		workerInputChannels[i] = make(chan *substate.Transaction)
+	}
+
+	go func() {
+		start := time.Now()
+		sec := time.Since(start).Seconds()
+		lastSec := time.Since(start).Seconds()
+		txCount := uint64(0)
+		lastTxCount := uint64(0)
+
+		defer func() {
+			wg.Done()
+			// close inputs for workers
+			for _, inputChan := range workerInputChannels {
+				close(inputChan)
+			}
+		}()
+
+		// Round-robin worker index
+		nextWorkerIndex := 0
+		for iter.Next() {
+			select {
+			case <-stopChan:
+				return
+			default:
+			}
+
+			tx := iter.Value()
+
+			sec = time.Since(start).Seconds()
+			diff := sec - lastSec
+
+			if tx.Block > lastBlock {
+				log.Infof("gen-del-acc: Total elapsed time: %.0f s, (Total ~%.1f Tx/s)", sec, float64(txCount)/sec)
+				break
+			}
+
+			txCount++
+			if diff >= 30 {
+				numTx := txCount - lastTxCount
+				lastTxCount = txCount
+				log.Infof("gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)", sec, tx.Block, float64(numTx)/diff)
+				lastSec = sec
+			}
+
+			if tx.Transaction < utils.PseudoTx && tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
+				// if not pseodo tx and completed successfully, send task to next worker in round-robin
+				select {
+				case <-stopChan:
+					return
+				case workerInputChannels[nextWorkerIndex] <- tx:
+					nextWorkerIndex = (nextWorkerIndex + 1) % cfg.Workers
+				}
+			}
+		}
+	}()
+
+	return workerInputChannels
+}
+
+// errorHandler collects errors from workers and returns them as a single error
+// while closing the stopChan to signal other routines to stop.
+func errorHandler(stopChan chan struct{}, errChan chan error) chan error {
+	encounteredErrors := make(chan error)
+	go func() {
+		defer close(encounteredErrors)
+
+		var result error
+		firstErr := true
+
+		defer func() {
+			if firstErr {
+				close(stopChan)
+				firstErr = false
+			}
+		}()
+
+		for {
+			err, ok := <-errChan
+			if !ok {
+				encounteredErrors <- result
+				return
+			}
+			if firstErr {
+				close(stopChan)
+				firstErr = false
+			}
+
+			result = errors.Join(result, err)
+		}
+	}()
+	return encounteredErrors
 }
