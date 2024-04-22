@@ -62,12 +62,12 @@ func Test_launchWorkersParallel(t *testing.T) {
 	workerInputChannels := make(map[int]chan *substate.Transaction)
 	for i := 0; i < cfg.Workers; i++ {
 		workerInputChannels[i] = make(chan *substate.Transaction)
-		go func(workerId int) {
+		go func(workerId int, workerIn chan *substate.Transaction) {
 			// 2 transactions for each worker
-			workerInputChannels[workerId] <- &substate.Transaction{Block: uint64(workerId), Substate: testTx[workerId]}
-			workerInputChannels[workerId] <- &substate.Transaction{Block: uint64(workerId + cfg.Workers), Substate: testTx[workerId+cfg.Workers]}
-			close(workerInputChannels[workerId])
-		}(i)
+			workerIn <- &substate.Transaction{Block: uint64(workerId), Substate: testTx[workerId]}
+			workerIn <- &substate.Transaction{Block: uint64(workerId + cfg.Workers), Substate: testTx[workerId+cfg.Workers]}
+			close(workerIn)
+		}(i, workerInputChannels[i])
 	}
 
 	processor.EXPECT().ProcessTransaction(gomock.Any(), 0, gomock.Any(), substatecontext.NewTxContext(testTx[0])).Return(nil, nil)
@@ -77,7 +77,7 @@ func Test_launchWorkersParallel(t *testing.T) {
 	processor.EXPECT().ProcessTransaction(gomock.Any(), 4, gomock.Any(), substatecontext.NewTxContext(testTx[4])).Return(nil, nil)
 	processor.EXPECT().ProcessTransaction(gomock.Any(), 5, gomock.Any(), substatecontext.NewTxContext(testTx[5])).Return(nil, nil)
 
-	outPut := launchWorkers(wg, cfg, workerInputChannels, processor, stopChan, errChan)
+	outPut := launchWorkers(wg, cfg, workerInputChannels, processor, stopChan, errChan, nil)
 
 	var orderCheck uint64 = 0
 	// 2 transactions for each worker
@@ -210,37 +210,33 @@ func Test_readAccounts(t *testing.T) {
 	})
 }
 
-// TODO trace why this test fails
-//func Test_resultCollector(t *testing.T) {
-//
-//	wg := &sync.WaitGroup{}
-//	cfg := &utils.Config{Workers: 100, ChainID: 250}
-//	stopChan := make(chan struct{})
-//
-//	// channel for each worker to get tasks for processing
-//	workerOutputChannels := make(map[int]chan txLivelinessResult)
-//	for i := 0; i < cfg.Workers; i++ {
-//		workerOutputChannels[i] = make(chan txLivelinessResult)
-//		go func(workerId int) {
-//			// make proxy.ContractLiveliness map
-//			cll := make([]proxy.ContractLiveliness, 0)
-//			cll = append(cll, proxy.ContractLiveliness{Addr: common.HexToAddress(fmt.Sprintf("0x%x", workerId)), IsDeleted: true})
-//			workerOutputChannels[workerId] <- txLivelinessResult{liveliness: cll}
-//			close(workerOutputChannels[workerId])
-//		}(i)
-//	}
-//
-//	res := resultCollector(wg, cfg, workerOutputChannels, stopChan)
-//
-//	currentBlk := 0
-//	for r := range res {
-//		if !r.liveliness[0].IsDeleted {
-//			t.Fatalf("results are in incorrect order")
-//		}
-//
-//		if r.liveliness[0].Addr != common.HexToAddress(fmt.Sprintf("0x%x", currentBlk)) {
-//			t.Fatalf("results are in incorrect order liveliness")
-//		}
-//		currentBlk++
-//	}
-//}
+func Test_resultCollector(t *testing.T) {
+
+	wg := &sync.WaitGroup{}
+	cfg := &utils.Config{Workers: 100, ChainID: 250}
+	stopChan := make(chan struct{})
+
+	// channel for each worker to get tasks for processing
+	workerOutputChannels := make(map[int]chan txLivelinessResult)
+	for i := 0; i < cfg.Workers; i++ {
+		workerOutputChannels[i] = make(chan txLivelinessResult)
+		go func(workerId int, workerOut chan txLivelinessResult) {
+			workerOut <- txLivelinessResult{liveliness: []proxy.ContractLiveliness{{Addr: common.HexToAddress(fmt.Sprintf("0x%x", workerId)), IsDeleted: true}}}
+			close(workerOutputChannels[workerId])
+		}(i, workerOutputChannels[i])
+	}
+
+	res := resultCollector(wg, cfg, workerOutputChannels, stopChan)
+
+	currentBlk := 0
+	for r := range res {
+		if !r.liveliness[0].IsDeleted {
+			t.Fatalf("results are in incorrect order")
+		}
+
+		if r.liveliness[0].Addr != common.HexToAddress(fmt.Sprintf("0x%x", currentBlk)) {
+			t.Fatalf("results are in incorrect order liveliness")
+		}
+		currentBlk++
+	}
+}
