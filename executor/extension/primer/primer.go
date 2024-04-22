@@ -115,6 +115,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error 
 		// advance block after merge update set
 		block++
 	}
+	updateIter.Release()
 
 	// if update set is not empty, prime the remaining
 	if len(update) > 0 {
@@ -124,7 +125,6 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error 
 		update = make(substate.WorldState)
 		hasPrimed = true
 	}
-	updateIter.Release()
 
 	// advance from the latest precomputed update-set to the target block
 	// if the first block is 1, target must prime the genesis block
