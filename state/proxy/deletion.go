@@ -24,11 +24,11 @@ type DeletionProxy struct {
 }
 
 // NewDeletionProxy creates a new StateDB proxy.
-func NewDeletionProxy(db state.StateDB, ch chan ContractLiveliness, logLevel string) *DeletionProxy {
+func NewDeletionProxy(db state.StateDB, ch chan ContractLiveliness, log logger.Logger) *DeletionProxy {
 	r := new(DeletionProxy)
 	r.db = db
 	r.ch = ch
-	r.log = logger.NewLogger(logLevel, "Proxy Deletion")
+	r.log = log
 	return r
 }
 

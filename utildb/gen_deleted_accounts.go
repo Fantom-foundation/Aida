@@ -67,7 +67,7 @@ func readAccounts(cllArr []proxy.ContractLiveliness, deleteHistory *map[common.A
 
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
-func genDeletedAccountsTask(tx *substate.Transaction, processor executor.TxProcessor, cfg *utils.Config) ([]proxy.ContractLiveliness, error) {
+func genDeletedAccountsTask(tx *substate.Transaction, processor executor.TxProcessor, cfg *utils.Config, log logger.Logger) ([]proxy.ContractLiveliness, error) {
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
@@ -79,7 +79,7 @@ func genDeletedAccountsTask(tx *substate.Transaction, processor executor.TxProce
 	}
 
 	//wrapper
-	statedb = proxy.NewDeletionProxy(statedb, ch, cfg.LogLevel)
+	statedb = proxy.NewDeletionProxy(statedb, ch, log)
 
 	_, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, ss)
 	if err != nil {
@@ -123,7 +123,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	workerInputChannels := taskFeeder(&wg, cfg, iter, lastBlock, stopChan, log)
 
 	// prepare workers to process transactions
-	workerOutputChannels := launchWorkers(&wg, cfg, workerInputChannels, processor, stopChan, errChan)
+	workerOutputChannels := launchWorkers(&wg, cfg, workerInputChannels, processor, stopChan, errChan, log)
 
 	// collect results from workers and orders them
 	orderedResults := resultCollector(&wg, cfg, workerOutputChannels, stopChan)
@@ -205,7 +205,7 @@ func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels
 }
 
 // launchWorkers lauches workers to process transactions in parallel.
-func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[int]chan *substate.Transaction, processor executor.TxProcessor, stopChan chan struct{}, errChan chan error) map[int]chan txLivelinessResult {
+func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[int]chan *substate.Transaction, processor executor.TxProcessor, stopChan chan struct{}, errChan chan error, log logger.Logger) map[int]chan txLivelinessResult {
 	// channel for each worker to send results
 	workerOutputChannels := make(map[int]chan txLivelinessResult)
 	for i := 0; i < cfg.Workers; i++ {
@@ -229,7 +229,7 @@ func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels ma
 						return
 					}
 					// Process sorted transactions
-					livelinessArr, err := genDeletedAccountsTask(tx, processor, cfg)
+					livelinessArr, err := genDeletedAccountsTask(tx, processor, cfg, log)
 					if err != nil {
 						errChan <- err
 						return
