@@ -99,7 +99,7 @@ func genDeletedAccountsTask(tx *substate.Transaction, processor executor.TxProce
 
 	_, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, ss)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	close(ch)
@@ -126,31 +126,31 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	processor := executor.MakeTxProcessor(cfg)
 
 	wg := sync.WaitGroup{}
-	stopChan := make(chan struct{})
+	abort := utils.MakeEvent()
 	errChan := make(chan error)
 
 	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
 	defer iter.Release()
 
 	//error handling routine
-	encounteredErrors := errorHandler(stopChan, errChan)
+	encounteredErrors := errorHandler(abort, errChan)
 
 	// feeder to send tasks to workers
-	workerInputChannels := taskFeeder(&wg, cfg, iter, lastBlock, stopChan, log)
+	workerInputChannels := taskFeeder(&wg, cfg, iter, lastBlock, abort, log)
 
 	// prepare workers to process transactions
-	workerOutputChannels := launchWorkers(&wg, cfg, workerInputChannels, processor, stopChan, errChan, log)
+	workerOutputChannels := txProcessor(&wg, cfg, workerInputChannels, processor, abort, errChan, log)
 
 	// collect results from workers and orders them
-	orderedResults := resultCollector(&wg, cfg, workerOutputChannels, stopChan)
+	orderedResults := resultCollector(&wg, cfg, workerOutputChannels, abort)
 
 	// process ordered txLivelinessResults
-	resolveDeletionsAndResurrections(ddb, orderedResults, stopChan, errChan)
+	resolveDeletionsAndResurrections(ddb, orderedResults, abort, errChan)
 
 	// wait until feeder, workers and collector are done
 	wg.Wait()
 
-	// notify error handler to stop
+	// notify error handler to stop listening
 	close(errChan)
 
 	utils.StopCPUProfile(cfg)
@@ -161,7 +161,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 }
 
 // resolveDeletionsAndResurrections reads txLivelinessResults and resolves deletions and resurrections.
-func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedResults chan txLivelinessResult, stopChan chan struct{}, errChan chan error) {
+func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedResults chan txLivelinessResult, abort utils.Event, errChan chan error) {
 	var deleteHistory = make(map[common.Address]bool)
 	defer func() {
 		// explicitly set to nil to release memory as soon as possible
@@ -170,7 +170,7 @@ func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedR
 
 	for {
 		select {
-		case <-stopChan:
+		case <-abort.Wait():
 			return
 		case contract, ok := <-orderedResults:
 			{
@@ -191,7 +191,7 @@ func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedR
 }
 
 // resultCollector collects results from workers in round-robin fashion and sends them to a single channel.
-func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels map[int]chan txLivelinessResult, stopChan chan struct{}) chan txLivelinessResult {
+func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels map[int]chan txLivelinessResult, abort utils.Event) chan txLivelinessResult {
 	orderedResults := make(chan txLivelinessResult, cfg.Workers)
 	wg.Add(1)
 	go func() {
@@ -202,7 +202,7 @@ func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels
 		for {
 			for i := 0; i < cfg.Workers; i++ {
 				select {
-				case <-stopChan:
+				case <-abort.Wait():
 					return
 				case res, ok := <-workerOutputChannels[i]:
 					if !ok {
@@ -211,7 +211,11 @@ func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels
 
 					// filter out txs with no liveliness actions
 					if res.liveliness != nil && len(res.liveliness) > 0 {
-						orderedResults <- res
+						select {
+						case <-abort.Wait():
+							return
+						case orderedResults <- res:
+						}
 					}
 				}
 			}
@@ -220,8 +224,8 @@ func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels
 	return orderedResults
 }
 
-// launchWorkers lauches workers to process transactions in parallel.
-func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[int]chan *substate.Transaction, processor executor.TxProcessor, stopChan chan struct{}, errChan chan error, log logger.Logger) map[int]chan txLivelinessResult {
+// txProcessor launches workers to process transactions in parallel.
+func txProcessor(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[int]chan *substate.Transaction, processor executor.TxProcessor, abort utils.Event, errChan chan error, log logger.Logger) map[int]chan txLivelinessResult {
 	// channel for each worker to send results
 	workerOutputChannels := make(map[int]chan txLivelinessResult)
 	for i := 0; i < cfg.Workers; i++ {
@@ -238,7 +242,7 @@ func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels ma
 
 			for {
 				select {
-				case <-stopChan:
+				case <-abort.Wait():
 					return
 				case tx, ok := <-workerInputChannels[workerId]:
 					if !ok {
@@ -252,7 +256,7 @@ func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels ma
 					}
 
 					select {
-					case <-stopChan:
+					case <-abort.Wait():
 						return
 					case workerOutputChannels[workerId] <- txLivelinessResult{livelinessArr, tx}:
 					}
@@ -265,7 +269,7 @@ func launchWorkers(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels ma
 }
 
 // taskFeeder feeds tasks to workers in round-robin fashion.
-func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIterator, lastBlock uint64, stopChan chan struct{}, log logger.Logger) map[int]chan *substate.Transaction {
+func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIterator, lastBlock uint64, abort utils.Event, log logger.Logger) map[int]chan *substate.Transaction {
 	wg.Add(1)
 
 	// channel for each worker to get tasks for processing
@@ -293,7 +297,7 @@ func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIte
 		nextWorkerIndex := 0
 		for iter.Next() {
 			select {
-			case <-stopChan:
+			case <-abort.Wait():
 				return
 			default:
 			}
@@ -304,7 +308,7 @@ func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIte
 			diff := sec - lastSec
 
 			if tx.Block > lastBlock {
-				log.Infof("gen-del-acc: Total elapsed time: %.0f s, (Total ~%.1f Tx/s)", sec, float64(txCount)/sec)
+				log.Noticef("gen-del-acc: Total elapsed time: %.0f s, (Total ~%.1f Tx/s)", sec, float64(txCount)/sec)
 				break
 			}
 
@@ -319,7 +323,7 @@ func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIte
 			if tx.Transaction < utils.PseudoTx && tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
 				// if not pseodo tx and completed successfully, send task to next worker in round-robin
 				select {
-				case <-stopChan:
+				case <-abort.Wait():
 					return
 				case workerInputChannels[nextWorkerIndex] <- tx:
 					nextWorkerIndex = (nextWorkerIndex + 1) % cfg.Workers
@@ -332,21 +336,15 @@ func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIte
 }
 
 // errorHandler collects errors from workers and returns them as a single error
-// while closing the stopChan to signal other routines to stop.
-func errorHandler(stopChan chan struct{}, errChan chan error) chan error {
+// while using abort to signal other routines to stop.
+func errorHandler(abort utils.Event, errChan chan error) chan error {
 	encounteredErrors := make(chan error)
 	go func() {
 		defer close(encounteredErrors)
 
 		var result error
-		firstErr := true
 
-		defer func() {
-			if firstErr {
-				close(stopChan)
-				firstErr = false
-			}
-		}()
+		defer abort.Signal()
 
 		for {
 			err, ok := <-errChan
@@ -354,10 +352,8 @@ func errorHandler(stopChan chan struct{}, errChan chan error) chan error {
 				encounteredErrors <- result
 				return
 			}
-			if firstErr {
-				close(stopChan)
-				firstErr = false
-			}
+
+			abort.Signal()
 
 			result = errors.Join(result, err)
 		}
