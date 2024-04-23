@@ -147,10 +147,6 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 // resolveDeletionsAndResurrections reads txLivelinessResults and resolves deletions and resurrections.
 func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedResults chan txLivelinessResult, abort utils.Event, errChan chan error) {
 	var deleteHistory = make(map[common.Address]bool)
-	defer func() {
-		// explicitly set to nil to release memory as soon as possible
-		deleteHistory = nil
-	}()
 
 	for {
 		select {
