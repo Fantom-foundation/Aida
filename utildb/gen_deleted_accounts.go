@@ -175,7 +175,7 @@ func resolveDeletionsAndResurrections(ddb *substate.DestroyedAccountDB, orderedR
 }
 
 // resultCollector collects results from workers in round-robin fashion and sends them to a single channel.
-func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels map[int]chan txLivelinessResult, abort utils.Event) chan txLivelinessResult {
+func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels []chan txLivelinessResult, abort utils.Event) chan txLivelinessResult {
 	orderedResults := make(chan txLivelinessResult, cfg.Workers)
 	wg.Add(1)
 	go func() {
@@ -209,9 +209,9 @@ func resultCollector(wg *sync.WaitGroup, cfg *utils.Config, workerOutputChannels
 }
 
 // txProcessor launches workers to process transactions in parallel.
-func txProcessor(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[int]chan *substate.Transaction, processor executor.TxProcessor, abort utils.Event, errChan chan error, log logger.Logger) map[int]chan txLivelinessResult {
+func txProcessor(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels []chan *substate.Transaction, processor executor.TxProcessor, abort utils.Event, errChan chan error, log logger.Logger) []chan txLivelinessResult {
 	// channel for each worker to send results
-	workerOutputChannels := make(map[int]chan txLivelinessResult)
+	workerOutputChannels := make([]chan txLivelinessResult, cfg.Workers)
 	for i := 0; i < cfg.Workers; i++ {
 		workerOutputChannels[i] = make(chan txLivelinessResult)
 	}
@@ -253,11 +253,11 @@ func txProcessor(wg *sync.WaitGroup, cfg *utils.Config, workerInputChannels map[
 }
 
 // taskFeeder feeds tasks to workers in round-robin fashion.
-func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIterator, lastBlock uint64, abort utils.Event, log logger.Logger) map[int]chan *substate.Transaction {
+func taskFeeder(wg *sync.WaitGroup, cfg *utils.Config, iter substate.SubstateIterator, lastBlock uint64, abort utils.Event, log logger.Logger) []chan *substate.Transaction {
 	wg.Add(1)
 
 	// channel for each worker to get tasks for processing
-	workerInputChannels := make(map[int]chan *substate.Transaction)
+	workerInputChannels := make([]chan *substate.Transaction, cfg.Workers)
 	for i := 0; i < cfg.Workers; i++ {
 		workerInputChannels[i] = make(chan *substate.Transaction)
 	}

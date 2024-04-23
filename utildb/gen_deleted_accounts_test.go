@@ -76,7 +76,7 @@ func Test_launchWorkersParallelAbortsOnSignal(t *testing.T) {
 	testTx := makeTestTx(4)
 
 	// channel for each worker to get tasks for processing
-	workerInputChannels := make(map[int]chan *substate.Transaction)
+	workerInputChannels := make([]chan *substate.Transaction, cfg.Workers)
 	for i := 0; i < cfg.Workers; i++ {
 		workerInputChannels[i] = make(chan *substate.Transaction)
 		go func(workerId int, workerIn chan *substate.Transaction) {
@@ -129,7 +129,7 @@ func Test_launchWorkersParallelCorrectOutputOrder(t *testing.T) {
 	}
 
 	// channel for each worker to get tasks for processing
-	workerInputChannels := make(map[int]chan *substate.Transaction)
+	workerInputChannels := make([]chan *substate.Transaction, cfg.Workers)
 	for i := 0; i < cfg.Workers; i++ {
 		workerInputChannels[i] = make(chan *substate.Transaction)
 		go func(workerId int, workerIn chan *substate.Transaction) {
@@ -254,16 +254,16 @@ func Test_readAccounts(t *testing.T) {
 	t.Run("ResurrectionDeletionResurrection", func(t *testing.T) {
 		arr := make([]proxy.ContractLiveliness, 0)
 		deleteHistory := make(map[common.Address]bool)
-		deleteHistory[common.HexToAddress("0x1")] = true
+		deleteHistory[common.HexToAddress("0x1")] = false
 
-		arr = append(arr, proxy.ContractLiveliness{Addr: common.HexToAddress("0x1"), IsDeleted: false})
 		arr = append(arr, proxy.ContractLiveliness{Addr: common.HexToAddress("0x1"), IsDeleted: true})
+		arr = append(arr, proxy.ContractLiveliness{Addr: common.HexToAddress("0x1"), IsDeleted: false})
 		del, res := readAccounts(arr, &deleteHistory)
-		if len(del) != 1 || len(res) != 0 {
+		if len(del) != 0 || len(res) != 1 {
 			t.Fatalf("should return empty deletion array and 1 resurrected")
 		}
-		if !deleteHistory[common.HexToAddress("0x1")] {
-			t.Fatalf("deleteHistory should have 0x1 deleted")
+		if deleteHistory[common.HexToAddress("0x1")] {
+			t.Fatalf("deleteHistory should have 0x1 ressurected")
 		}
 	})
 }
@@ -273,7 +273,7 @@ func Test_resultCollectorCorrectResultOrder(t *testing.T) {
 	cfg := &utils.Config{Workers: 100, ChainID: 250}
 
 	// channel for each worker to get tasks for processing
-	workerOutputChannels := make(map[int]chan txLivelinessResult)
+	workerOutputChannels := make([]chan txLivelinessResult, cfg.Workers)
 	for i := 0; i < cfg.Workers; i++ {
 		workerOutputChannels[i] = make(chan txLivelinessResult)
 		go func(workerId int, workerOut chan txLivelinessResult) {
@@ -304,7 +304,7 @@ func Test_resultCollectorAbortsOnSignal(t *testing.T) {
 	abort := utils.MakeEvent()
 
 	// channel for each worker to get tasks for processing
-	workerOutputChannels := make(map[int]chan txLivelinessResult)
+	workerOutputChannels := make([]chan txLivelinessResult, cfg.Workers)
 	for i := 0; i < cfg.Workers; i++ {
 		workerOutputChannels[i] = make(chan txLivelinessResult)
 		go func(workerId int, workerOut chan txLivelinessResult) {
