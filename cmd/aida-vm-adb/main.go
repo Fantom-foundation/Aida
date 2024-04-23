@@ -36,6 +36,7 @@ var RunArchiveApp = cli.App{
 		&utils.AidaDbFlag,
 		&utils.StateDbSrcFlag,
 		&utils.ValidateTxStateFlag,
+		&utils.ValidateFlag,
 
 		// ShadowDb
 		&utils.ShadowDb,

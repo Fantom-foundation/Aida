@@ -31,6 +31,7 @@ func main() {
 			&utils.ChannelBufferSizeFlag,
 			&utils.VmImplementation,
 			&utils.ValidateTxStateFlag,
+			&utils.ValidateFlag,
 			//&utils.OnlySuccessfulFlag,
 			&utils.CpuProfileFlag,
 			&utils.DiagnosticServerFlag,

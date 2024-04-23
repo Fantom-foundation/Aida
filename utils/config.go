@@ -616,8 +616,9 @@ func (cc *configContext) adjustMissingConfigValues() error {
 		log.Warning("Enable continue-on-failure mode because error logging is used.")
 	}
 
-	// --continue-on-failure implicitly enables transaction state validation
+	// --continue-on-failure implicitly enables all validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
+	cfg.ValidateStateHashes = cfg.Validate || cfg.ValidateStateHashes || cfg.ContinueOnFailure
 
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
