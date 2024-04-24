@@ -69,9 +69,8 @@ func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, arch
 }
 
 type carmenStateDB struct {
-	db          carmen.Database
-	txCtx       carmen.TransactionContext
-	blockNumber uint64
+	db    carmen.Database
+	txCtx carmen.TransactionContext
 }
 
 type carmenHeadState struct {
@@ -345,9 +344,11 @@ func (s *carmenHeadState) GetArchiveState(block uint64) (NonCommittableStateDB, 
 	}
 
 	return &carmenHistoricState{
-		carmenStateDB: s.carmenStateDB,
-		blkCtx:        historicBlkCtx,
-		blkNumber:     block,
+		carmenStateDB: carmenStateDB{
+			db: s.db,
+		},
+		blkCtx:    historicBlkCtx,
+		blkNumber: block,
 	}, nil
 }
 
