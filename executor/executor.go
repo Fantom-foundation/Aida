@@ -335,12 +335,15 @@ func runBlock[T any](
 }
 
 // forwardBlocks is a worker that unites transactions by block and forwards them to execution.
-func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo[T], *error) {
+func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo[T], error) {
 	blocks := make(chan []*TransactionInfo[T], 10*params.NumWorkers)
-	forwardErr := new(error)
+	forwardErr := make(chan error, 1)
 
 	go func() {
-		defer close(blocks)
+		defer func() {
+			close(blocks)
+			close(forwardErr)
+		}()
 		abortErr := errors.New("aborted")
 
 		previousBlock := params.From
@@ -379,11 +382,16 @@ func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*T
 		}
 
 		if err != abortErr {
-			*forwardErr = err
+			forwardErr <- err
 		}
 	}()
 
-	return blocks, forwardErr
+	var err error
+	select {
+	case err = <-forwardErr:
+	}
+
+	return blocks, err
 }
 
 func (e *executor[T]) runTransactions(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
@@ -511,7 +519,7 @@ func (e *executor[T]) runBlocks(params Params, processor Processor[T], extension
 	}
 
 	err := errors.Join(
-		*forwardErr,
+		forwardErr,
 		errors.Join(workerErrs...),
 	)
 	if err == nil {
