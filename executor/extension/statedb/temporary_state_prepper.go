@@ -1,8 +1,6 @@
 package statedb
 
 import (
-	"fmt"
-
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	statedb "github.com/Fantom-foundation/Aida/state"
@@ -24,7 +22,7 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 		// offTheChainStateDb is default value
 		substate.RecordReplay = true
 		return &temporaryOffTheChainStatePrepper{
-			cfg: cfg,
+			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)),
 		}
 	}
 }
@@ -45,14 +43,11 @@ func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txconte
 // StateDB instance before each transaction execution.
 type temporaryOffTheChainStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg *utils.Config
+	chainConduit *statedb.ChainConduit
 }
 
 func (p *temporaryOffTheChainStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
-	if p.cfg == nil {
-		return fmt.Errorf("temporaryOffTheChainStatePrepper: cfg is nil")
-	}
-	ctx.State, err = statedb.MakeOffTheChainStateDB(state.Data.GetInputState(), uint64(state.Block), statedb.NewChainConduit(p.cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)))
+	ctx.State, err = statedb.MakeOffTheChainStateDB(state.Data.GetInputState(), uint64(state.Block), p.chainConduit)
 	return err
 }
