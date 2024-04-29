@@ -936,7 +936,7 @@ func TestProcessor_ProcessErrorAbortsProcessing_TransactionLevelParallelism(t *t
 
 	stop := fmt.Errorf("stop!")
 	processor.EXPECT().Process(AtBlock[any](4), gomock.Any()).Return(stop)
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(200)
 
 	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
@@ -967,7 +967,7 @@ func TestProcessor_ProcessErrorAbortsProcessing_BlockLevelParallelism(t *testing
 
 	stop := fmt.Errorf("stop!")
 	processor.EXPECT().Process(AtBlock[any](4), gomock.Any()).Return(stop)
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(200)
 
 	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
@@ -997,14 +997,14 @@ func TestProcessor_PreEventErrorAbortsProcessing_TransactionLevelParallelism(t *
 			return nil
 		})
 
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(200)
 
 	stop := fmt.Errorf("stop!")
 	extension.EXPECT().PreTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
 
 	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
-	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(200)
+	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(200)
 	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
 
 	err := NewExecutor[any](substate, "DEBUG").Run(

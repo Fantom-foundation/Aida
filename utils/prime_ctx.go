@@ -12,8 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewPrimeContext(cfg *Config, db state.StateDB, log logger.Logger) *PrimeContext {
-	return &PrimeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
+func NewPrimeContext(cfg *Config, db state.StateDB, block uint64, log logger.Logger) *PrimeContext {
+	return &PrimeContext{cfg: cfg, log: log, block: block, db: db, exist: make(map[common.Address]bool)}
 }
 
 // PrimeContext structure keeps context used over iterations of priming
@@ -65,7 +65,11 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
-		var err error
+		err := pc.loadExistingAccountsIntoCache(ws)
+		if err != nil {
+			return err
+		}
+
 		pc.load, err = db.StartBulkLoad(pc.block)
 		if err != nil {
 			return err
@@ -97,6 +101,41 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 	return nil
 }
 
+// loadExistingAccountsIntoCache checks whether accounts to be primed already exists in the statedb.
+// If so, it preloads pc.exist cache with the account existence.
+func (pc *PrimeContext) loadExistingAccountsIntoCache(ws txcontext.WorldState) error {
+	err := pc.db.BeginBlock(pc.block)
+	if err != nil {
+		return fmt.Errorf("cannot begin block; %w", err)
+	}
+
+	err = pc.db.BeginTransaction(uint32(0))
+	if err != nil {
+		return fmt.Errorf("cannot begin transaction; %w", err)
+	}
+
+	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		found, ok := pc.exist[addr]
+		if !ok || !found {
+			dbExist := pc.db.Exist(addr)
+			if dbExist {
+				pc.exist[addr] = true
+			}
+		}
+	})
+
+	err = pc.db.EndTransaction()
+	if err != nil {
+		return err
+	}
+	err = pc.db.EndBlock()
+	if err != nil {
+		return err
+	}
+	pc.block++
+	return nil
+}
+
 // primeOneAccount initializes an account on stateDB with substate
 func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Account, pt *ProgressTracker) error {
 	exist, found := pc.exist[addr]
@@ -104,12 +143,14 @@ func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Accou
 	if !exist && acc.GetBalance().Sign() == 0 && acc.GetNonce() == 0 && len(acc.GetCode()) == 0 {
 		return nil
 	}
+
 	// if an account was previously primed, skip account creation.
 	if !found || !exist {
 		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
 		pc.operations++
 	}
+
 	pc.load.SetBalance(addr, acc.GetBalance())
 	pc.load.SetNonce(addr, acc.GetNonce())
 	pc.load.SetCode(addr, acc.GetCode())
@@ -147,11 +188,16 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	var err error
+	err := pc.loadExistingAccountsIntoCache(ws)
+	if err != nil {
+		return err
+	}
+
 	pc.load, err = pc.db.StartBulkLoad(pc.block)
 	if err != nil {
 		return err
 	}
+
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws.Get(addr)
@@ -189,4 +235,8 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []substatetyp
 	db.EndSyncPeriod()
 	pc.block++
 	pc.log.Infof("\t\t %v suicided accounts were removed from statedb (before priming).", count)
+}
+
+func (pc *PrimeContext) GetBlock() uint64 {
+	return pc.block
 }

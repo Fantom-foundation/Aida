@@ -2,6 +2,7 @@ package primer
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -38,9 +39,14 @@ type stateDbPrimer[T any] struct {
 
 // PreRun primes StateDb to given block.
 func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (err error) {
+	// is used to determine block from which the priming starts
+	var primingStartBlock uint64
 	if p.cfg.IsExistingStateDb {
-		p.log.Warning("Skipping priming due to usage of pre-existing StateDb")
-		return nil
+		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(p.cfg.StateDbSrc, utils.PathToDbInfo))
+		if err != nil {
+			return fmt.Errorf("cannot read state db info; %w", err)
+		}
+		primingStartBlock = stateDbInfo.Block + 1
 	}
 
 	if p.cfg.SkipPriming {
@@ -48,28 +54,35 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 		return nil
 	}
 
+	if primingStartBlock == p.cfg.First {
+		p.log.Debugf("skipping priming; first priming block %v; first block %v", primingStartBlock-1, p.cfg.First)
+		return nil
+	}
+
+	// user incorrectly tries to prime data into database even tho database is already advanced further
+	if primingStartBlock > p.cfg.First {
+		return fmt.Errorf("undefined behaviour; starting block %v shouldn't lower than block of provided stateDb %v", p.cfg.First, primingStartBlock-1)
+	}
+
 	if p.cfg.PrimeRandom {
 		p.log.Infof("Randomized Priming enabled; Seed: %v, threshold: %v", p.cfg.RandomSeed, p.cfg.PrimeThreshold)
 	}
 
-	if p.cfg.First == 0 {
-		return nil
-	}
-
 	p.log.Infof("Update buffer size: %v bytes", p.cfg.UpdateBufferSize)
 
+	p.log.Noticef("Priming from block %v...", primingStartBlock)
 	p.log.Noticef("Priming to block %v...", p.cfg.First-1)
-	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
+	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, primingStartBlock, p.log)
 
 	return p.prime(ctx.State, ctx.AidaDb)
 }
 
-// prime the stateDb to given first block.
+// prime advances the stateDb to given first block.
 func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error {
 	var (
-		totalSize uint64 // total size of unprimed update set
-		block     uint64 // current block position
-		hasPrimed bool   // if true, db has been primed
+		totalSize uint64             // total size of unprimed update set
+		hasPrimed bool               // if true, db has been primed
+		block     = p.ctx.GetBlock() // current block priming position
 	)
 
 	// load pre-computed update-set from update-set db
@@ -128,17 +141,17 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error 
 
 	// advance from the latest precomputed update-set to the target block
 	// if the first block is 1, target must prime the genesis block
-	if block < p.cfg.First-1 || p.cfg.First-1 == 0 {
+	if block < p.cfg.First || p.cfg.First-1 == 0 {
 		log.Infof("\tPriming using substate from %v to %v", block, p.cfg.First-1)
 		update, deletedAccounts, err := utils.GenerateUpdateSet(block, p.cfg.First-1, p.cfg, aidaDb)
 		if err != nil {
-			return fmt.Errorf("cannot generate update-set; %v", err)
+			return fmt.Errorf("cannot generate update-set; %w", err)
 		}
 		if hasPrimed {
 			p.ctx.SuicideAccounts(stateDb, deletedAccounts)
 		}
 		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
-			return fmt.Errorf("cannot prime state-db; %v", err)
+			return fmt.Errorf("cannot prime state-db; %w", err)
 		}
 	}
 

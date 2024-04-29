@@ -789,15 +789,20 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := utils.NewPrimeContext(cfg, sDB, log)
+			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB with given world state
 			if err = pc.PrimeStateDB(ws, sDB); err != nil {
 				t.Fatal(err)
 			}
 
-			err = state.BeginCarmenDbTestContext(sDB)
+			err = sDB.BeginBlock(uint64(2))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("cannot begin block; %v", err)
+			}
+
+			err = sDB.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
 			}
 
 			// Call for state DB validation and subsequent check for error
@@ -835,7 +840,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := utils.NewPrimeContext(cfg, sDB, log)
+			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 
@@ -852,9 +857,13 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			ws[addr] = subAcc
 
-			err = state.BeginCarmenDbTestContext(sDB)
+			err = sDB.BeginBlock(uint64(2))
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = sDB.BeginTransaction(uint32(0))
+			if err != nil {
+				t.Fatalf("cannot begin transaction; %v", err)
 			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
