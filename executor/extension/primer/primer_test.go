@@ -62,7 +62,11 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 		log.EXPECT().Noticef("Priming from block %v...", uint64(0)),
 		log.EXPECT().Noticef("Priming to block %v...", cfg.First-1),
 		log.EXPECT().Debugf("\tLoading %d accounts with %d values ..", 0, 0),
-		stateDb.EXPECT().StartBulkLoad(uint64(0)).Return(nil, errors.New("stop")),
+		stateDb.EXPECT().BeginBlock(uint64(0)),
+		stateDb.EXPECT().BeginTransaction(uint32(0)),
+		stateDb.EXPECT().EndTransaction(),
+		stateDb.EXPECT().EndBlock(),
+		stateDb.EXPECT().StartBulkLoad(uint64(1)).Return(nil, errors.New("stop")),
 	)
 
 	ext := makeStateDbPrimer[any](cfg, log)
@@ -195,7 +199,11 @@ func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
 		log.EXPECT().Noticef("Priming from block %v...", uint64(0)),
 		log.EXPECT().Noticef("Priming to block %v...", uint64(9)),
 		log.EXPECT().Debugf("\tLoading %d accounts with %d values ..", 0, 0),
-		stateDb.EXPECT().StartBulkLoad(uint64(0)).Return(nil, errors.New("stop")),
+		stateDb.EXPECT().BeginBlock(uint64(0)),
+		stateDb.EXPECT().BeginTransaction(uint32(0)),
+		stateDb.EXPECT().EndTransaction(),
+		stateDb.EXPECT().EndBlock(),
+		stateDb.EXPECT().StartBulkLoad(uint64(1)).Return(nil, errors.New("stop")),
 	)
 
 	aidaDb, err := db.NewDefaultBaseDB(aidaDbPath)
@@ -232,7 +240,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := substatecontext.NewWorldState(alloc)
+			ws := txcontext.NewWorldState(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB
@@ -299,7 +307,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				}
 			}()
 
-			err = sDB2.BeginBlock(uint64(3))
+			err = sDB2.BeginBlock(uint64(7))
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
 			}
@@ -342,16 +350,16 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 
 			// Generating randomized world state
 			alloc2, _ := utils.MakeWorldState(t)
-			ws2 := substatecontext.NewWorldState(alloc2)
+			ws2 := txcontext.NewWorldState(alloc2)
 
-			pc2 := utils.NewPrimeContext(cfg, sDB2, 4, log)
+			pc2 := utils.NewPrimeContext(cfg, sDB2, 8, log)
 			// Priming state DB
 			err = pc2.PrimeStateDB(ws2, sDB2)
 			if err != nil {
 				t.Fatalf("failed to prime state DB2: %v", err)
 			}
 
-			err = sDB2.BeginBlock(uint64(6))
+			err = sDB2.BeginBlock(uint64(10))
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
 			}
