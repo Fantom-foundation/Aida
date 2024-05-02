@@ -1,22 +1,34 @@
 pipeline {
-    agent { label 'pullrequest' }
+    agent { label 'db-small-ssd' }
     
-    options { timestamps () }
+    options { 
+        timestamps ()
+        timeout(time: 1, unit: 'HOURS')
+    }
     
-    environment { 
-        PATH = '/usr/local/bin:/usr/bin:/bin:/usr/local/go/bin'
+    environment {
+        GOROOT = '/usr/lib/go-1.21/'
         STORAGE = '--db-impl carmen --db-variant go-file --carmen-schema 3'
         PRIME = '--update-buffer-size 4000'
         VM = '--vm-impl lfvm'
-        AIDADB = '--aida-db=/var/opera/Aida/mainnet-data/aida-db'
-        TMPDB = '--db-tmp=/var/opera/Aida/dbtmpjenkins'
-        DBSRC = '--db-src=/var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_${TOBLOCK}'
+        AIDADB = '--aida-db=/mnt/aida-db-central/aida-db'
+        TMPDB = '--db-tmp=/mnt/tmp-disk'
+        DBSRC = '--db-src=/mnt/tmp-disk/state_db_carmen_go-file_${TOBLOCK}'
         TRACEDIR = 'tracefiles'
         FROMBLOCK = 'opera'
         TOBLOCK = '4600000'
     }
 
     stages {
+
+        stage('Check formatting') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh 'diff=`${GOROOT}/bin/gofmt -s -d .`; echo "$diff"; test -z "$diff"'
+                }
+            }
+        }
+
         stage('Build') {
             steps {
                 script {
@@ -27,13 +39,13 @@ pipeline {
             }
         }
 
-	stage('Test') {
+        stage('Run unit tests') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
                      sh 'go test ./...'
                 }
             }
-	}
+        }
 
         stage('aida-vm') {
             steps {
@@ -135,18 +147,6 @@ pipeline {
                 sh "rm -rf *.dat ${TRACEDIR}"
                 sh "rm -rf /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_${TOBLOCK}"
             }
-        }
-    }
-
-    post {
-        always {
-            build job: '/Notifications/slack-notification-pipeline', parameters: [
-                string(name: 'result', value: "${currentBuild.result}"),
-                string(name: 'name', value: "${currentBuild.fullDisplayName}"),
-                string(name: 'duration', value: "${currentBuild.duration}"),
-                string(name: 'url', value: "$currentBuild.absoluteUrl"),
-                string(name: 'user', value: env.CHANGE_AUTHOR),
-            ]
         }
     }
 }
