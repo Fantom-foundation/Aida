@@ -220,12 +220,28 @@ func (f fakeRpcClient) Call(_ interface{}, _ string, _ ...interface{}) error {
 }
 
 func (f fakeRpcClient) NonceAt(_ context.Context, account common.Address, _ *big.Int) (uint64, error) {
+	err := f.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return 0, err
+	}
 	nonce := f.stateDb.GetNonce(account)
+	err = f.stateDb.EndTransaction()
+	if err != nil {
+		return 0, err
+	}
 	return nonce, nil
 }
 
 func (f fakeRpcClient) BalanceAt(_ context.Context, account common.Address, _ *big.Int) (*big.Int, error) {
+	err := f.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return nil, err
+	}
 	balance := f.stateDb.GetBalance(account)
+	err = f.stateDb.EndTransaction()
+	if err != nil {
+		return nil, err
+	}
 	return balance, nil
 }
 
@@ -234,7 +250,15 @@ func (f fakeRpcClient) Close() {
 }
 
 func (f fakeRpcClient) CodeAt(_ context.Context, address common.Address, _ *big.Int) ([]byte, error) {
+	err := f.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return nil, err
+	}
 	code := f.stateDb.GetCode(address)
+	err = f.stateDb.EndTransaction()
+	if err != nil {
+		return nil, err
+	}
 	return code, nil
 }
 
