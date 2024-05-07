@@ -290,7 +290,9 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	archive := state.NewMockNonCommittableStateDB(ctrl)
+	archiveBlk2 := state.NewMockNonCommittableStateDB(ctrl)
+	archiveBlk3 := state.NewMockNonCommittableStateDB(ctrl)
+	archiveBlk4 := state.NewMockNonCommittableStateDB(ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 
@@ -324,48 +326,48 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 
 	// Block 2
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archiveBlk2, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 		// Tx 1
-		archive.EXPECT().BeginTransaction(uint32(1)),
+		archiveBlk2.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
-		archive.EXPECT().EndTransaction(),
+		archiveBlk2.EXPECT().EndTransaction(),
 		// Tx 2
-		archive.EXPECT().BeginTransaction(uint32(2)),
+		archiveBlk2.EXPECT().BeginTransaction(uint32(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		archive.EXPECT().EndTransaction(),
+		archiveBlk2.EXPECT().EndTransaction(),
 		ext.EXPECT().PostBlock(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
-		archive.EXPECT().Release(),
+		archiveBlk2.EXPECT().Release(),
 	)
 
 	// Block 3
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveBlk3, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](3), gomock.Any()),
-		archive.EXPECT().BeginTransaction(uint32(1)),
+		archiveBlk3.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		archive.EXPECT().EndTransaction(),
-		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		archive.EXPECT().Release(),
+		archiveBlk3.EXPECT().EndTransaction(),
+		ext.EXPECT().PostBlock(executor.AtBlock[txcontext.TxContext](3), gomock.Any()),
+		archiveBlk3.EXPECT().Release(),
 	)
 
 	// Block 4
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveBlk4, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](4), gomock.Any()),
-		archive.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
+		archiveBlk4.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		archive.EXPECT().EndTransaction(),
-		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		archive.EXPECT().Release(),
+		archiveBlk4.EXPECT().EndTransaction(),
+		ext.EXPECT().PostBlock(executor.AtBlock[txcontext.TxContext](4), gomock.Any()),
+		archiveBlk4.EXPECT().Release(),
 	)
 
 	ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil)
