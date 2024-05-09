@@ -7,7 +7,7 @@ toolchain go1.22.0
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240304081312-ad4c7efe9986
 	github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0
-	github.com/Fantom-foundation/Substate v0.0.0-20240419092516-5792e05a668b
+	github.com/Fantom-foundation/Substate v0.0.0-20240509142111-69f0915c9d4c
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
@@ -26,7 +26,7 @@ require (
 	github.com/paulmach/orb v0.9.0
 	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
 	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.9.0
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/urfave/cli/v2 v2.25.7
 	go.uber.org/mock v0.4.0
@@ -104,7 +104,7 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 
 // todo remove
-replace github.com/Fantom-foundation/Substate => github.com/Fantom-foundation/Substate v0.0.0-20240419092516-5792e05a668b
+replace github.com/Fantom-foundation/Substate => github.com/Fantom-foundation/Substate v0.0.0-20240509144346-4d7c62a8b38f
 
 replace github.com/ethereum/go-ethereum => github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0
 

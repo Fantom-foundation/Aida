@@ -505,7 +505,7 @@ func (cc *configContext) setChainId() error {
 		cc.log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
-		if aidaDb, err := db.NewDefaultBaseDB(cc.cfg.AidaDb); err == nil {
+		if aidaDb, err := db.OpenBaseDB(cc.cfg.AidaDb); err == nil {
 			md := NewAidaDbMetadata(aidaDb, cc.cfg.LogLevel)
 
 			cc.cfg.ChainID = md.GetChainID()

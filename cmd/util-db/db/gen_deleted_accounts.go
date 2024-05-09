@@ -51,7 +51,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 	}
 	defer sdb.Close()
 
-	ddb, err := db.OpenDestroyedAccountDB(cfg.DeletionDb)
+	ddb, err := db.NewDefaultDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}

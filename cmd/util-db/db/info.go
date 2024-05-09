@@ -181,7 +181,7 @@ func printRange(ctx *cli.Context) error {
 
 	// print deleted range
 	if dbComponent == dbcomponent.Delete || dbComponent == dbcomponent.All {
-		ddb, err := db.OpenDestroyedAccountDB(cfg.AidaDb)
+		ddb, err := db.NewDefaultDestroyedAccountDB(cfg.AidaDb)
 		if err != nil {
 			return fmt.Errorf("cannot open destroyed account db; %w", err)
 		}
@@ -219,7 +219,7 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Deleted-Account-Info")
 
-	db, err := db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	db, err := db.NewReadOnlyDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}

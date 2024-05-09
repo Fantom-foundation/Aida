@@ -271,7 +271,7 @@ func (g *Generator) init() (*db.DestroyedAccountDB, db.UpdateDB, uint64, error) 
 		return nil, nil, 0, fmt.Errorf("cannot open tmp deletion-db; %v", err)
 	}
 
-	deleteDb := db.NewDestroyedAccountDB(g.DeletionDbTmp)
+	deleteDb := db.MakeDefaultDestroyedAccountDBFromBaseDB(g.DeletionDbTmp)
 	updateDb := db.MakeDefaultUpdateDBFromBaseDB(g.AidaDb)
 
 	// set first updateset block
@@ -638,7 +638,7 @@ func (g *Generator) mergeTemporaryDeletionDb() (*db.DestroyedAccountDB, error) {
 	g.Log.Noticef("DeletionDbTmp successfully merged into AidaDb...")
 
 	// return deleteDb pointing to AidaDb
-	deleteDb := db.NewDestroyedAccountDB(g.AidaDb)
+	deleteDb := db.MakeDefaultDestroyedAccountDBFromBaseDB(g.AidaDb)
 	return deleteDb, nil
 }
 

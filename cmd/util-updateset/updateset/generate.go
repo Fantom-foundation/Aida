@@ -100,7 +100,7 @@ func generateUpdateSet(ctx *cli.Context) error {
 	}
 	defer sdb.Close()
 
-	ddb, err := db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	ddb, err := db.NewReadOnlyDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}

@@ -206,7 +206,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 func DeleteDestroyedAccountsFromWorldState(ws txcontext.WorldState, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src, err := db.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	src, err := db.NewReadOnlyDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
@@ -229,7 +229,7 @@ func DeleteDestroyedAccountsFromWorldState(ws txcontext.WorldState, cfg *Config,
 func DeleteDestroyedAccountsFromStateDB(sdb state.StateDB, cfg *Config, target uint64, aidaDb db.BaseDB) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src := db.MakeDestroyedAccountDBFromBaseDB(aidaDb)
+	src := db.MakeDefaultDestroyedAccountDBFromBaseDB(aidaDb)
 	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err

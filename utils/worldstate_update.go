@@ -21,7 +21,7 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config, aidaDb db.BaseDB)
 	defer stateIter.Release()
 
 	// Todo rewrite in wrapping functions
-	deletedAccountDB = db.MakeDestroyedAccountDBFromBaseDB(aidaDb)
+	deletedAccountDB = db.MakeDefaultDestroyedAccountDBFromBaseDB(aidaDb)
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		// exceeded block range?
