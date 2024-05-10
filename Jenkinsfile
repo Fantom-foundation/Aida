@@ -1,9 +1,10 @@
 pipeline {
-    agent { label 'db-small-ssd' }
+    agent { label 'pr-quick' }
     
     options { 
         timestamps ()
         timeout(time: 1, unit: 'HOURS')
+        disableConcurrentBuilds(abortPrevious: true)
     }
     
     environment {
