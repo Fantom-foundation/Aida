@@ -168,7 +168,7 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 
 	executionResult, err = evmcore.ApplyMessage(evm, msg, gp)
 	if executionResult.Err != nil {
-		return nil, fmt.Errorf("execution returned err; %w", err)
+		return nil, fmt.Errorf("execution returned err; %w", executionResult.Err)
 	}
 
 	if hashErr != nil {

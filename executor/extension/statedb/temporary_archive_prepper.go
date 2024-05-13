@@ -17,6 +17,8 @@
 package statedb
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/rpc"
@@ -40,12 +42,13 @@ func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.Reque
 		return err
 	}
 
-	return nil
+	return ctx.Archive.BeginTransaction(uint32(state.Transaction))
 }
 
 // PostTransaction releases temporary Archive.
 func (r *temporaryArchivePrepper) PostTransaction(_ executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	ctx.Archive.Release()
-
-	return nil
+	if err := ctx.Archive.EndTransaction(); err != nil {
+		return fmt.Errorf("cannot end transaction; %w", err)
+	}
+	return ctx.Archive.Release()
 }
