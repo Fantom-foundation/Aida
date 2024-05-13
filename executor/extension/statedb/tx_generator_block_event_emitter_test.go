@@ -16,8 +16,12 @@ func TestTxGeneratorBlockEventEmitter_SingleBlock(t *testing.T) {
 
 	gomock.InOrder(
 		mockStateDB.EXPECT().BeginBlock(uint64(0)),
+		mockStateDB.EXPECT().BeginTransaction(uint32(0)),
+		mockStateDB.EXPECT().EndTransaction(),
 		mockStateDB.EXPECT().EndBlock(),
 		mockStateDB.EXPECT().BeginBlock(uint64(1)),
+		mockStateDB.EXPECT().BeginTransaction(uint32(0)),
+		mockStateDB.EXPECT().EndTransaction(),
 		mockStateDB.EXPECT().EndBlock(),
 	)
 
@@ -30,11 +34,18 @@ func TestTxGeneratorBlockEventEmitter_SingleBlock(t *testing.T) {
 	if err := ext.PreTransaction(state, ctx); err != nil {
 		t.Fatalf("failed to to run pre-transaction: %v", err)
 	}
+	if err := ext.PostTransaction(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-transaction: %v", err)
+	}
 
 	// increment the block number to make sure the block is ended
 	// and the next block is started
 	state.Block = 1
 	if err := ext.PreTransaction(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-transaction: %v", err)
+	}
+
+	if err := ext.PostTransaction(state, ctx); err != nil {
 		t.Fatalf("failed to to run pre-transaction: %v", err)
 	}
 
