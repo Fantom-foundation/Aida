@@ -29,13 +29,35 @@ import (
 func TestTemporaryArchivePrepper_PreTransactionGetsArchiveForRequestedBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
 	ext := MakeTemporaryArchivePrepper()
 
-	db.EXPECT().GetArchiveState(uint64(10)).Return(nil, nil)
+	gomock.InOrder(
+		db.EXPECT().GetArchiveState(uint64(10)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(0)),
+	)
 
 	st := executor.State[*rpc.RequestAndResults]{Block: 10, Transaction: 0, Data: data}
 	ctx := &executor.Context{State: db}
 	err := ext.PreTransaction(st, ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTemporaryArchivePrepper_PostTransactionReleasesAllocations(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
+	ext := MakeTemporaryArchivePrepper()
+
+	gomock.InOrder(
+		archive.EXPECT().EndTransaction(),
+		archive.EXPECT().Release(),
+	)
+
+	st := executor.State[*rpc.RequestAndResults]{Block: 10, Transaction: 0, Data: data}
+	ctx := &executor.Context{Archive: archive}
+	err := ext.PostTransaction(st, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
