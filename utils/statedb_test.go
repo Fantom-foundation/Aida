@@ -62,7 +62,7 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 			}
 
 			// Creating new destroyed accounts DB
-			daDB := db.NewDestroyedAccountDB(daBackend)
+			daDB := db.MakeDefaultDestroyedAccountDBFromBaseDB(daBackend)
 
 			// Storing two picked accounts from destroyedAccounts slice to destroyed accounts DB
 			err = daDB.SetDestroyedAccounts(5, 1, destroyedAccounts, []substatetypes.Address{})
@@ -115,7 +115,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			}
 
 			// Creating new destroyed accounts DB
-			daDB := db.NewDestroyedAccountDB(base)
+			daDB := db.MakeDefaultDestroyedAccountDBFromBaseDB(base)
 
 			// Storing two picked accounts from destroyedAccounts slice to destroyed accounts DB
 			err = daDB.SetDestroyedAccounts(5, 1, destroyedAccounts, []substatetypes.Address{})
