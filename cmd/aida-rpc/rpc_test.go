@@ -105,7 +105,6 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	archiveOne := state.NewMockNonCommittableStateDB(ctrl)
 	archiveTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
-	archiveFour := state.NewMockNonCommittableStateDB(ctrl)
 
 	cfg := &utils.Config{
 		First:       2,
@@ -121,9 +120,8 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*rpc.RequestAndResults]) error {
 			// Block 2
 			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 2, Transaction: 1, Data: reqBlockTwo})
-			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 2, Transaction: 2, Data: reqBlockTwo})
 			// Block 3
-			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 3, Transaction: 1, Data: reqBlockThree})
+			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 3, Transaction: 2, Data: reqBlockThree})
 			// Block 4
 			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 4, Transaction: 0, Data: reqBlockFour})
 			return nil
@@ -141,27 +139,19 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	)
 	gomock.InOrder(
 		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveTwo, nil),
+		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveTwo, nil),
 		archiveTwo.EXPECT().BeginTransaction(uint32(2)),
-		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveTwo.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(3)),
 		archiveTwo.EXPECT().EndTransaction(),
 		archiveTwo.EXPECT().Release(),
 	)
 	gomock.InOrder(
 		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveThree, nil),
-		archiveThree.EXPECT().BeginTransaction(uint32(1)),
-		archiveThree.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(1)),
+		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveThree, nil),
+		archiveThree.EXPECT().BeginTransaction(uint32(0)),
+		archiveThree.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
 		archiveThree.EXPECT().EndTransaction(),
 		archiveThree.EXPECT().Release(),
-	)
-	gomock.InOrder(
-		// Req 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveFour, nil),
-		archiveFour.EXPECT().BeginTransaction(uint32(0)),
-		archiveFour.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
-		archiveFour.EXPECT().EndTransaction(),
-		archiveFour.EXPECT().Release(),
 	)
 
 	if err := run(cfg, provider, db, rpcProcessor{cfg}, nil); err != nil {
