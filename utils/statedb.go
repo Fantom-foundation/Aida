@@ -244,14 +244,26 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		return nil
 	}
 	db.BeginSyncPeriod(0)
-	db.BeginBlock(target)
-	db.BeginTransaction(0)
+	err = db.BeginBlock(target)
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts BeginBlock: %w", err)
+	}
+	err = db.BeginTransaction(0)
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts BeginTransaction: %w", err)
+	}
 	for _, addr := range accounts {
 		db.Suicide(addr)
 		log.Debugf("Perform suicide on %v", addr)
 	}
-	db.EndTransaction()
-	db.EndBlock()
+	err = db.EndTransaction()
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts EndTransaction: %w", err)
+	}
+	err = db.EndBlock()
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts EndBlock: %w", err)
+	}
 	db.EndSyncPeriod()
 	return nil
 }

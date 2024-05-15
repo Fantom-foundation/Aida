@@ -169,11 +169,17 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 }
 
 // SuicideAccounts clears storage of all input accounts.
-func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
+func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) error {
 	count := 0
 	db.BeginSyncPeriod(0)
-	db.BeginBlock(pc.block)
-	db.BeginTransaction(0)
+	err := db.BeginBlock(pc.block)
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts BeginBlock: %w", err)
+	}
+	err = db.BeginTransaction(0)
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts BeginTransaction: %w", err)
+	}
 	for _, addr := range accounts {
 		if db.Exist(addr) {
 			db.Suicide(addr)
@@ -182,8 +188,14 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 			pc.exist[addr] = false
 		}
 	}
-	db.EndTransaction()
-	db.EndBlock()
+	err = db.EndTransaction()
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts EndTransaction: %w", err)
+	}
+	err = db.EndBlock()
+	if err != nil {
+		return fmt.Errorf("DeleteDestroyedAccounts EndBlock: %w", err)
+	}
 	db.EndSyncPeriod()
 	pc.block++
 	pc.log.Infof("\t\t %v suicided accounts were removed from statedb (before priming).", count)

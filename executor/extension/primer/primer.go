@@ -139,7 +139,10 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 			return fmt.Errorf("cannot generate update-set; %v", err)
 		}
 		if hasPrimed {
-			p.ctx.SuicideAccounts(stateDb, deletedAccounts)
+			err = p.ctx.SuicideAccounts(stateDb, deletedAccounts)
+			if err != nil {
+				return err
+			}
 		}
 		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
 			return fmt.Errorf("cannot prime state-db; %v", err)
