@@ -121,11 +121,7 @@ func (s *carmenStateDB) HasSuicided(addr common.Address) bool {
 }
 
 func (s *carmenStateDB) GetBalance(addr common.Address) *big.Int {
-	if balance := s.txCtx.GetBalance(carmen.Address(addr)); balance != nil {
-		return balance
-	}
-
-	return big.NewInt(0)
+	return s.txCtx.GetBalance(carmen.Address(addr))
 }
 
 func (s *carmenStateDB) AddBalance(addr common.Address, value *big.Int) {
