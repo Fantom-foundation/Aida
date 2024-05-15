@@ -199,4 +199,5 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 	db.EndSyncPeriod()
 	pc.block++
 	pc.log.Infof("\t\t %v suicided accounts were removed from statedb (before priming).", count)
+	return nil
 }
