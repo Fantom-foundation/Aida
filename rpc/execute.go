@@ -34,12 +34,9 @@ const falsyContract = "0xe0c38b2a8d09aad53f1c67734b9a95e43d5981c0"
 func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) txcontext.Result {
 	switch rec.Query.MethodBase {
 	case "getBalance":
-
 		return executeGetBalance(rec.Query.Params[0], archive)
-
 	case "getTransactionCount":
 		return executeGetTransactionCount(rec.Query.Params[0], archive)
-
 	case "call":
 		if rec.Timestamp == 0 {
 			return nil
@@ -57,10 +54,8 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
 		return executeGetCode(rec.Query.Params[0], archive)
-
 	case "getStorageAt":
 		return executeGetStorageAt(rec.Query.Params, archive)
-
 	default:
 		break
 	}
@@ -91,9 +86,15 @@ func executeCall(evm *EvmExecutor) *result {
 	var gasUsed uint64
 
 	exRes, err := evm.sendCall()
-	if exRes != nil {
-		gasUsed = exRes.UsedGas
+	if exRes == nil {
+		return &result{
+			gasUsed: 0,
+			result:  []byte{},
+			err:     err,
+		}
 	}
+
+	gasUsed = exRes.UsedGas
 
 	// this situation can happen if request is valid but the response from EVM is empty
 	// EVM returns nil instead of an empty result
