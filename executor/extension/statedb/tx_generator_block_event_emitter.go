@@ -17,6 +17,8 @@
 package statedb
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 )
@@ -38,16 +40,37 @@ func (l *txGeneratorBlockEventEmitter[T]) PreTransaction(state executor.State[T]
 	// if last block is nil, begin block for the current block
 	// this is to ensure that the block is started before the first transaction
 	if l.lastBlock == nil {
-		ctx.State.BeginBlock(uint64(state.Block))
+		err := ctx.State.BeginBlock(uint64(state.Block))
+		if err != nil {
+			return fmt.Errorf("cannot begin block; %w", err)
+		}
 		blk := uint64(state.Block)
 		l.lastBlock = &blk
 	} else if *l.lastBlock != uint64(state.Block) {
 		// if the last block is not equal to the current block, end the last block
 		// and begin the current block
-		ctx.State.EndBlock()
-		ctx.State.BeginBlock(uint64(state.Block))
+		err := ctx.State.EndBlock()
+		if err != nil {
+			return fmt.Errorf("cannot begin block; %w", err)
+		}
+		err = ctx.State.BeginBlock(uint64(state.Block))
+		if err != nil {
+			return fmt.Errorf("cannot begin block; %w", err)
+		}
 		blk := uint64(state.Block)
 		l.lastBlock = &blk
+	}
+	err := ctx.State.BeginTransaction(uint32(state.Transaction))
+	if err != nil {
+		return fmt.Errorf("cannot begin transaction; %w", err)
+	}
+	return nil
+}
+
+func (l *txGeneratorBlockEventEmitter[T]) PostTransaction(_ executor.State[T], ctx *executor.Context) error {
+	err := ctx.State.EndTransaction()
+	if err != nil {
+		return fmt.Errorf("cannot end transaction; %w", err)
 	}
 	return nil
 }

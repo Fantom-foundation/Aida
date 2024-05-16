@@ -52,20 +52,32 @@ func TestNormaTxProvider_Run(t *testing.T) {
 		// expected on block 2, because block 1 is treasure account initialization
 		// and we are starting from block 1
 		consumer.EXPECT().Consume(2, 0, gomock.Any()).Return(nil),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
 
 		// funding accounts
 		// we return a lot of tokens, so we don't have to "fund" them
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(1_000_000))),
+		dbMock.EXPECT().EndTransaction(),
 		// nonce for account deploying the contract has to be 1
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(1)),
+		dbMock.EXPECT().EndTransaction(),
 		// nonce for funded accounts has to be 0
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(1_000_000))),
+		dbMock.EXPECT().EndTransaction(),
 
 		// waiting for contract deployment requires checking the nonce
 		// of funded accounts, since we did no funding, then nonce is 0
-		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)).AnyTimes(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
+		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
 
 		// generating transactions, starting from transaction 1 (0 was contract deployment)
 		consumer.EXPECT().Consume(2, 1, gomock.Any()).Return(nil),
@@ -111,36 +123,69 @@ func TestNormaTxProvider_RunAll(t *testing.T) {
 
 		// ERC 20
 		consumer.EXPECT().Consume(2, 0, gomock.Any()).Return(nil),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(balance),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(1)),
+		dbMock.EXPECT().EndTransaction(),
 		// funding accounts
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(balance),
+		dbMock.EXPECT().EndTransaction(),
 		// mint nf tokens
 		consumer.EXPECT().Consume(2, 1, gomock.Any()).Return(nil),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(1)),
-
+		dbMock.EXPECT().EndTransaction(),
 		// COUNTER
 		consumer.EXPECT().Consume(2, 2, gomock.Any()).Return(nil),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(1)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(balance),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(2)),
+		dbMock.EXPECT().EndTransaction(),
 		// funding accounts
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(balance),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(1)),
-
+		dbMock.EXPECT().EndTransaction(),
 		// STORE
 		consumer.EXPECT().Consume(2, 3, gomock.Any()).Return(nil),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(2)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(balance),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(3)),
+		dbMock.EXPECT().EndTransaction(),
 		// funding accounts
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetBalance(gomock.Any()).Return(balance),
+		dbMock.EXPECT().EndTransaction(),
+		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(2)),
-
+		dbMock.EXPECT().EndTransaction(),
 		// generating transactions
 		consumer.EXPECT().Consume(2, 4, gomock.Any()).Return(nil),
 		consumer.EXPECT().Consume(3, 0, gomock.Any()).Return(nil),

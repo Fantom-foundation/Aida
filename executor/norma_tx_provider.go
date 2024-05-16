@@ -170,12 +170,24 @@ func (p normaTxProvider) initializeTreasureAccount(blkNumber int) (*app.Account,
 	amount := big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(2_000_000_000))
 	// we need to begin and end the block and transaction to be able to create an account
 	// and add balance to it (otherwise the account would not be funded for geth storage implementation)
-	p.stateDb.BeginBlock(uint64(blkNumber))
-	p.stateDb.BeginTransaction(uint32(0))
+	err = p.stateDb.BeginBlock(uint64(blkNumber))
+	if err != nil {
+		return nil, fmt.Errorf("cannot begin block; %w", err)
+	}
+	err = p.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return nil, fmt.Errorf("cannot begin transaction; %w", err)
+	}
 	p.stateDb.CreateAccount(fromAddress)
 	p.stateDb.AddBalance(fromAddress, amount)
-	p.stateDb.EndTransaction()
-	p.stateDb.EndBlock()
+	err = p.stateDb.EndTransaction()
+	if err != nil {
+		return nil, fmt.Errorf("cannot end transaction; %w", err)
+	}
+	err = p.stateDb.EndBlock()
+	if err != nil {
+		return nil, fmt.Errorf("cannot end block; %w", err)
+	}
 
 	return app.NewAccount(0, treasureAccountPrivateKey, int64(p.cfg.ChainID))
 }
@@ -224,12 +236,28 @@ func (f fakeRpcClient) Call(_ interface{}, _ string, _ ...interface{}) error {
 }
 
 func (f fakeRpcClient) NonceAt(_ context.Context, account common.Address, _ *big.Int) (uint64, error) {
+	err := f.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return 0, err
+	}
 	nonce := f.stateDb.GetNonce(account)
+	err = f.stateDb.EndTransaction()
+	if err != nil {
+		return 0, err
+	}
 	return nonce, nil
 }
 
 func (f fakeRpcClient) BalanceAt(_ context.Context, account common.Address, _ *big.Int) (*big.Int, error) {
+	err := f.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return nil, err
+	}
 	balance := f.stateDb.GetBalance(account)
+	err = f.stateDb.EndTransaction()
+	if err != nil {
+		return nil, err
+	}
 	return balance, nil
 }
 
@@ -238,7 +266,15 @@ func (f fakeRpcClient) Close() {
 }
 
 func (f fakeRpcClient) CodeAt(_ context.Context, address common.Address, _ *big.Int) ([]byte, error) {
+	err := f.stateDb.BeginTransaction(uint32(0))
+	if err != nil {
+		return nil, err
+	}
 	code := f.stateDb.GetCode(address)
+	err = f.stateDb.EndTransaction()
+	if err != nil {
+		return nil, err
+	}
 	return code, nil
 }
 
