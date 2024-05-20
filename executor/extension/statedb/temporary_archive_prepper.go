@@ -1,6 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package statedb
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/rpc"
@@ -24,12 +42,13 @@ func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.Reque
 		return err
 	}
 
-	return nil
+	return ctx.Archive.BeginTransaction(uint32(state.Transaction))
 }
 
 // PostTransaction releases temporary Archive.
 func (r *temporaryArchivePrepper) PostTransaction(_ executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	ctx.Archive.Release()
-
-	return nil
+	if err := ctx.Archive.EndTransaction(); err != nil {
+		return fmt.Errorf("cannot end transaction; %w", err)
+	}
+	return ctx.Archive.Release()
 }
