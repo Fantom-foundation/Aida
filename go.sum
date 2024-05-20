@@ -4,8 +4,8 @@ github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec h1:1Qb69m
 github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec/go.mod h1:CD8UlnlLDiqb36L110uqiP2iSflVjx9g/3U9hCI4q2U=
 github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0 h1:BkwXZsFZvfy9a0GyCTBm/Hs31zjCfmgQVCXy3FQyBaU=
 github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0/go.mod h1:NLvaNtS7elcJ9Q/Ypz7ZzA2DuQqd+UC+Bccue2EVRWk=
-github.com/Fantom-foundation/Substate v0.0.0-20240509144346-4d7c62a8b38f h1:q0ag4xBnetCLjLAp1f38j1fUyr5+YJt3TefR+k1P/xU=
-github.com/Fantom-foundation/Substate v0.0.0-20240509144346-4d7c62a8b38f/go.mod h1:8dW0EnFHo0PegzvTFLUa5oxUgKvhLudPR0Ro3fUV7ag=
+github.com/Fantom-foundation/Substate v0.0.0-20240520082918-8c0338cc5a0a h1:6KSxqZODBo/pTKItvDDJLKil5RNPl6mCtuQlIx8zGx8=
+github.com/Fantom-foundation/Substate v0.0.0-20240520082918-8c0338cc5a0a/go.mod h1:8dW0EnFHo0PegzvTFLUa5oxUgKvhLudPR0Ro3fUV7ag=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00 h1:yw5QaA7u4t2/j7VIGrMt640Kuhsx6pEIHM3bj10glWc=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00/go.mod h1:Ogv5etzSmM2rQ4eN3OfmyitwWaaPjd4EIDiW/NAbYGk=
 github.com/Fantom-foundation/sonic v0.0.0-20240402081641-433e313aa881 h1:w0j7uKcwW/mtBf0nV67Un2K5umvjV7FgYivGRfiQjpQ=
