@@ -134,6 +134,17 @@ func (s *loggingVmStateDb) SetState(addr common.Address, key common.Hash, value 
 	s.writeLog("SetState, %v, %v, %v", addr, key, value)
 }
 
+func (s *loggingVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.writeLog("SetState, %v, %v, %v", addr, key, value)
+	s.db.SetTransientState(addr, key, value)
+}
+
+func (s *loggingVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	value := s.db.GetTransientState(addr, key)
+	s.writeLog("GetTransientState, %v, %v, %v", addr, key, value)
+	return value
+}
+
 func (s *loggingVmStateDb) GetCode(addr common.Address) []byte {
 	res := s.db.GetCode(addr)
 	s.writeLog("GetCode, %v, %v", addr, hex.EncodeToString(res))

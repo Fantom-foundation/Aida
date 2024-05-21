@@ -152,6 +152,14 @@ func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value com
 	s.txCtx.SetState(carmen.Address(addr), carmen.Key(key), carmen.Value(value))
 }
 
+func (s *carmenStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.txCtx.SetTransientState(carmen.Address(addr), carmen.Key(key), carmen.Value(value))
+}
+
+func (s *carmenStateDB) GetTransientState(address common.Address, key common.Hash) common.Hash {
+	return common.Hash(s.txCtx.GetTransientState(carmen.Address(address), carmen.Key(key)))
+}
+
 func (s *carmenStateDB) GetCode(addr common.Address) []byte {
 	return s.txCtx.GetCode(carmen.Address(addr))
 }

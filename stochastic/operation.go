@@ -42,11 +42,13 @@ const (
 	GetCommittedStateID
 	GetNonceID
 	GetStateID
+	GetTransientStateID
 	HasSuicidedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
 	SetStateID
+	SetTransientStateID
 	SnapshotID
 	SubBalanceID
 	SuicideID
@@ -76,11 +78,13 @@ var opText = map[int]string{
 	GetCommittedStateID: "GetCommittedState",
 	GetNonceID:          "GetNonce",
 	GetStateID:          "GetState",
+	GetTransientStateID: "GetTransientState",
 	HasSuicidedID:       "HasSuicided",
 	RevertToSnapshotID:  "RevertToSnapshot",
 	SetCodeID:           "SetCode",
 	SetNonceID:          "SetNonce",
 	SetStateID:          "SetState",
+	SetTransientStateID: "SetTransientState",
 	SnapshotID:          "Snapshot",
 	SubBalanceID:        "SubBalance",
 	SuicideID:           "Suicide",
@@ -105,11 +109,13 @@ var opMnemo = map[int]string{
 	GetCommittedStateID: "GM",
 	GetNonceID:          "GN",
 	GetStateID:          "GS",
+	GetTransientStateID: "GT",
 	HasSuicidedID:       "HS",
 	RevertToSnapshotID:  "RS",
 	SetCodeID:           "SC",
 	SetNonceID:          "SO",
 	SetStateID:          "SS",
+	SetTransientStateID: "ST",
 	SnapshotID:          "SN",
 	SubBalanceID:        "SB",
 	SuicideID:           "SU",
@@ -134,11 +140,13 @@ var opNumArgs = map[int]int{
 	GetCommittedStateID: 2,
 	GetNonceID:          1,
 	GetStateID:          2,
+	GetTransientStateID: 2,
 	HasSuicidedID:       1,
 	RevertToSnapshotID:  0,
 	SetCodeID:           1,
 	SetNonceID:          1,
 	SetStateID:          3,
+	SetTransientStateID: 3,
 	SnapshotID:          0,
 	SubBalanceID:        1,
 	SuicideID:           1,
@@ -162,7 +170,8 @@ var opId = map[string]int{
 	"GZ": GetCodeSizeID,
 	"GM": GetCommittedStateID,
 	"GN": GetNonceID,
-	"GS": GetStateID,
+	"GS": GetTransientStateID,
+	"GT": GetStateID,
 	"HS": HasSuicidedID,
 	"RS": RevertToSnapshotID,
 	"SC": SetCodeID,
@@ -170,6 +179,7 @@ var opId = map[string]int{
 	"SN": SnapshotID,
 	"SB": SubBalanceID,
 	"SS": SetStateID,
+	"ST": SetTransientStateID,
 	"SU": SuicideID,
 }
 

@@ -177,6 +177,15 @@ func (p *EventProxy) SetState(address common.Address, key common.Hash, value com
 	// call real StateDB
 	p.db.SetState(address, key, value)
 }
+func (p *EventProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.registry.RegisterValueOp(SetTransientStateID, &addr, &key, &value)
+	p.db.SetTransientState(addr, key, value)
+}
+
+func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	p.registry.RegisterKeyOp(GetTransientStateID, &addr, &key)
+	return p.db.GetState(addr, key)
+}
 
 // Suicide an account.
 func (p *EventProxy) Suicide(address common.Address) bool {

@@ -141,6 +141,17 @@ func (s *shadowVmStateDb) SetState(addr common.Address, key common.Hash, value c
 	})
 }
 
+func (s *shadowVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.run("SetTransientState", func(s state.VmStateDB) error {
+		s.SetTransientState(addr, key, value)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return s.getHash("GetTransientState", func(s state.VmStateDB) common.Hash { return s.GetTransientState(addr, key) }, addr, key)
+}
+
 func (s *shadowVmStateDb) GetCode(addr common.Address) []byte {
 	return s.getBytes("GetCode", func(s state.VmStateDB) []byte { return s.GetCode(addr) }, addr)
 }

@@ -132,6 +132,16 @@ func (s *gethStateDB) SetState(addr common.Address, key common.Hash, value commo
 	s.db.SetState(addr, key, value)
 }
 
+func (s *gethStateDB) SetTransientState(addr common.Address, value common.Hash, hash2 common.Hash) {
+	//TODO upgrade geth version
+	panic("not yet supported")
+}
+
+func (s *gethStateDB) GetTransientState(addr common.Address, value common.Hash) common.Hash {
+	//TODO upgrade geth version
+	panic("not yet supported")
+}
+
 func (s *gethStateDB) GetCode(addr common.Address) []byte {
 	return s.db.GetCode(addr)
 }

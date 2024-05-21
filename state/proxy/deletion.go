@@ -137,6 +137,14 @@ func (r *DeletionProxy) SetState(addr common.Address, key common.Hash, value com
 	r.db.SetState(addr, key, value)
 }
 
+func (r *DeletionProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	r.db.SetTransientState(addr, key, value)
+}
+
+func (r *DeletionProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return r.db.GetTransientState(addr, key)
+}
+
 // Suicide marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
 // return a non-nil account after Suicide.

@@ -49,6 +49,16 @@ type inMemoryStateDB struct {
 	blockNum         uint64
 }
 
+func (db *inMemoryStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s := slot{addr: addr, key: key}
+	db.state.transientStorage[s] = value
+}
+
+func (db *inMemoryStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	s := slot{addr: addr, key: key}
+	return db.state.transientStorage[s]
+}
+
 type slot struct {
 	addr common.Address
 	key  common.Hash
@@ -64,6 +74,7 @@ type snapshot struct {
 	codes             map[common.Address][]byte
 	suicided          map[common.Address]int // Set of destructed accounts
 	storage           map[slot]common.Hash
+	transientStorage  map[slot]common.Hash
 	accessed_accounts map[common.Address]int
 	accessed_slots    map[slot]int
 	logs              []*types.Log
@@ -86,6 +97,7 @@ func makeSnapshot(parent *snapshot, id int) *snapshot {
 		codes:             map[common.Address][]byte{},
 		suicided:          map[common.Address]int{},
 		storage:           map[slot]common.Hash{},
+		transientStorage:  map[slot]common.Hash{},
 		accessed_accounts: map[common.Address]int{},
 		accessed_slots:    map[slot]int{},
 		logs:              make([]*types.Log, 0),
