@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'pr-quick' }
+    agent { label 'quick' }
     
     options { 
         timestamps ()

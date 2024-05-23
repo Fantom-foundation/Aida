@@ -17,9 +17,10 @@ con <- dbConnect(SQLite(), params$db)
 # Fetch RunMetadata
 Metadata <- dbSendQuery(con, 'SELECT key, cast(value as text) as value FROM metadata;') %>% dbFetch
 
+recentRange <- 10000000
 first <- Metadata %>% filter(key == "First")
 last <- Metadata %>% filter(key == "Last")
-recent <- max(as.integer(last$value) - 10000000, as.integer(first$value))
+recent <- max(as.integer(last$value) - recentRange, as.integer(first$value))
 
 # load block and transaction tables into data frames and exclude lachesis transition block
 TxData <- dbReadTable(con, 'stats') %>% 
@@ -178,8 +179,8 @@ TxData %>%
 ```
 
 ```{r, echo=FALSE, message=FALSE}
-thresholdRecent <- 0.40 # print if recent is smaller than %total. 0 to always print.
-isRecentPrintable <- thresholdRecent < (as.integer(last$value) - recent) / (as.integer(last$value) - as.integer(first$value))
+thresholdRecent <- 0.40 # print if recent range is smaller than %total. 0 to always print.
+isRecentPrintable <- thresholdRecent > (recentRange / (as.integer(last$value) - as.integer(first$value)))
 ```
 
 `r 
