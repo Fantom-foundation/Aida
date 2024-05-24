@@ -64,7 +64,7 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 	if m.cfg.StateDbSrc != "" {
 		// if using pre-existing StateDb and running in read-only mode, we must report both source db and working tmp dir
 		m.log.Infof("Source storage directory: %v", m.cfg.StateDbSrc)
-		if m.cfg.SrcDbReadonly {
+		if m.cfg.StateDbSrcDirectAccess {
 			m.log.Infof("Working storage directory: %v", m.cfg.DbTmp)
 		}
 
@@ -97,7 +97,7 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 	//  if state was not correctly initialized remove the stateDbPath and abort
 	if ctx.State == nil {
 		var err = fmt.Errorf("state-db is nil")
-		if !m.cfg.SrcDbReadonly {
+		if !m.cfg.StateDbSrcDirectAccess {
 			err = errors.Join(err, os.RemoveAll(ctx.StateDbPath))
 		}
 		return err
@@ -109,13 +109,13 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 			return fmt.Errorf("failed to close state-db; %v", err)
 		}
 
-		if !m.cfg.SrcDbReadonly {
+		if !m.cfg.StateDbSrcDirectAccess {
 			return os.RemoveAll(ctx.StateDbPath)
 		}
 		return nil
 	}
 
-	if m.cfg.SrcDbReadonly {
+	if m.cfg.StateDbSrcDirectAccess {
 		m.log.Noticef("State-db directory was readonly %v", ctx.StateDbPath)
 		return nil
 	}

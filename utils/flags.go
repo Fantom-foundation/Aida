@@ -182,6 +182,10 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
+	SrcDbOverwriteFlag = cli.BoolFlag{
+		Name:  "db-src-overwrite",
+		Usage: "Modify source db directly",
+	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
