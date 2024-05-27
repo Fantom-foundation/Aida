@@ -31,15 +31,14 @@ import (
 func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	switch cfg.DbImpl {
 	case "in-memory", "memory":
-		return temporaryInMemoryStatePrepper{}
+		return &temporaryInMemoryStatePrepper{}
 	case "off-the-chain":
 		fallthrough
 	default:
 		// offTheChainStateDb is default value
 		substate.RecordReplay = true
-		return &temporaryOffTheChainStatePrepper{
-			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)),
-		}
+		conduit := statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID))
+		return &temporaryOffTheChainStatePrepper{chainConduit: conduit}
 	}
 }
 
@@ -49,7 +48,7 @@ type temporaryInMemoryStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
 }
 
-func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (p *temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	alloc := state.Data.GetInputState()
 	ctx.State = statedb.MakeInMemoryStateDB(alloc, uint64(state.Block))
 	return nil

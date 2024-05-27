@@ -151,7 +151,7 @@ func (db *inMemoryStateDB) GetCodeHash(addr common.Address) common.Hash {
 	if !db.Exist(addr) {
 		return common.Hash{}
 	}
-	return getHash(addr, db.GetCode(addr))
+	return createCodeHash(db.GetCode(addr))
 }
 
 func (db *inMemoryStateDB) GetCode(addr common.Address) []byte {
