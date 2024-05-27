@@ -38,7 +38,7 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 		// offTheChainStateDb is default value
 		substate.RecordReplay = true
 		conduit := statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID))
-		return &temporaryOffTheChainStatePrepper{cfg: cfg, chainConduit: conduit}
+		return &temporaryOffTheChainStatePrepper{chainConduit: conduit}
 	}
 }
 
@@ -58,7 +58,6 @@ func (p *temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txco
 // StateDB instance before each transaction execution.
 type temporaryOffTheChainStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg     *utils.Config
 	chainConduit *statedb.ChainConduit
 }
 
