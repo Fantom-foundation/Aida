@@ -302,7 +302,9 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.GetRefund() },
 		func() { db.GetCommittedState(mockAddress, mockHash) },
 		func() { db.GetState(mockAddress, mockHash) },
+		func() { db.GetTransientState(mockAddress, mockHash) },
 		func() { db.SetState(mockAddress, mockHash, mockHash) },
+		func() { db.SetTransientState(mockAddress, mockHash, mockHash) },
 		func() { db.Suicide(mockAddress) },
 		func() { db.HasSuicided(mockAddress) },
 		func() { db.Exist(mockAddress) },
@@ -357,7 +359,9 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().GetRefund().AnyTimes()
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().GetState(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetTransientState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().SetTransientState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().Suicide(gomock.Any()).AnyTimes()
 	m.EXPECT().HasSuicided(gomock.Any()).AnyTimes()
 	m.EXPECT().Exist(gomock.Any()).AnyTimes()
@@ -404,7 +408,9 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().GetRefund()
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any())
 	m.EXPECT().GetState(gomock.Any(), gomock.Any())
+	m.EXPECT().GetTransientState(gomock.Any(), gomock.Any())
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().SetTransientState(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().Suicide(gomock.Any())
 	m.EXPECT().HasSuicided(gomock.Any())
 	m.EXPECT().Exist(gomock.Any())
