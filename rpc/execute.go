@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package rpc
 
 import (
@@ -18,12 +34,9 @@ const falsyContract = "0xe0c38b2a8d09aad53f1c67734b9a95e43d5981c0"
 func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) txcontext.Result {
 	switch rec.Query.MethodBase {
 	case "getBalance":
-
 		return executeGetBalance(rec.Query.Params[0], archive)
-
 	case "getTransactionCount":
 		return executeGetTransactionCount(rec.Query.Params[0], archive)
-
 	case "call":
 		if rec.Timestamp == 0 {
 			return nil
@@ -41,10 +54,8 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
 		return executeGetCode(rec.Query.Params[0], archive)
-
 	case "getStorageAt":
 		return executeGetStorageAt(rec.Query.Params, archive)
-
 	default:
 		break
 	}
@@ -75,9 +86,15 @@ func executeCall(evm *EvmExecutor) *result {
 	var gasUsed uint64
 
 	exRes, err := evm.sendCall()
-	if exRes != nil {
-		gasUsed = exRes.UsedGas
+	if exRes == nil {
+		return &result{
+			gasUsed: 0,
+			result:  []byte{},
+			err:     err,
+		}
 	}
+
+	gasUsed = exRes.UsedGas
 
 	// this situation can happen if request is valid but the response from EVM is empty
 	// EVM returns nil instead of an empty result

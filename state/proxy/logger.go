@@ -1,9 +1,26 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package proxy
 
 import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -14,12 +31,13 @@ import (
 
 // NewLoggerProxy wraps the given StateDB instance into a logging wrapper causing
 // every StateDB operation (except BulkLoading) to be logged for debugging.
-func NewLoggerProxy(db state.StateDB, log logger.Logger, output chan string) state.StateDB {
+func NewLoggerProxy(db state.StateDB, log logger.Logger, output chan string, wg *sync.WaitGroup) state.StateDB {
 	return &LoggingStateDb{
 		loggingVmStateDb: loggingVmStateDb{
 			db:     db,
 			log:    log,
 			output: output,
+			wg:     wg,
 		},
 
 		state: db,
@@ -30,6 +48,7 @@ type loggingVmStateDb struct {
 	db     state.VmStateDB
 	log    logger.Logger
 	output chan string
+	wg     *sync.WaitGroup
 }
 
 type loggingNonCommittableStateDb struct {
@@ -204,8 +223,10 @@ func (s *loggingNonCommittableStateDb) GetHash() (common.Hash, error) {
 
 func (s *LoggingStateDb) Close() error {
 	res := s.state.Close()
-	str := fmt.Sprintf("EndSyncPeriod, %v", res)
-	s.log.Debug(str)
+	s.writeLog("Close")
+	// signal and await the close
+	close(s.output)
+	s.wg.Wait()
 	return res
 }
 
