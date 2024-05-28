@@ -42,16 +42,16 @@ const (
 	GetCommittedStateID
 	GetNonceID
 	GetStateID
-	GetTransientStateID
 	HasSuicidedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
 	SetStateID
-	SetTransientStateID
 	SnapshotID
 	SubBalanceID
 	SuicideID
+	GetTransientStateID
+	SetTransientStateID
 
 	NumOps
 )
@@ -78,16 +78,16 @@ var opText = map[int]string{
 	GetCommittedStateID: "GetCommittedState",
 	GetNonceID:          "GetNonce",
 	GetStateID:          "GetState",
-	GetTransientStateID: "GetTransientState",
 	HasSuicidedID:       "HasSuicided",
 	RevertToSnapshotID:  "RevertToSnapshot",
 	SetCodeID:           "SetCode",
 	SetNonceID:          "SetNonce",
 	SetStateID:          "SetState",
-	SetTransientStateID: "SetTransientState",
 	SnapshotID:          "Snapshot",
 	SubBalanceID:        "SubBalance",
 	SuicideID:           "Suicide",
+	GetTransientStateID: "GetTransientState",
+	SetTransientStateID: "SetTransientState",
 }
 
 // opMnemo is a mnemonics table for operations.
@@ -109,16 +109,16 @@ var opMnemo = map[int]string{
 	GetCommittedStateID: "GM",
 	GetNonceID:          "GN",
 	GetStateID:          "GS",
-	GetTransientStateID: "GT",
 	HasSuicidedID:       "HS",
 	RevertToSnapshotID:  "RS",
 	SetCodeID:           "SC",
 	SetNonceID:          "SO",
 	SetStateID:          "SS",
-	SetTransientStateID: "ST",
 	SnapshotID:          "SN",
 	SubBalanceID:        "SB",
 	SuicideID:           "SU",
+	GetTransientStateID: "GT",
+	SetTransientStateID: "ST",
 }
 
 // opNumArgs is an argument number table for operations.
@@ -140,16 +140,16 @@ var opNumArgs = map[int]int{
 	GetCommittedStateID: 2,
 	GetNonceID:          1,
 	GetStateID:          2,
-	GetTransientStateID: 2,
 	HasSuicidedID:       1,
 	RevertToSnapshotID:  0,
 	SetCodeID:           1,
 	SetNonceID:          1,
 	SetStateID:          3,
-	SetTransientStateID: 3,
 	SnapshotID:          0,
 	SubBalanceID:        1,
 	SuicideID:           1,
+	GetTransientStateID: 2,
+	SetTransientStateID: 3,
 }
 
 // opId is an operation ID table.
@@ -170,7 +170,6 @@ var opId = map[string]int{
 	"GZ": GetCodeSizeID,
 	"GM": GetCommittedStateID,
 	"GN": GetNonceID,
-	"GS": GetTransientStateID,
 	"GT": GetStateID,
 	"HS": HasSuicidedID,
 	"RS": RevertToSnapshotID,
@@ -179,8 +178,9 @@ var opId = map[string]int{
 	"SN": SnapshotID,
 	"SB": SubBalanceID,
 	"SS": SetStateID,
-	"ST": SetTransientStateID,
 	"SU": SuicideID,
+	"ST": SetTransientStateID,
+	"GS": GetTransientStateID,
 }
 
 // argMnemo is the argument-class mnemonics table.

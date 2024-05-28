@@ -50,21 +50,15 @@ const (
 	GetCommittedStateLclsID
 	GetNonceID
 	GetStateID
-	GetTransientStateID
 	GetStateLccsID
-	GetTransientStateLccsID
 	GetStateLcID
-	GetTransientStateLcID
 	GetStateLclsID
-	GetTransientStateLclsID
 	HasSuicidedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
 	SetStateID
-	SetTransientStateID
 	SetStateLclsID
-	SetTransientStateLclsID
 	SnapshotID
 	SubBalanceID
 	SuicideID
@@ -85,6 +79,13 @@ const (
 	IntermediateRootID
 	PrepareID
 	SubRefundID
+
+	GetTransientStateID
+	GetTransientStateLccsID
+	GetTransientStateLcID
+	GetTransientStateLclsID
+	SetTransientStateID
+	SetTransientStateLclsID
 
 	// WARNING: New IDs should be added here. Any change in the order of the
 	// IDs above invalidates persisted data -- in particular storage traces.
@@ -122,21 +123,15 @@ var opDict = map[byte]OperationDictionary{
 	GetCommittedStateLclsID: {label: "GetCommittedStateLcls", readfunc: ReadGetCommittedStateLcls},
 	GetNonceID:              {label: "GetNonce", readfunc: ReadGetNonce},
 	GetStateID:              {label: "GetState", readfunc: ReadGetState},
-	GetTransientStateID:     {label: "GetTransientState", readfunc: ReadGetTransientState},
 	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
-	GetTransientStateLcID:   {label: "GetTransientStateLc", readfunc: ReadGetTransientStateLc},
 	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
-	GetTransientStateLccsID: {label: "GetTransientStateLccs", readfunc: ReadGetTransientStateLccs},
 	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
-	GetTransientStateLclsID: {label: "GetTransientStateLcls", readfunc: ReadGetTransientStateLcls},
 	HasSuicidedID:           {label: "HasSuicided", readfunc: ReadHasSuicided},
 	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
 	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
 	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
 	SetStateID:              {label: "SetState", readfunc: ReadSetState},
-	SetTransientStateID:     {label: "SetTransientState", readfunc: ReadSetTransientState},
 	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
-	SetTransientStateLclsID: {label: "SetTransientStateLcls", readfunc: ReadSetTransientStateLcls},
 	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
 	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
 	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
@@ -157,6 +152,14 @@ var opDict = map[byte]OperationDictionary{
 	PrepareID:                {label: "Prepare", readfunc: ReadPanic},
 	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
 	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
+
+	// Transient Storage
+	GetTransientStateID:     {label: "GetTransientState", readfunc: ReadGetTransientState},
+	GetTransientStateLcID:   {label: "GetTransientStateLc", readfunc: ReadGetTransientStateLc},
+	GetTransientStateLccsID: {label: "GetTransientStateLccs", readfunc: ReadGetTransientStateLccs},
+	GetTransientStateLclsID: {label: "GetTransientStateLcls", readfunc: ReadGetTransientStateLcls},
+	SetTransientStateID:     {label: "SetTransientState", readfunc: ReadSetTransientState},
+	SetTransientStateLclsID: {label: "SetTransientStateLcls", readfunc: ReadSetTransientStateLcls},
 }
 
 // GetLabel retrieves a label of a state operation.
