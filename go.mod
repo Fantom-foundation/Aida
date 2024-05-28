@@ -3,7 +3,7 @@ module github.com/Fantom-foundation/Aida
 go 1.21
 
 require (
-	github.com/Fantom-foundation/Carmen/go v0.0.0-20240507092214-445df9f3b43c
+	github.com/Fantom-foundation/Carmen/go v0.0.0-20240527074610-67008e3801f9
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
 	github.com/Fantom-foundation/Substate v0.0.0-20240117110940-3ffd9c344809
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
@@ -57,7 +57,7 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
+	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
