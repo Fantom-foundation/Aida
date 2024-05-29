@@ -100,7 +100,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 
 		// These are purposely not implemented, will be blacklisted here
 		notImplemented := make([]bool, len(ops))
-		for _, a := range []byte{14, 18, 22, 23, 24, 25, 26, 27, 34, 35} {
+		for _, a := range []byte{14, 18, 21, 22, 23, 29, 49, 50, 51, 53} {
 			notImplemented[a] = true
 		}
 
