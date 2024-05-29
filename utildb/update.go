@@ -27,7 +27,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -627,6 +626,14 @@ func extractTarGz(tarGzFile, outputFolder string) error {
 		targetPath, err := filepath.Abs(filepath.Join(outputFolder, header.Name))
 		if err != nil {
 			return err
+		}
+
+		// Make sure that output file does not overwrite existing files
+		_, err := os.Stat(targetPath)
+		if err != nil && errors.Is(err, os.ErrNotExist) { // check of not exist is clearer than check if exists
+			continue
+		} else {
+			return fmt.Errorf("Tarfile is attempting to overwrite existing file: %s", targetPath)
 		}
 
 		// Check if it's a directory
