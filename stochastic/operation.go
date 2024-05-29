@@ -170,7 +170,7 @@ var opId = map[string]int{
 	"GZ": GetCodeSizeID,
 	"GM": GetCommittedStateID,
 	"GN": GetNonceID,
-	"GT": GetStateID,
+	"GS": GetStateID,
 	"HS": HasSuicidedID,
 	"RS": RevertToSnapshotID,
 	"SC": SetCodeID,
@@ -180,7 +180,7 @@ var opId = map[string]int{
 	"SS": SetStateID,
 	"SU": SuicideID,
 	"ST": SetTransientStateID,
-	"GS": GetTransientStateID,
+	"GT": GetTransientStateID,
 }
 
 // argMnemo is the argument-class mnemonics table.
