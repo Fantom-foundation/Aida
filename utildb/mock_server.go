@@ -48,7 +48,7 @@ func StartMockServer(baseDir string) error {
 
 	// Create a custom handler to serve files based on the URL path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		requestedPath := r.URL.Path
+		requestedPath := path.Clean(r.URL.Path)
 		filePath := path.Clean(filepath.Join(baseDir, requestedPath[1:])) // Remove the leading "/" in the URL path
 
 		// Check if the file exists
