@@ -27,6 +27,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -594,12 +595,6 @@ func downloadFileContents(url string, startSize int64, out *bufio.Writer) (int64
 
 // extractTarGz extracts tar file contents into location of output folder
 func extractTarGz(tarGzFile, outputFolder string) error {
-	// CodeQL: Must check tarGzFile for ".." before using
-	// https://codeql.github.com/codeql-query-help/javascript/js-zipslip/
-	if strings.Contains(tarGzFile, "..") {
-		return errors.New("tar-file contains '..', disallowed as codeql vulnerabilities.")
-	}
-
 	// Open the tar.gz file
 	file, err := os.Open(tarGzFile)
 	if err != nil {
@@ -629,7 +624,10 @@ func extractTarGz(tarGzFile, outputFolder string) error {
 		}
 
 		// Determine the output file path
-		targetPath := filepath.Join(outputFolder, header.Name)
+		targetPath, err := filepath.Abs(filepath.Join(outputFolder, header.Name))
+		if err != nil {
+			return err
+		}
 
 		// Check if it's a directory
 		if header.FileInfo().IsDir() {
