@@ -121,15 +121,23 @@ func (s *carmenStateDB) HasSuicided(addr common.Address) bool {
 }
 
 func (s *carmenStateDB) GetBalance(addr common.Address) *big.Int {
-	return s.txCtx.GetBalance(carmen.Address(addr))
+	return s.txCtx.GetBalance(carmen.Address(addr)).ToBig()
 }
 
 func (s *carmenStateDB) AddBalance(addr common.Address, value *big.Int) {
-	s.txCtx.AddBalance(carmen.Address(addr), value)
+	amount, err := carmen.NewAmountFromBigInt(value)
+	if err != nil {
+		amount = carmen.NewAmount()
+	}
+	s.txCtx.AddBalance(carmen.Address(addr), amount)
 }
 
 func (s *carmenStateDB) SubBalance(addr common.Address, value *big.Int) {
-	s.txCtx.SubBalance(carmen.Address(addr), value)
+	amount, err := carmen.NewAmountFromBigInt(value)
+	if err != nil {
+		amount = carmen.NewAmount()
+	}
+	s.txCtx.SubBalance(carmen.Address(addr), amount)
 }
 
 func (s *carmenStateDB) GetNonce(addr common.Address) uint64 {
@@ -409,7 +417,11 @@ func (l *carmenBulkLoad) CreateAccount(addr common.Address) {
 }
 
 func (l *carmenBulkLoad) SetBalance(addr common.Address, value *big.Int) {
-	l.load.SetBalance(carmen.Address(addr), value)
+	balance, err := carmen.NewAmountFromBigInt(value)
+	if err != nil {
+		balance = carmen.NewAmount()
+	}
+	l.load.SetBalance(carmen.Address(addr), balance)
 }
 
 func (l *carmenBulkLoad) SetNonce(addr common.Address, nonce uint64) {
