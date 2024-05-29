@@ -628,6 +628,11 @@ func extractTarGz(tarGzFile, outputFolder string) error {
 			return err
 		}
 
+		// Make sure that path does not contain ".."
+		if strings.Contains(targetPath, "..") {
+			return fmt.Errorf("Tarfile is attempting to use path containing ..: %s", targetPath)
+		}
+
 		// Make sure that output file does not overwrite existing files
 		_, err := os.Stat(targetPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) { // check of not exist is clearer than check if exists
