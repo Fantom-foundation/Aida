@@ -174,7 +174,7 @@ func insertMetadata(ctx *cli.Context) error {
 			return err
 		}
 	case utils.TypePrefix:
-		num, err := strconv.Atoi(valArg)
+		num, err := strconv.ParseUint(valArg, 10, 8)
 		if err != nil {
 			return err
 		}
