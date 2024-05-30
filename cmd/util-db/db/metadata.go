@@ -177,7 +177,7 @@ func insertMetadata(ctx *cli.Context) error {
 		num64, err := strconv.ParseUint(valArg, 10, 8)
 		if err != nil {
 			return err
-		} 
+		}
 		if err = md.SetDbType(utils.AidaDbType(uint8(num64))); err != nil {
 			return err
 		}
