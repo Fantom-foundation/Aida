@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
 // mock server is tool to test update command
@@ -47,13 +49,10 @@ func StartMockServer(baseDir string) error {
 
 	// Create a custom handler to serve files based on the URL path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		requestedPath := r.URL.Path
-		filePath := filepath.Join(baseDir, requestedPath[1:]) // Remove the leading "/" in the URL path
-
-		// Check if the file exists
-		_, err := os.Stat(filePath)
-		if err != nil {
-			http.Error(w, "File not found", http.StatusNotFound)
+		requestedPath := path.Clean(r.URL.Path)
+		filePath, err := filepath.Abs(filepath.Join(baseDir, requestedPath[1:])) // Remove the leading "/" in the URL path
+		if err != nil || !strings.HasPrefix(filePath, baseDir) {
+			http.Error(w, "Invalid file name", http.StatusBadRequest)
 			return
 		}
 
