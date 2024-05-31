@@ -78,7 +78,6 @@ var RunPrimerCmd = cli.Command{
 
 		// Priming
 		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
 		&utils.UpdateBufferSizeFlag,
 
 		// Utils
