@@ -25,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/register"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -59,6 +60,7 @@ func runPriming(
 ) error {
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
+		statedb.MakeStateDbManager[txcontext.TxContext](cfg, ""),
 	}
 
 	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{

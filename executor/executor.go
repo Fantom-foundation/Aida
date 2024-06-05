@@ -541,7 +541,14 @@ func PreRun[T any](params Params, extensions []Extension[T]) (err error) {
 	ctx := Context{State: params.State}
 
 	state.Block = params.From
-	return signalPreRun(state, &ctx, extensions)
+	if err = signalPreRun(state, &ctx, extensions); err != nil {
+		return err
+	}
+
+	return errors.Join(
+		err,
+		signalPostRun(state, &ctx, err, extensions),
+	)
 }
 
 func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
