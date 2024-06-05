@@ -260,7 +260,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.DbTmp = tmpOutDir
 	cfg.StateDbSrc = sourcePath
 	cfg.KeepDb = false
-	cfg.SrcDbReadonly = true
+	cfg.SetSrcDirectAccess()
 
 	ext = MakeStateDbManager[any](cfg, "")
 

@@ -70,7 +70,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// make a copy of source statedb
-	if !cfg.SrcDbReadonly {
+	if !cfg.StateDbSrcDirectAccess {
 		// does path to state db exist?
 		if _, err = os.Stat(cfg.StateDbSrc); os.IsNotExist(err) {
 			return nil, "", fmt.Errorf("%v does not exist", cfg.StateDbSrc)

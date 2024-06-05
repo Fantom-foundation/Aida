@@ -204,8 +204,8 @@ type Config struct {
 	SkipPriming            bool           // skip priming of the state DB
 	SkipStateHashScrapping bool           // if enabled, then state-hashes are not loaded from rpc
 	SnapshotDepth          int            // depth of snapshot history
-	SrcDbReadonly          bool           // if false, make a copy the source statedb
 	StateDbSrc             string         // directory to load an existing State DB data
+	StateDbSrcDirectAccess bool           // if true, read and write directly from the source database
 	StateValidationMode    ValidationMode // state validation mode
 	SubstateDb             string         // substate directory
 	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
@@ -303,6 +303,10 @@ func (cc *configContext) setAidaDbRepositoryUrl() error {
 		return fmt.Errorf("invalid chain id %d", cc.cfg.ChainID)
 	}
 	return nil
+}
+
+func (cfg *Config) SetSrcDirectAccess() {
+	cfg.StateDbSrcDirectAccess = true
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
