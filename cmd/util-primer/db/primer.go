@@ -39,7 +39,6 @@ var RunPrimerCmd = cli.Command{
 		&utils.StateDbSrcFlag,
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
-		&utils.ValidateStateHashesFlag,
 
 		// ArchiveDb
 		&utils.ArchiveModeFlag,
@@ -63,7 +62,6 @@ var RunPrimerCmd = cli.Command{
 		// Utils
 		&utils.CustomDbNameFlag,
 		&logger.LogLevelFlag,
-		&utils.NoHeartbeatLoggingFlag,
 		&utils.TrackProgressFlag,
 		&utils.ErrorLoggingFlag,
 	},
