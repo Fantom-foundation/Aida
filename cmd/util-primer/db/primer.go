@@ -21,7 +21,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 )
 
 var RunPrimerCmd = cli.Command{
@@ -47,11 +46,6 @@ var RunPrimerCmd = cli.Command{
 		&utils.ArchiveQueryRateFlag,
 		&utils.ArchiveMaxQueryAgeFlag,
 		&utils.ArchiveVariantFlag,
-
-		// ShadowDb
-		&utils.ShadowDb,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
 
 		// VM
 		&utils.VmImplementation,
@@ -81,13 +75,7 @@ var RunPrimerCmd = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 
 		// Utils
-		&substate.WorkersFlag,
-		&utils.ChainIDFlag,
-		&utils.ContinueOnFailureFlag,
-		&utils.SyncPeriodLengthFlag,
 		&utils.CustomDbNameFlag,
-		&utils.ValidateTxStateFlag,
-		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.TrackProgressFlag,

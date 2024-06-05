@@ -22,14 +22,10 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
-	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/register"
-	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
-	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -62,11 +58,6 @@ func runPriming(
 	cfg *utils.Config,
 ) error {
 	var extensionList = []executor.Extension[txcontext.TxContext]{
-		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
-		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
-		statedb.MakeStateDbManager[txcontext.TxContext](cfg, ""),
-		statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
-		validator.MakeShadowDbValidator(cfg),
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
 	}
 
@@ -75,9 +66,6 @@ func runPriming(
 		// RegisterProgress should be the as top-most as possible on the list
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.
-		profiler.MakeThreadLocker[txcontext.TxContext](),
-		aidadb.MakeAidaDbManager[txcontext.TxContext](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		tracker.MakeBlockProgressTracker(cfg, 100_000),
