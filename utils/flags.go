@@ -182,7 +182,7 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
-	SrcDbOverwriteFlag = cli.BoolFlag{
+	StateDbSrcOverwriteFlag = cli.BoolFlag{
 		Name:  "db-src-overwrite",
 		Usage: "Modify source db directly",
 	}

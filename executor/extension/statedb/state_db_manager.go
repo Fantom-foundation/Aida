@@ -115,8 +115,8 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		return nil
 	}
 
-	if m.cfg.StateDbSrcDirectAccess {
-		m.log.Noticef("State-db directory was readonly %v", ctx.StateDbPath)
+	if m.cfg.StateDbSrcReadOnly {
+		m.log.Noticef("State-db directory was read-only %v", ctx.StateDbPath)
 		return nil
 	}
 

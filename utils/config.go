@@ -206,6 +206,7 @@ type Config struct {
 	SnapshotDepth          int            // depth of snapshot history
 	StateDbSrc             string         // directory to load an existing State DB data
 	StateDbSrcDirectAccess bool           // if true, read and write directly from the source database
+	StateDbSrcReadOnly     bool           // if true, source database is not modified
 	StateValidationMode    ValidationMode // state validation mode
 	SubstateDb             string         // substate directory
 	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
@@ -305,8 +306,9 @@ func (cc *configContext) setAidaDbRepositoryUrl() error {
 	return nil
 }
 
-func (cfg *Config) SetSrcDirectAccess() {
+func (cfg *Config) SetStateDbSrcReadOnly() {
 	cfg.StateDbSrcDirectAccess = true
+	cfg.StateDbSrcReadOnly = true
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
