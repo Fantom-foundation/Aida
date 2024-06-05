@@ -47,9 +47,6 @@ var RunPrimerCmd = cli.Command{
 		&utils.ArchiveMaxQueryAgeFlag,
 		&utils.ArchiveVariantFlag,
 
-		// VM
-		&utils.VmImplementation,
-
 		// Profiling
 		&utils.CpuProfileFlag,
 		&utils.CpuProfilePerIntervalFlag,
@@ -58,17 +55,6 @@ var RunPrimerCmd = cli.Command{
 		&utils.MemoryProfileFlag,
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileDepthFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileSqlite3Flag,
-		&utils.ProfileIntervalFlag,
-		&utils.ProfileDBFlag,
-		&utils.ProfileBlocksFlag,
-
-		// RegisterRun
-		&utils.RegisterRunFlag,
-		&utils.OverwriteRunIdFlag,
 
 		// Priming
 		&utils.RandomizePrimingFlag,

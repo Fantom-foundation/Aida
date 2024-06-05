@@ -17,16 +17,12 @@
 package db
 
 import (
-	"time"
-
 	"github.com/urfave/cli/v2"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
-	"github.com/Fantom-foundation/Aida/executor/extension/register"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -64,13 +60,6 @@ func runPriming(
 	}
 
 	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
-		register.MakeRegisterProgress(cfg, 100_000),
-		// RegisterProgress should be the as top-most as possible on the list
-		// In this case, after StateDb is created.
-		// Any error that happen in extension above it will not be correctly recorded.
-		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
-		logger.MakeErrorLogger[txcontext.TxContext](cfg),
-		tracker.MakeBlockProgressTracker(cfg, 100_000),
 		primer.MakeStateDbPrimer[txcontext.TxContext](cfg),
 	}...,
 	)
