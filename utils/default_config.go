@@ -96,9 +96,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		SkipStateHashScrapping: getFlagValue(ctx, SkipStateHashScrappingFlag).(bool),
 		SnapshotDepth:          getFlagValue(ctx, SnapshotDepthFlag).(int),
 		StateDbSrc:             getFlagValue(ctx, StateDbSrcFlag).(string),
-		StateDbSrcDirectAccess: getFlagValue(ctx, SrcDbOverwriteFlag).(bool),
+		StateDbSrcDirectAccess: getFlagValue(ctx, StateDbSrcOverwriteFlag).(bool),
 		StateDbSrcReadOnly:     false,
-		StateValidationMode:    EqualityCheck,
 		// TODO re-enable equality check once supported in Carmen
 		StateValidationMode: SubsetCheck,
 		SubstateDb:          getFlagValue(ctx, AidaDbFlag).(string),

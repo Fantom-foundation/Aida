@@ -87,7 +87,7 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 		m.log.Infof("Archive mode disabled")
 	}
 
-	if !m.cfg.KeepDb {
+	if !m.cfg.KeepDb && !m.cfg.StateDbSrcDirectAccess {
 		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
 	return nil
@@ -103,21 +103,21 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		return err
 	}
 
-	// if db isn't kept, then close and delete temporary state-db
-	if !m.cfg.KeepDb {
+	// db was not modified, then close db without chnaging state-db info and keep db folder as-is.
+	if m.cfg.StateDbSrcReadOnly {
 		if err := ctx.State.Close(); err != nil {
 			return fmt.Errorf("failed to close state-db; %v", err)
 		}
-
-		if !m.cfg.StateDbSrcDirectAccess {
-			return os.RemoveAll(ctx.StateDbPath)
-		}
+		m.log.Noticef("State-db directory was read-only %v. No updates to state-db info", ctx.StateDbPath)
 		return nil
 	}
 
-	if m.cfg.StateDbSrcReadOnly {
-		m.log.Noticef("State-db directory was read-only %v", ctx.StateDbPath)
-		return nil
+	// if db isn't kept and db was not modified in-place, then close and delete temporary state-db.
+	if !m.cfg.KeepDb && !m.cfg.StateDbSrcDirectAccess {
+		if err := ctx.State.Close(); err != nil {
+			return fmt.Errorf("failed to close state-db; %v", err)
+		}
+		return os.RemoveAll(ctx.StateDbPath)
 	}
 
 	// lastProcessedBlock contains number of last successfully processed block
@@ -141,8 +141,11 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		return fmt.Errorf("failed to close state-db; %v", err)
 	}
 
-	newName := utils.RenameTempStateDbDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
-	m.log.Noticef("State-db directory: %v", newName)
+	// if db was modified in-place, no need to rename state-db folder.
+	if !m.cfg.StateDbSrcDirectAccess {
+		newName := utils.RenameTempStateDbDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
+		m.log.Noticef("State-db directory: %v", newName)
+	}
 	return nil
 }
 

@@ -255,11 +255,11 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	// create database from source
 
 	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state0.Block)
-	sourcePath := filepath.Join(cfg.DbTmp, expectedName)
+	sourceDir := filepath.Join(cfg.DbTmp, expectedName)
 
 	tmpOutDir := t.TempDir()
 	cfg.DbTmp = tmpOutDir
-	cfg.StateDbSrc = sourcePath
+	cfg.StateDbSrc = sourceDir
 	cfg.KeepDb = false
 	cfg.SetStateDbSrcReadOnly()
 
@@ -285,12 +285,12 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	}
 
 	//  check original source stateDb, that it wasn't deleted
-	empty, err := IsEmptyDirectory(sourcePath)
+	empty, err := IsEmptyDirectory(sourceDir)
 	if err != nil {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
 	if empty {
-		t.Fatalf("Source StateDb was removed from %v", sourcePath)
+		t.Fatalf("Source StateDb was removed from %v", sourceDir)
 	}
 
 	//  check that the readonly database was used instead of using working directory from second run
@@ -299,7 +299,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
 	if !empty {
-		t.Fatalf("Source StateDb was removed from %v", sourcePath)
+		t.Fatalf("Source StateDb was removed from %v", sourceDir)
 	}
 }
 
@@ -341,11 +341,11 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	// create database from source
 
 	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state0.Block)
-	sourcePath := filepath.Join(cfg.DbTmp, expectedName)
+	sourceDir := filepath.Join(cfg.DbTmp, expectedName)
 
 	tmpOutDir := t.TempDir()
 	cfg.DbTmp = tmpOutDir
-	cfg.StateDbSrc = sourcePath
+	cfg.StateDbSrc = sourceDir
 
 	ext = MakeStateDbManager[any](cfg, "")
 
@@ -364,17 +364,109 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)
 	}
 
+	// statedb tmp directory should be created.
+	tmpEmpty, err := IsEmptyDirectory(tmpOutDir)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if tmpEmpty {
+		t.Fatalf("Temporary state-db directory should be created")
+	}
+
 	if err := ext.PostRun(state0, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)
 	}
 
 	//  check original source stateDb, that it wasn't deleted
-	empty, err := IsEmptyDirectory(sourcePath)
+	empty, err := IsEmptyDirectory(sourceDir)
 	if err != nil {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
 	if empty {
-		t.Fatalf("Source StateDb was removed from %v", sourcePath)
+		t.Fatalf("Source StateDb was removed from %v", sourceDir)
+	}
+}
+
+func TestStateDbManager_UsingExistingSourceDbAndOverWrite(t *testing.T) {
+	cfg := &utils.Config{}
+
+	// create source database
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
+
+	ext := MakeStateDbManager[any](cfg, "")
+
+	state0 := executor.State[any]{
+		Block: 0,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state0, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	// insert random data into the source
+	// then the second stateDb hash can be confirmed as correct copy of the source
+	insertRandomDataIntoStateDb(t, ctx)
+
+	expectedHash, err := ctx.State.GetHash()
+	if err != nil {
+		t.Fatalf("failed to get state hash; %v", err)
+	}
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	// create database from source
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state0.Block)
+	sourceDir := filepath.Join(cfg.DbTmp, expectedName)
+
+	tmpOutDir := t.TempDir()
+	cfg.DbTmp = tmpOutDir
+	cfg.StateDbSrc = sourceDir
+	// src db is modified directly
+	cfg.StateDbSrcDirectAccess = true
+	ext = MakeStateDbManager[any](cfg, "")
+	ctx = &executor.Context{}
+
+	if err := ext.PreRun(state0, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	currentHash, err := ctx.State.GetHash()
+	if err != nil {
+		t.Fatalf("failed to get state hash; %v", err)
+	}
+
+	if currentHash != expectedHash {
+		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)
+	}
+
+	// statedb tmp directory shouldn't be created.
+	tmpEmpty, err := IsEmptyDirectory(tmpOutDir)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if !tmpEmpty {
+		t.Fatalf("Temporary state-db directory should not be created")
+	}
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	//  check original source stateDb, that it wasn't deleted
+	srcEmpty, err := IsEmptyDirectory(sourceDir)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if srcEmpty {
+		t.Fatalf("Source StateDb was removed from %v", sourceDir)
 	}
 }
 
