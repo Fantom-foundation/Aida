@@ -636,7 +636,7 @@ func extractTarGz(tarGzFile, outputFolder string) error {
 		// Make sure that output file does not overwrite existing files
 		_, err = os.Stat(targetPath)
 		if err == nil || os.IsExist(err) {
-			return fmt.Errorf("Tarfile is attempting to overwrite existing file: %s; (%v)", targetPath, err)
+			return fmt.Errorf("Tarfile is attempting to overwrite existing file. This may have happened due to previous failed attempt to extract the file - consider removing the folder %s", targetPath)
 		}
 
 		// Check if it's a directory
