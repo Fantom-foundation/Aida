@@ -16,6 +16,8 @@
 
 package executor
 
+//go:generate mockgen -source transaction_processor.go -destination transaction_processor_mocks.go -package executor
+
 import (
 	"errors"
 	"fmt"
@@ -36,11 +38,11 @@ import (
 
 // MakeLiveDbTxProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
 func MakeLiveDbTxProcessor(cfg *utils.Config) *LiveDbTxProcessor {
-	return &LiveDbTxProcessor{MakeTxProcessor(cfg)}
+	return &LiveDbTxProcessor{makeTxProcessor(cfg)}
 }
 
 type LiveDbTxProcessor struct {
-	*TxProcessor
+	*txProcessor
 }
 
 // Process transaction inside state into given LIVE StateDb
@@ -62,11 +64,11 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 
 // MakeArchiveDbTxProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
 func MakeArchiveDbTxProcessor(cfg *utils.Config) *ArchiveDbTxProcessor {
-	return &ArchiveDbTxProcessor{MakeTxProcessor(cfg)}
+	return &ArchiveDbTxProcessor{makeTxProcessor(cfg)}
 }
 
 type ArchiveDbTxProcessor struct {
-	*TxProcessor
+	*txProcessor
 }
 
 // Process transaction inside state into given ARCHIVE StateDb
@@ -86,7 +88,11 @@ func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Co
 	return err
 }
 
-type TxProcessor struct {
+type TxProcessor interface {
+	ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Result, error)
+}
+
+type txProcessor struct {
 	cfg       *utils.Config
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
 	vmCfg     vm.Config
@@ -94,7 +100,11 @@ type TxProcessor struct {
 	log       logger.Logger
 }
 
-func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
+func MakeTxProcessor(cfg *utils.Config) TxProcessor {
+	return makeTxProcessor(cfg)
+}
+
+func makeTxProcessor(cfg *utils.Config) *txProcessor {
 	var vmCfg vm.Config
 	switch cfg.ChainID {
 	case utils.EthereumChainID:
@@ -111,16 +121,16 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 	vmCfg.Tracer = nil
 	vmCfg.Debug = false
 
-	return &TxProcessor{
+	return &txProcessor{
 		cfg:       cfg,
 		numErrors: new(atomic.Int32),
 		vmCfg:     vmCfg,
 		chainCfg:  utils.GetChainConfig(cfg.ChainID),
-		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
+		log:       logger.NewLogger(cfg.LogLevel, "txProcessor"),
 	}
 }
 
-func (s *TxProcessor) isErrFatal() bool {
+func (s *txProcessor) isErrFatal() bool {
 	if !s.cfg.ContinueOnFailure {
 		return true
 	}
@@ -138,7 +148,7 @@ func (s *TxProcessor) isErrFatal() bool {
 	return true
 }
 
-func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Result, error) {
+func (s *txProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Result, error) {
 	if tx >= utils.PseudoTx {
 		return s.processPseudoTx(st.GetOutputState(), db), nil
 	}
@@ -146,7 +156,7 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
+func (s *txProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
 		gasPool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
@@ -190,7 +200,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
+func (s *txProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
 	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		db.SubBalance(addr, db.GetBalance(addr))
 		db.AddBalance(addr, acc.GetBalance())
