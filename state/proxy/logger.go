@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -30,12 +31,13 @@ import (
 
 // NewLoggerProxy wraps the given StateDB instance into a logging wrapper causing
 // every StateDB operation (except BulkLoading) to be logged for debugging.
-func NewLoggerProxy(db state.StateDB, log logger.Logger, output chan string) state.StateDB {
+func NewLoggerProxy(db state.StateDB, log logger.Logger, output chan string, wg *sync.WaitGroup) state.StateDB {
 	return &LoggingStateDb{
 		loggingVmStateDb: loggingVmStateDb{
 			db:     db,
 			log:    log,
 			output: output,
+			wg:     wg,
 		},
 
 		state: db,
@@ -46,6 +48,7 @@ type loggingVmStateDb struct {
 	db     state.VmStateDB
 	log    logger.Logger
 	output chan string
+	wg     *sync.WaitGroup
 }
 
 type loggingNonCommittableStateDb struct {
@@ -220,8 +223,10 @@ func (s *loggingNonCommittableStateDb) GetHash() (common.Hash, error) {
 
 func (s *LoggingStateDb) Close() error {
 	res := s.state.Close()
-	str := fmt.Sprintf("EndSyncPeriod, %v", res)
-	s.log.Debug(str)
+	s.writeLog("Close")
+	// signal and await the close
+	close(s.output)
+	s.wg.Wait()
 	return res
 }
 

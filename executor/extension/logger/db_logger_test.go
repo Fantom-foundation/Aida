@@ -123,14 +123,9 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 		t.Fatalf("post-run returned err; %v", err)
 	}
 
-	stat, err := os.Stat(fileName)
-	if err != nil {
-		t.Fatalf("cannot get file stats; %v", err)
-	}
-
-	if stat.Size() == 0 {
-		t.Fatal("log file should have something inside")
-	}
+	// signal and await the close
+	close(ext.input)
+	ext.wg.Wait()
 
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -247,5 +242,55 @@ func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxyIfStateIsNil(t *test
 
 	if ctx.State != nil {
 		t.Fatal("db must be nil!")
+	}
+}
+
+func TestDbLoggerExtension_StateDbCloseIsWrittenInTheFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	fileName := t.TempDir() + "test-log"
+	cfg := &utils.Config{}
+	cfg.DbLogging = fileName
+
+	ext := makeDbLogger[any](cfg, log)
+
+	ctx := &executor.Context{State: db}
+
+	err := ext.PreRun(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-run returned err; %v", err)
+	}
+
+	err = ext.PreTransaction(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction returned err; %v", err)
+	}
+
+	want := "Close"
+	gomock.InOrder(
+		db.EXPECT().Close().Return(nil),
+		log.EXPECT().Debug(want),
+	)
+
+	err = ctx.State.Close()
+	if err != nil {
+		t.Fatalf("cannot close database; %v", err)
+	}
+
+	file, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("cannot open testing; %v", err)
+	}
+	defer file.Close()
+
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatalf("cannot read content of the testing log; %v", err)
+	}
+
+	if !strings.Contains(string(fileContent), want) {
+		t.Fatalf("close was not logged\nlog: %v", string(fileContent))
 	}
 }

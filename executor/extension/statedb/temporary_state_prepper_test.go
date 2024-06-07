@@ -52,7 +52,7 @@ func TestTemporaryStatePrepper_InMemoryDbImplementation(t *testing.T) {
 
 	ext := MakeTemporaryStatePrepper(cfg)
 
-	if _, ok := ext.(temporaryInMemoryStatePrepper); !ok {
+	if _, ok := ext.(*temporaryInMemoryStatePrepper); !ok {
 		t.Fatal("unexpected extension type")
 	}
 }

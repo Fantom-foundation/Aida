@@ -171,11 +171,11 @@ func insertMetadata(ctx *cli.Context) error {
 			return err
 		}
 	case utils.TypePrefix:
-		num, err := strconv.Atoi(valArg)
+		num64, err := strconv.ParseUint(valArg, 10, 8)
 		if err != nil {
 			return err
 		}
-		if err = md.SetDbType(utils.AidaDbType(num)); err != nil {
+		if err = md.SetDbType(utils.AidaDbType(uint8(num64))); err != nil {
 			return err
 		}
 	case utils.ChainIDPrefix:

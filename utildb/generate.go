@@ -33,7 +33,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/util-updateset/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
@@ -330,9 +329,6 @@ func (g *Generator) processDeletedAccounts(ddb *db.DestroyedAccountDB) error {
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
-
-	// explicitly release code cache
-	state.ReleaseCache()
 
 	g.Log.Noticef("Deleted accounts generated successfully. It took: %v", time.Since(start).Round(1*time.Second))
 	g.Log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
