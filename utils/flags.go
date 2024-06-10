@@ -247,6 +247,11 @@ var (
 		Name:  "validate-tx",
 		Usage: "enables validation after transaction processing",
 	}
+	EvmImplementation = cli.StringFlag{
+		Name:  "evm-impl",
+		Usage: "select EVM implementation",
+		Value: "aida",
+	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
 		Usage: "select VM implementation",

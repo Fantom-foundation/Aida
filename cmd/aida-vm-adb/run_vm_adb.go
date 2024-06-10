@@ -57,7 +57,12 @@ func RunVmAdb(ctx *cli.Context) error {
 	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
 	defer substateIterator.Close()
 
-	return run(cfg, substateIterator, nil, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return run(cfg, substateIterator, nil, processor, nil)
 }
 
 func run(
