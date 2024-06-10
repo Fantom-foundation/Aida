@@ -98,17 +98,10 @@ util-updateset: carmen tosca
 
 util-db: carmen tosca
 	GOPROXY=$(GOPROXY) \
+	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/util-db \
 	./cmd/util-db
-
-util-primer: carmen tosca
-	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/Sonic \
-	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
-	go build -ldflags "-s -w" \
-	-o $(GO_BIN)/util-primer \
-	./cmd/util-primer
 
 test: carmen tosca
 	@go test ./...
