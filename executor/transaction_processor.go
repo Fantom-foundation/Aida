@@ -26,6 +26,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	tosca "github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
@@ -90,9 +91,8 @@ func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Co
 type TxProcessor struct {
 	cfg       *utils.Config
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
-	vmCfg     vm.Config
-	chainCfg  *params.ChainConfig
 	log       logger.Logger
+	processor processor
 }
 
 func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
@@ -114,9 +114,12 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 	return &TxProcessor{
 		cfg:       cfg,
 		numErrors: new(atomic.Int32),
-		vmCfg:     vmCfg,
-		chainCfg:  utils.GetChainConfig(cfg.ChainID),
 		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
+		processor: &operaProcessor{
+			vmCfg:    vmCfg,
+			chainCfg: utils.GetChainConfig(cfg.ChainID),
+			log:      logger.NewLogger(cfg.LogLevel, "OperaProcessor"),
+		},
 	}
 }
 
@@ -142,11 +145,21 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 	if tx >= utils.PseudoTx {
 		return s.processPseudoTx(st.GetOutputState(), db), nil
 	}
-	return s.processRegularTx(db, block, tx, st)
+	return s.processor.processRegularTx(db, block, tx, st)
+}
+
+type processor interface {
+	processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (transactionResult, error)
+}
+
+type operaProcessor struct {
+	vmCfg    vm.Config
+	chainCfg *params.ChainConfig
+	log      logger.Logger
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
+func (s *operaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
 		gasPool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
@@ -227,4 +240,16 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 		blockCtx.BaseFee = new(big.Int).Set(baseFee)
 	}
 	return blockCtx
+}
+
+type toscaProcessor struct {
+	vmCfg    vm.Config
+	chainCfg *params.ChainConfig
+	log      logger.Logger
+}
+
+func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
+	var processor *tosca.Processor
+	processor.Run()
+	panic("implement me")
 }
