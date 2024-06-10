@@ -73,6 +73,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.ShadowDbVariantFlag,
 
 		// VM
+		&utils.EvmImplementation,
 		&utils.VmImplementation,
 
 		// Profiling
@@ -150,6 +151,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.OverwriteRunIdFlag,
 
 		// VM
+		&utils.EvmImplementation,
 		&utils.VmImplementation,
 
 		// Profiling
