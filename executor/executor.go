@@ -536,7 +536,7 @@ func (e *executor[T]) runBlocks(params Params, processor Processor[T], extension
 	return err
 }
 
-func PreRun[T any](params Params, extensions []Extension[T]) (err error) {
+func RunUtilPrimer[T any](params Params, extensions []Extension[T]) (err error) {
 	state := State[T]{}
 	ctx := Context{State: params.State}
 

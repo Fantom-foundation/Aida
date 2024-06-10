@@ -64,7 +64,7 @@ func runPriming(
 	}...,
 	)
 
-	return executor.PreRun(
+	return executor.RunUtilPrimer(
 		executor.Params{
 			To:                     int(cfg.Last),
 			NumWorkers:             1, // vm-sdb can run only with one worker
