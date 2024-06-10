@@ -44,6 +44,7 @@ func main() {
 			//&utils.BasicBlockProfilingFlag,
 			//&utils.ProfilingDbNameFlag,
 			&utils.ChannelBufferSizeFlag,
+			&utils.EvmImplementation,
 			&utils.VmImplementation,
 			&utils.ValidateTxStateFlag,
 			&utils.ValidateFlag,

@@ -50,6 +50,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ShadowDbVariantFlag,
 
 		// VM
+		&utils.EvmImplementation,
 		&utils.VmImplementation,
 
 		// Profiling
@@ -88,7 +89,12 @@ func RunEthereumTest(ctx *cli.Context) error {
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
 
-	return runEth(cfg, executor.NewEthStateTestProvider(cfg), nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return runEth(cfg, executor.NewEthStateTestProvider(cfg), nil, processor, nil)
 }
 
 func runEth(

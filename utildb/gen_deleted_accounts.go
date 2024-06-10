@@ -152,7 +152,10 @@ func GenDeletedAccountsAction(cfg *utils.Config, sdb db.SubstateDB, ddb *db.Dest
 	iter := sdb.NewSubstateIterator(int(firstBlock), cfg.Workers)
 	defer iter.Release()
 
-	processor := executor.MakeTxProcessor(cfg)
+	processor, err := executor.MakeTxProcessor(cfg)
+	if err != nil {
+		return nil
+	}
 
 	for iter.Next() {
 		tx := iter.Value()
