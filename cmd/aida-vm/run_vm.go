@@ -49,6 +49,13 @@ func RunVm(ctx *cli.Context) error {
 	defer substateIterator.Close()
 
 	return run(cfg, substateIterator, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return run(cfg, substateIterator, nil, processor, nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.

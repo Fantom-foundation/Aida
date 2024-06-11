@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -27,18 +28,24 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	tosca "github.com/Fantom-foundation/Tosca/go/vm"
+	tosca_geth "github.com/Fantom-foundation/Tosca/go/vm/geth"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 )
 
 // MakeLiveDbTxProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
-func MakeLiveDbTxProcessor(cfg *utils.Config) *LiveDbTxProcessor {
-	return &LiveDbTxProcessor{MakeTxProcessor(cfg)}
+func MakeLiveDbTxProcessor(cfg *utils.Config) (*LiveDbTxProcessor, error) {
+	processor, err := MakeTxProcessor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &LiveDbTxProcessor{processor}, nil
 }
 
 type LiveDbTxProcessor struct {
@@ -63,8 +70,12 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 }
 
 // MakeArchiveDbTxProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
-func MakeArchiveDbTxProcessor(cfg *utils.Config) *ArchiveDbTxProcessor {
-	return &ArchiveDbTxProcessor{MakeTxProcessor(cfg)}
+func MakeArchiveDbTxProcessor(cfg *utils.Config) (*ArchiveDbTxProcessor, error) {
+	processor, err := MakeTxProcessor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &ArchiveDbTxProcessor{processor}, nil
 }
 
 type ArchiveDbTxProcessor struct {
@@ -95,7 +106,7 @@ type TxProcessor struct {
 	processor processor
 }
 
-func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
+func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 	var vmCfg vm.Config
 	switch cfg.ChainID {
 	case utils.EthereumChainID:
@@ -111,16 +122,30 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 	vmCfg.InterpreterImpl = cfg.VmImpl
 	vmCfg.Tracer = nil
 
+	var processor processor
+	switch strings.ToLower(cfg.EvmImpl) {
+	case "opera":
+		processor = &operaProcessor{
+			vmCfg:    vmCfg,
+			chainCfg: utils.GetChainConfig(cfg.ChainID),
+			log:      logger.NewLogger(cfg.LogLevel, "OperaProcessor"),
+		}
+	case "tosca":
+		processor = &toscaProcessor{
+			vmImpl:   cfg.VmImpl,
+			chainCfg: utils.GetChainConfig(cfg.ChainID),
+			log:      logger.NewLogger(cfg.LogLevel, "ToscaProcessor"),
+		}
+	default:
+		return nil, fmt.Errorf("unknown EVM implementation: %s", cfg.EvmImpl)
+	}
+
 	return &TxProcessor{
 		cfg:       cfg,
 		numErrors: new(atomic.Int32),
 		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
-		processor: &operaProcessor{
-			vmCfg:    vmCfg,
-			chainCfg: utils.GetChainConfig(cfg.ChainID),
-			log:      logger.NewLogger(cfg.LogLevel, "OperaProcessor"),
-		},
-	}
+		processor: processor,
+	}, nil
 }
 
 func (s *TxProcessor) isErrFatal() bool {
@@ -243,13 +268,242 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 }
 
 type toscaProcessor struct {
-	vmCfg    vm.Config
+	vmImpl   string
 	chainCfg *params.ChainConfig
 	log      logger.Logger
 }
 
+func bigToValue(value *big.Int) tosca.Value {
+	var res tosca.Value
+	value.FillBytes(res[:])
+	return res
+}
+
 func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
-	var processor *tosca.Processor
-	processor.Run()
-	panic("implement me")
+
+	// TODO: use the registry to pick the desired EVM implementation
+	processor := tosca_geth.NewProcessorWithVm(t.vmImpl)
+
+	blockInfo := tosca.BlockInfo{
+		BlockNumber: int64(block),
+		Timestamp:   int64(st.GetBlockEnvironment().GetTimestamp()),
+		/*
+			GasPrice: 0,
+			Coinbase:    Address,
+			GasLimit:    Gas,
+			PrevRandao:  Hash,
+			ChainID:     Word,
+			BaseFee:     Value,
+			BlobBaseFee: Value,
+		*/
+		Revision: tosca.R07_Istanbul,
+	}
+
+	transaction := tosca.Transaction{
+		Sender: tosca.Address(st.GetMessage().From()),
+		Recipient: func() *tosca.Address {
+			addr := st.GetMessage().To()
+			if addr == nil {
+				return nil
+			}
+			toscaAddr := tosca.Address(*addr)
+			return &toscaAddr
+		}(),
+		Nonce:    st.GetMessage().Nonce(),
+		Input:    st.GetMessage().Data(),
+		Value:    bigToValue(st.GetMessage().Value()),
+		GasLimit: tosca.Gas(st.GetMessage().Gas()),
+		/*
+			AccessList []AccessTuple
+		*/
+	}
+
+	transactionContext := tosca.TransactionContext{
+		BlockInfo: blockInfo,
+		Origin:    tosca.Address(st.GetMessage().From()),
+	}
+
+	state := &stateAdapter{
+		transactionContext: transactionContext,
+		db:                 db,
+	}
+
+	fmt.Printf("running block %d / tx %d\n", block, tx)
+	receipt, err := processor.Run(blockInfo, transaction, state)
+	if err != nil {
+		panic(err)
+		return transactionResult{}, err
+	}
+
+	log := []*types.Log{}
+	for _, l := range receipt.Logs {
+		topics := make([]common.Hash, len(l.Topics))
+		for i, t := range l.Topics {
+			topics[i] = common.Hash(t)
+		}
+		log = append(log, &types.Log{
+			Address: common.Address(l.Address),
+			Topics:  topics,
+			Data:    l.Data,
+		})
+	}
+	msg := st.GetMessage()
+
+	if !receipt.Success {
+		// The actual error is not relevant. Anything
+		// that is not equal to nil will be considered
+		// as a failed execution that got rolled back.
+		err = fmt.Errorf("transaction failed")
+	}
+
+	result := &evmcore.ExecutionResult{
+		UsedGas:    uint64(receipt.GasUsed),
+		Err:        err,
+		ReturnData: receipt.Output,
+	}
+
+	return newTransactionResult(log, msg, result, nil, msg.From()), nil
+}
+
+type stateAdapter struct {
+	transactionContext tosca.TransactionContext
+	db                 state.VmStateDB
+}
+
+func (a *stateAdapter) AccountExists(addr tosca.Address) bool {
+	return a.db.Exist(common.Address(addr))
+}
+
+func (a *stateAdapter) GetBalance(addr tosca.Address) tosca.Value {
+	return bigToValue(a.db.GetBalance(common.Address(addr)))
+}
+
+func (a *stateAdapter) SetBalance(addr tosca.Address, balance tosca.Value) {
+	want := balance.ToBig()
+	account := common.Address(addr)
+	cur := a.db.GetBalance(account)
+	diff := new(big.Int).Sub(want, cur)
+	a.db.AddBalance(account, diff)
+}
+
+func (a *stateAdapter) GetNonce(addr tosca.Address) uint64 {
+	return a.db.GetNonce(common.Address(addr))
+}
+
+func (a *stateAdapter) SetNonce(addr tosca.Address, nonce uint64) {
+	a.db.SetNonce(common.Address(addr), nonce)
+}
+
+func (a *stateAdapter) GetCodeSize(addr tosca.Address) int {
+	return a.db.GetCodeSize(common.Address(addr))
+}
+
+func (a *stateAdapter) GetCodeHash(addr tosca.Address) tosca.Hash {
+	return tosca.Hash(a.db.GetCodeHash(common.Address(addr)))
+}
+
+func (a *stateAdapter) GetCode(addr tosca.Address) []byte {
+	return a.db.GetCode(common.Address(addr))
+}
+
+func (a *stateAdapter) SetCode(addr tosca.Address, code []byte) {
+	a.db.SetCode(common.Address(addr), code)
+}
+
+func (a *stateAdapter) GetStorage(addr tosca.Address, key tosca.Key) tosca.Word {
+	return tosca.Word(a.db.GetState(common.Address(addr), common.Hash(key)))
+}
+
+func (a *stateAdapter) GetCommittedStorage(addr tosca.Address, key tosca.Key) tosca.Word {
+	return tosca.Word(a.db.GetCommittedState(common.Address(addr), common.Hash(key)))
+}
+
+func (a *stateAdapter) SetStorage(addr tosca.Address, key tosca.Key, value tosca.Word) tosca.StorageStatus {
+	original := a.GetCommittedStorage(addr, key)
+	current := a.GetStorage(addr, key)
+	a.db.SetState(common.Address(addr), common.Hash(key), common.Hash(value))
+	return tosca.GetStorageStatus(original, current, value)
+}
+
+func (a *stateAdapter) GetTransactionContext() tosca.TransactionContext {
+	return a.transactionContext
+}
+
+func (a *stateAdapter) GetBlockHash(number int64) tosca.Hash {
+	panic("implement me - block hash")
+}
+
+func (a *stateAdapter) EmitLog(addr tosca.Address, topics []tosca.Hash, data []byte) {
+	tpcs := make([]common.Hash, len(topics))
+	for i, t := range topics {
+		tpcs[i] = common.Hash(t)
+	}
+
+	a.db.AddLog(&types.Log{
+		Address: common.Address(addr),
+		Topics:  tpcs,
+		Data:    data,
+	})
+}
+
+func (a *stateAdapter) GetLogs() []tosca.Log {
+	res := []tosca.Log{}
+	for _, l := range a.db.GetLogs(common.Hash{}, common.Hash{}) {
+		topics := make([]tosca.Hash, len(l.Topics))
+		for i, t := range l.Topics {
+			topics[i] = tosca.Hash(t)
+		}
+		res = append(res, tosca.Log{
+			Address: tosca.Address(l.Address),
+			Topics:  topics,
+			Data:    l.Data,
+		})
+	}
+	return res
+}
+
+func (a *stateAdapter) Call(kind tosca.CallKind, parameter tosca.CallParameter) (tosca.CallResult, error) {
+	panic("implement me - call")
+}
+
+func (a *stateAdapter) SelfDestruct(addr tosca.Address, beneficiary tosca.Address) bool {
+	panic("implement me - self destruct")
+}
+
+func (a *stateAdapter) AccessAccount(addr tosca.Address) tosca.AccessStatus {
+	res := a.IsAddressInAccessList(addr)
+	a.db.AddAddressToAccessList(common.Address(addr))
+	if res {
+		return tosca.WarmAccess
+	}
+	return tosca.ColdAccess
+}
+
+func (a *stateAdapter) AccessStorage(addr tosca.Address, key tosca.Key) tosca.AccessStatus {
+	_, res := a.IsSlotInAccessList(addr, key)
+	a.db.AddSlotToAccessList(common.Address(addr), common.Hash(key))
+	if res {
+		return tosca.WarmAccess
+	}
+	return tosca.ColdAccess
+}
+
+func (a *stateAdapter) HasSelfDestructed(addr tosca.Address) bool {
+	panic("implement me - has self destructed")
+}
+
+func (a *stateAdapter) CreateSnapshot() int {
+	return a.db.Snapshot()
+}
+
+func (a *stateAdapter) RestoreSnapshot(snapshot int) {
+	a.db.RevertToSnapshot(snapshot)
+}
+
+func (a *stateAdapter) IsAddressInAccessList(addr tosca.Address) bool {
+	return a.db.AddressInAccessList(common.Address(addr))
+}
+
+func (a *stateAdapter) IsSlotInAccessList(addr tosca.Address, key tosca.Key) (addressPresent, slotPresent bool) {
+	return a.db.SlotInAccessList(common.Address(addr), common.Hash(key))
 }

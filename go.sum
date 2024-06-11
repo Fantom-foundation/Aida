@@ -100,6 +100,8 @@ github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/ethereum/c-kzg-4844 v1.0.2 h1:8tV84BCEiPeOkiVgW9mpYBeBUir2bkCNVqxPwwVeO+s=
 github.com/ethereum/c-kzg-4844 v1.0.2/go.mod h1:VewdlzQmpT5QSrVhbBuGoCdFJkpaJlO1aQputP83wc0=
+github.com/ethereum/evmc/v11 v11.0.0 h1:eNSnttQ4fpGXt0Jo9mNbyE8o5vSo9GOBAGkhXcSEvjw=
+github.com/ethereum/evmc/v11 v11.0.0/go.mod h1:Jx1hvf5HxIU/t0iOVyDcK9NsKa943peXBtuDQEcyQ7Y=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/fjl/memsize v0.0.2 h1:27txuSD9or+NZlnOWdKUxeBzTAUkWCVh+4Gf2dWFOzA=
