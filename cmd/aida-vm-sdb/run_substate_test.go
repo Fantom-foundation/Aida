@@ -28,7 +28,8 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -110,7 +111,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
 	if err != nil {
 		errors.Unwrap(err)
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
@@ -202,7 +203,7 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil),
 	)
 
-	if err := runSubstates(cfg, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
+	if err := runSubstates(cfg, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -245,7 +246,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -287,7 +288,7 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		// EndTransaction does not get called because validation fails
 	)
 
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
@@ -303,23 +304,23 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	Env: &substate.Env{},
+	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:        &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	Env:           &substate.Env{},
+	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }

@@ -21,7 +21,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -33,7 +32,7 @@ var GetLocationStatsCommand = cli.Command{
 	Usage:     "computes usage statistics of accessed storage locations",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
@@ -82,17 +81,17 @@ func getLocationStatsAction(ctx *cli.Context) error {
 	var key_index Index[common.Hash]
 	return getReferenceStatsAction(ctx, "location-stats", func(info *TransactionInfo) []Location {
 		locations := []Location{}
-		for address, account := range info.st.InputAlloc {
-			address_id := address_index.Get(&address)
+		for address, account := range info.st.InputSubstate {
+			address_id := address_index.Get((*common.Address)(&address))
 			for key := range account.Storage {
-				key_id := key_index.Get(&key)
+				key_id := key_index.Get((*common.Hash)(&key))
 				locations = append(locations, Location{address_id, key_id})
 			}
 		}
-		for address, account := range info.st.OutputAlloc {
-			address_id := address_index.Get(&address)
+		for address, account := range info.st.OutputSubstate {
+			address_id := address_index.Get((*common.Address)(&address))
 			for key := range account.Storage {
-				key_id := key_index.Get(&key)
+				key_id := key_index.Get((*common.Hash)(&key))
 				locations = append(locations, Location{address_id, key_id})
 			}
 		}

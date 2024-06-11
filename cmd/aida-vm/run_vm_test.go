@@ -27,7 +27,8 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -282,7 +283,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	// run fails but not on validation
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
-		t.Errorf("run must fail")
+		t.Fatal("run must fail")
 	}
 
 	// we expected error with low gas, which means the validation passed
@@ -426,24 +427,24 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	Env: &substate.Env{},
+	Message: &substate.Message{
 		Gas:      10000,
 		GasPrice: big.NewInt(0),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:        &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	Env:           &substate.Env{},
+	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }

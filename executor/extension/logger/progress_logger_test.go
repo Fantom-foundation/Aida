@@ -25,7 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"go.uber.org/mock/gomock"
 )
 
@@ -94,7 +94,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		Transaction: 1,
 		Data:        nil,
 	}, &executor.Context{
-		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100_000_000}),
+		ExecutionResult: substatecontext.NewReceipt(&substate.Result{GasUsed: 100_000_000}),
 	})
 
 	// we must wait for the ticker to tick
@@ -126,7 +126,7 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 		Transaction: 1,
 		Data:        nil,
 	}, &executor.Context{
-		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100_000_000}),
+		ExecutionResult: substatecontext.NewReceipt(&substate.Result{GasUsed: 100_000_000}),
 	})
 
 	// wait for data to get into logger

@@ -25,7 +25,9 @@ import (
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -76,16 +78,16 @@ func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Ad
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
 func genDeletedAccountsTask(
-	tx *substate.Transaction,
+	tx *substate.Substate,
 	processor *executor.TxProcessor,
-	ddb *substate.DestroyedAccountDB,
+	ddb *db.DestroyedAccountDB,
 	deleteHistory *map[common.Address]bool,
 	cfg *utils.Config,
 ) error {
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
-	ss := substatecontext.NewTxContext(tx.Substate)
+	ss := substatecontext.NewTxContext(tx)
 
 	conduit := state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(cfg.ChainID))
 	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputState(), tx.Block, conduit)
@@ -108,8 +110,16 @@ func genDeletedAccountsTask(
 	if len(des)+len(res) > 0 {
 		// if transaction completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
-		if tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
-			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, des, res)
+		if tx.Result.Status == types.ReceiptStatusSuccessful {
+			var destroyed, resurrected []substatetypes.Address
+			for _, addr := range des {
+				destroyed = append(destroyed, substatetypes.Address(addr))
+			}
+
+			for _, addr := range res {
+				resurrected = append(destroyed, substatetypes.Address(addr))
+			}
+			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, destroyed, resurrected)
 			if err != nil {
 				return err
 			}
@@ -120,7 +130,7 @@ func genDeletedAccountsTask(
 }
 
 // GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
-func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountDB, firstBlock uint64, lastBlock uint64) error {
+func GenDeletedAccountsAction(cfg *utils.Config, sdb db.SubstateDB, ddb *db.DestroyedAccountDB, firstBlock uint64, lastBlock uint64) error {
 	var err error
 
 	err = utils.StartCPUProfile(cfg)
@@ -139,7 +149,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	lastTxCount := uint64(0)
 	var deleteHistory = make(map[common.Address]bool)
 
-	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
+	iter := sdb.NewSubstateIterator(int(firstBlock), cfg.Workers)
 	defer iter.Release()
 
 	processor := executor.MakeTxProcessor(cfg)

@@ -21,7 +21,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -48,13 +48,13 @@ func scrapePrepare(ctx *cli.Context) error {
 	log := logger.NewLogger(cfg.LogLevel, "UtilDb-Scrape")
 	log.Infof("Scraping for range %d-%d", cfg.First, cfg.Last)
 
-	db, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "state-hash", false)
+	database, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("error opening stateHash leveldb %s: %v", cfg.TargetDb, err)
 	}
-	defer db.Close()
+	defer database.Close()
 
-	err = utils.StateHashScraper(ctx.Context, cfg.ChainID, cfg.OperaDb, db, cfg.First, cfg.Last, log)
+	err = utils.StateHashScraper(ctx.Context, cfg.ChainID, cfg.OperaDb, database, cfg.First, cfg.Last, log)
 	if err != nil {
 		return err
 	}

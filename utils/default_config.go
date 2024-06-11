@@ -19,7 +19,6 @@ package utils
 import (
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -99,7 +98,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		StateDbSrc:             getFlagValue(ctx, StateDbSrcFlag).(string),
 		StateDbSrcDirectAccess: getFlagValue(ctx, SrcDbOverwriteFlag).(bool),
 		StateValidationMode:    EqualityCheck,
-		SubstateDb:             getFlagValue(ctx, substate.SubstateDbFlag).(string),
+		SubstateDb:             getFlagValue(ctx, AidaDbFlag).(string),
 		SyncPeriodLength:       getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
 		TargetDb:               getFlagValue(ctx, TargetDbFlag).(string),
 		TargetEpoch:            getFlagValue(ctx, TargetEpochFlag).(uint64),
@@ -117,7 +116,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		ValidateTxState:        getFlagValue(ctx, ValidateTxStateFlag).(bool),
 		ValuesNumber:           getFlagValue(ctx, ValuesNumberFlag).(int64),
 		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
-		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
+		Workers:                getFlagValue(ctx, WorkersFlag).(int),
 		TxGeneratorType:        getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
 	}
 

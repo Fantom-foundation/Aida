@@ -126,7 +126,7 @@ func CloseCarmenDbTestContext(db StateDB) error {
 }
 
 func BeginCarmenDbTestContext(db StateDB) error {
-	err := db.BeginBlock(uint64(1))
+	err := db.BeginBlock(uint64(6))
 	if err != nil {
 		return fmt.Errorf("cannot begin block; %w", err)
 	}

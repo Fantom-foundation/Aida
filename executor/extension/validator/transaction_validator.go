@@ -49,7 +49,7 @@ type liveDbTxValidator struct {
 	*stateDbValidator
 }
 
-// PreTransaction validates InputAlloc in given substate
+// PreTransaction validates InputSubstate in given substate
 func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	return v.runPreTxValidation("live-db-validator", ctx.State, state, ctx.ErrorInput)
 }

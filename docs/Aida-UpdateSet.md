@@ -38,7 +38,7 @@ Generate the UpdateSet.
 ```
 ./build/aida-updateset generate --world-state path/to/world-state --update-db path/to/update-db `<blockNumLast>` `<interval>`
 ```
-generates piecewise update-sets (merges of output substates) at every `<interval>` blocks starting from block 4564026 to block `<blockNumLast>` and stores them in updateDB. SubstateAlloc of block 4564025 from the world state is reocrded as the first update-set if --world-state is provided. The subsequence update-sets happen every `<interval>` blocks afterwards.
+generates piecewise update-sets (merges of output substates) at every `<interval>` blocks starting from block 4564026 to block `<blockNumLast>` and stores them in updateDB. WorldState of block 4564025 from the world state is reocrded as the first update-set if --world-state is provided. The subsequence update-sets happen every `<interval>` blocks afterwards.
 
 ### Options
 ```

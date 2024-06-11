@@ -24,8 +24,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -74,11 +73,10 @@ func AutogenRun(cfg *utils.Config, g *Generator) error {
 	g.Log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// reopen aida-db
-	g.AidaDb, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	g.AidaDb, err = db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot create new db; %v", err)
 	}
-	substate.SetSubstateDbBackend(g.AidaDb)
 
 	err = g.Opera.getOperaBlockAndEpoch(false)
 	if err != nil {
@@ -114,8 +112,7 @@ func PrepareAutogen(ctx *cli.Context, cfg *utils.Config) (*Generator, bool, erro
 		}
 	}
 
-	MustCloseDB(g.AidaDb)
-
+	g.AidaDb.Close()
 	// start epoch is last epoch + 1
 	if g.Opera.FirstEpoch > g.TargetEpoch {
 		return g, false, nil

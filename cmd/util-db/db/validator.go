@@ -25,7 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,7 +53,7 @@ func generateDbHashCmd(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -82,7 +82,7 @@ func validateCmd(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -160,7 +160,7 @@ var PrintDbHashCommand = cli.Command{
 func printDbHash(ctx *cli.Context) error {
 	var force = ctx.Bool(flags.ForceFlag.Name)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
+	aidaDb, err := db.NewReadOnlyBaseDB(ctx.String(utils.AidaDbFlag.Name))
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}

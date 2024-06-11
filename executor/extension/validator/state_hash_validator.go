@@ -31,6 +31,8 @@ import (
 )
 
 func MakeStateHashValidator[T any](cfg *utils.Config) executor.Extension[T] {
+	// todo make true when --validate is chosen (validate should enable all validations)
+
 	if !cfg.ValidateStateHashes {
 		return extension.NilExtension[T]{}
 	}

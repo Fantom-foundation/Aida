@@ -17,6 +17,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
@@ -25,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -45,13 +48,16 @@ func RunVmAdb(ctx *cli.Context) error {
 		cfg.First = 1
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return run(cfg, substateIterator, nil, executor.MakeArchiveDbTxProcessor(cfg), nil)
 }
 
 func run(
@@ -89,5 +95,6 @@ func run(
 		},
 		processor,
 		extensionList,
+		nil,
 	)
 }

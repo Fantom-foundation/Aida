@@ -22,7 +22,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -90,7 +91,7 @@ func runStatCollector[T comparable](stats *AccessStatistics[T], src <-chan T, do
 }
 
 // collectAddressStats collects statistical information on address usage.
-func collectStats[T comparable](dest chan<- T, extract Extractor[T], block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func collectStats[T comparable](dest chan<- T, extract Extractor[T], block uint64, tx int, st *substate.Substate, taskPool *db.SubstateTaskPool) error {
 	info := TransactionInfo{
 		block: block,
 		tx:    tx,
@@ -131,9 +132,10 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	// TODO this print has not been working ever since this functionality was introduced to aidaDb
 	//log.Infof("contract-db: %v\n", cfg.Db)
 
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
 
 	// Start Collector.
 	stats := newStatistics[T](log)
@@ -142,12 +144,12 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	go runStatCollector(&stats, refs, done)
 
 	// Create per-transaction task.
-	task := func(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+	task := func(block uint64, tx int, st *substate.Substate, taskPool *db.SubstateTaskPool) error {
 		return collectStats(refs, extract, block, tx, st, taskPool)
 	}
 
 	// Process all transactions in parallel, out-of-order.
-	taskPool := substate.NewSubstateTaskPool(fmt.Sprintf("aida-vm %v", cli_command), task, cfg.First, cfg.Last, ctx)
+	taskPool := sdb.NewSubstateTaskPool(fmt.Sprintf("aida-vm %v", cli_command), task, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	if err != nil {
 		return err

@@ -644,7 +644,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				t.Fatalf("cannot end block; %v", err)
 			}
 
-			cbl, err := shadowDB.StartBulkLoad(2)
+			cbl, err := shadowDB.StartBulkLoad(7)
 			if err != nil {
 				t.Fatal(err)
 

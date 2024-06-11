@@ -24,8 +24,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -74,25 +73,23 @@ func generateMetadata(ctx *cli.Context) error {
 		return argErr
 	}
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		return err
 	}
-	substate.SetSubstateDbBackend(aidaDb)
-	fb, lb, ok := utils.FindBlockRangeInSubstate()
+
+	defer base.Close()
+	sdb := db.MakeDefaultSubstateDBFromBaseDB(base)
+	fb, lb, ok := utils.FindBlockRangeInSubstate(sdb)
 	if !ok {
 		return errors.New("cannot find block range in substate")
 	}
 
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(base, "INFO")
 	md.FirstBlock = fb
 	md.LastBlock = lb
 	if err = md.SetFreshMetadata(cfg.ChainID); err != nil {
 		return err
-	}
-
-	if err = aidaDb.Close(); err != nil {
-		return fmt.Errorf("cannot close aida-db; %v", err)
 	}
 
 	return utildb.PrintMetadata(cfg.AidaDb)
@@ -131,16 +128,16 @@ func insertMetadata(ctx *cli.Context) error {
 	valArg := ctx.Args().Get(1)
 
 	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(aidaDbPath)
 	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+		return err
 	}
 
-	defer utildb.MustCloseDB(aidaDb)
+	defer base.Close()
 
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(base, "INFO")
 
-	switch substate.MetadataPrefix + keyArg {
+	switch db.MetadataPrefix + keyArg {
 	case utils.FirstBlockPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
@@ -201,7 +198,7 @@ func insertMetadata(ctx *cli.Context) error {
 		if err = md.SetDbHash(hash); err != nil {
 			return err
 		}
-	case substate.UpdatesetIntervalKey:
+	case db.UpdatesetIntervalKey:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
@@ -209,7 +206,7 @@ func insertMetadata(ctx *cli.Context) error {
 		if err = md.SetUpdatesetInterval(val); err != nil {
 			return err
 		}
-	case substate.UpdatesetSizeKey:
+	case db.UpdatesetSizeKey:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
@@ -243,12 +240,13 @@ func removeMetadata(ctx *cli.Context) error {
 	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
 
 	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(aidaDbPath)
 	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+		return err
 	}
 
-	md := utils.NewAidaDbMetadata(aidaDb, "DEBUG")
+	defer base.Close()
+	md := utils.NewAidaDbMetadata(base, "DEBUG")
 	md.DeleteMetadata()
 
 	return nil

@@ -55,6 +55,47 @@ type WorldState interface {
 
 type AccountHandler func(addr common.Address, acc Account)
 
+func NewWorldState(m map[common.Address]Account) WorldState {
+	return AidaWorldState(m)
+}
+
+type AidaWorldState map[common.Address]Account
+
+func (a AidaWorldState) String() string {
+	return WorldStateString(a)
+}
+
+func (a AidaWorldState) Has(addr common.Address) bool {
+	_, ok := a[addr]
+	return ok
+}
+
+func (a AidaWorldState) Equal(y WorldState) bool {
+	return WorldStateEqual(a, y)
+}
+
+func (a AidaWorldState) Get(addr common.Address) Account {
+	acc, ok := a[addr]
+	if !ok {
+		return nil
+	}
+
+	return acc
+}
+
+func (a AidaWorldState) ForEachAccount(h AccountHandler) {
+	for addr, acc := range a {
+		h(addr, acc)
+	}
+}
+
+func (a AidaWorldState) Len() int {
+	return len(a)
+}
+
+func (a AidaWorldState) Delete(addr common.Address) {
+	delete(a, addr)
+}
 func WorldStateEqual(x, y WorldState) (isEqual bool) {
 	if x.Len() != y.Len() {
 		return false

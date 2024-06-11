@@ -109,5 +109,6 @@ func run(
 		},
 		processor,
 		extensionList,
+		nil,
 	)
 }

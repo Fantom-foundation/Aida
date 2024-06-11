@@ -17,6 +17,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
@@ -25,7 +27,8 @@ import (
 	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,7 +42,7 @@ var RecordCommand = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -63,14 +66,17 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	substate.RecordReplay = true
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	state.EnableRecordReplay()
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return record(cfg, substateDb, executor.MakeLiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return record(cfg, substateIterator, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func record(
@@ -98,5 +104,6 @@ func record(
 		},
 		processor,
 		extensions,
+		nil,
 	)
 }

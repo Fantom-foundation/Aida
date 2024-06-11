@@ -763,7 +763,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				t.Fatalf("cannot end block; %v", err)
 			}
 
-			cbl, err := csDB.StartBulkLoad(2)
+			cbl, err := csDB.StartBulkLoad(7)
 			if err != nil {
 				t.Fatal(err)
 			}

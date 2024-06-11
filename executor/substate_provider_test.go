@@ -25,19 +25,10 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 	"go.uber.org/mock/gomock"
 )
-
-func TestSubstateProvider_OpeningANonExistingDbResultsInAnError(t *testing.T) {
-	cfg := utils.Config{}
-	cfg.AidaDb = t.TempDir()
-	// Important: the following code does not panic.
-	_, err := OpenSubstateDb(&cfg, nil)
-	if err == nil {
-		t.Errorf("attempting to open a non-existing substate DB should fail")
-	}
-}
 
 func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -45,15 +36,12 @@ func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 
 	// Prepare a directory containing some substate data.
 	path := t.TempDir()
-	if err := createSubstateDb(path); err != nil {
+	if err := createSubstateDb(t, path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path, t)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -73,15 +61,12 @@ func TestSubstateProvider_LowerBoundIsInclusive(t *testing.T) {
 
 	// Prepare a directory containing some substate data.
 	path := t.TempDir()
-	if err := createSubstateDb(path); err != nil {
+	if err := createSubstateDb(t, path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -101,15 +86,12 @@ func TestSubstateProvider_UpperBoundIsExclusive(t *testing.T) {
 
 	// Prepare a directory containing some substate data.
 	path := t.TempDir()
-	if err := createSubstateDb(path); err != nil {
+	if err := createSubstateDb(t, path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	gomock.InOrder(
@@ -128,15 +110,12 @@ func TestSubstateProvider_RangeCanBeEmpty(t *testing.T) {
 
 	// Prepare a directory containing some substate data.
 	path := t.TempDir()
-	if err := createSubstateDb(path); err != nil {
+	if err := createSubstateDb(t, path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	if err := provider.Run(5, 10, toSubstateConsumer(consumer)); err != nil {
@@ -150,15 +129,12 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 
 	// Prepare a directory containing some substate data.
 	path := t.TempDir()
-	if err := createSubstateDb(path); err != nil {
+	if err := createSubstateDb(t, path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstateDb(path)
-	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
-	}
+	provider := openSubstateDb(path, nil)
 	defer provider.Close()
 
 	stop := errors.New("stop!")
@@ -172,31 +148,53 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 }
 
-func openSubstateDb(path string) (Provider[txcontext.TxContext], error) {
+func openSubstateDb(path string, t *testing.T) Provider[txcontext.TxContext] {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1
-	return OpenSubstateDb(&cfg, nil)
+	aidaDb, err := db.NewReadOnlyBaseDB(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return OpenSubstateProvider(&cfg, nil, aidaDb)
 }
 
-func createSubstateDb(path string) error {
-	substate.SetSubstateDb(path)
-	substate.OpenSubstateDB()
-
+func createSubstateDb(t *testing.T, path string) error {
+	sdb, err := db.NewDefaultSubstateDB(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	state := substate.Substate{
-		Env: &substate.SubstateEnv{},
-		Message: &substate.SubstateMessage{
+		Block:       10,
+		Transaction: 7,
+		Env:         &substate.Env{},
+		Message: &substate.Message{
 			Value: big.NewInt(12),
 		},
-		InputAlloc:  substate.SubstateAlloc{},
-		OutputAlloc: substate.SubstateAlloc{},
-		Result:      &substate.SubstateResult{},
+		InputSubstate:  substate.WorldState{},
+		OutputSubstate: substate.WorldState{},
+		Result:         &substate.Result{},
 	}
 
-	substate.PutSubstate(10, 7, &state)
-	substate.PutSubstate(10, 9, &state)
-	substate.PutSubstate(12, 5, &state)
+	err = sdb.PutSubstate(&state)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	substate.CloseSubstateDB()
+	state.Block = 10
+	state.Transaction = 9
+	err = sdb.PutSubstate(&state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	state.Block = 12
+	state.Transaction = 5
+	err = sdb.PutSubstate(&state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sdb.Close()
 	return nil
 }

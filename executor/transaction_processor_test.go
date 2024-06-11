@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -29,7 +29,7 @@ func TestPrepareBlockCtx(t *testing.T) {
 	gaslimit := uint64(10000000)
 	blocknum := uint64(4600000)
 	basefee := big.NewInt(12345)
-	env := substatecontext.NewBlockEnvironment(&substate.SubstateEnv{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee})
+	env := substatecontext.NewBlockEnvironment(&substate.Env{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee})
 
 	var hashError error
 	// BlockHashes are nil, expect an error

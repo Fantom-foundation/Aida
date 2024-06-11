@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -46,18 +46,18 @@ func reportUpdateSetStats(ctx *cli.Context) error {
 		return argErr
 	}
 	// initialize updateDB
-	db, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer udb.Close()
 
-	iter := substate.NewUpdateSetIterator(db, cfg.First, cfg.Last)
+	iter := udb.NewUpdateSetIterator(cfg.First, cfg.Last)
 	defer iter.Release()
 
 	for iter.Next() {
 		update := iter.Value()
-		state := *update.UpdateSet
+		state := update.WorldState
 		fmt.Printf("%v,%v,", update.Block, len(state))
 		storage := 0
 		for account := range state {

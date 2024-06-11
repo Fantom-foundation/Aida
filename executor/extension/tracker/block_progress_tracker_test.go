@@ -30,7 +30,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"go.uber.org/mock/gomock"
 )
 
@@ -64,11 +64,11 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ctx := &executor.Context{
 		State:           db,
 		StateDbPath:     dummyStateDbPath,
-		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100}),
+		ExecutionResult: substatecontext.NewReceipt(&substate.Result{GasUsed: 100}),
 	}
 
 	s := substatecontext.NewTxContext(&substate.Substate{
-		Result: &substate.SubstateResult{
+		Result: &substate.Result{
 			Status: 0,
 		},
 	})
@@ -134,11 +134,11 @@ func TestSubstateProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ctx := &executor.Context{
 		State:           db,
-		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 10}),
+		ExecutionResult: substatecontext.NewReceipt(&substate.Result{GasUsed: 10}),
 	}
 
 	s := substatecontext.NewTxContext(&substate.Substate{
-		Result: &substate.SubstateResult{
+		Result: &substate.Result{
 			Status: 0,
 		},
 	})
