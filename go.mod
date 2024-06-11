@@ -7,7 +7,7 @@ toolchain go1.22.0
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240527074610-67008e3801f9
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
-	github.com/Fantom-foundation/Substate v0.0.0-20240509142111-69f0915c9d4c
+	github.com/Fantom-foundation/Substate v0.0.0-20240606095437-0d28864f0a7a
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
@@ -106,7 +106,7 @@ replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 // todo remove
 replace github.com/Fantom-foundation/Substate => github.com/Fantom-foundation/Substate v0.0.0-20240520082918-8c0338cc5a0a
 
-replace github.com/ethereum/go-ethereum => github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.0.0-a
 

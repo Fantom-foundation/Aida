@@ -6,6 +6,8 @@ github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4 h1:vtziTKo
 github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4/go.mod h1:NLvaNtS7elcJ9Q/Ypz7ZzA2DuQqd+UC+Bccue2EVRWk=
 github.com/Fantom-foundation/Substate v0.0.0-20240520082918-8c0338cc5a0a h1:6KSxqZODBo/pTKItvDDJLKil5RNPl6mCtuQlIx8zGx8=
 github.com/Fantom-foundation/Substate v0.0.0-20240520082918-8c0338cc5a0a/go.mod h1:8dW0EnFHo0PegzvTFLUa5oxUgKvhLudPR0Ro3fUV7ag=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf h1:+on3LIdi54bude/KdPl94K+homdttL1T9EB1dlOZY1M=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf/go.mod h1:9e69ZhWA6jYhPsMVjFzfIeptd/Fnelk7Eo+QrMyJXJM=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00 h1:yw5QaA7u4t2/j7VIGrMt640Kuhsx6pEIHM3bj10glWc=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00/go.mod h1:Ogv5etzSmM2rQ4eN3OfmyitwWaaPjd4EIDiW/NAbYGk=
 github.com/Fantom-foundation/sonic v1.0.0-a h1:uDJC/vgIt8Dr8KAjMLdMf4LbqJE/JLfe0KumNxjt1u0=
@@ -72,8 +74,6 @@ github.com/dsnet/compress v0.0.1/go.mod h1:Aw8dCMJ7RioblQeTqt88akK31OvO8Dhf5Jflh
 github.com/dsnet/golib v0.0.0-20171103203638-1ea166775780/go.mod h1:Lj+Z9rebOhdfkVLjJ8T6VcRQv3SXugXy999NBtR9aFY=
 github.com/edsrzf/mmap-go v1.0.0 h1:CEBF7HpRnUCSJgGUb5h1Gm7e3VkmVDrR8lvWVLtrOFw=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
-github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0 h1:/hI9fBSJCzjJ5yE1XzObYsyBnK0Hb6mruqzU4bPG/Jk=
-github.com/evgensheff/go-ethereum-substate v1.1.1-0.20240408074049-5ecfb7efe9b0/go.mod h1:3GuIYSft1VR8gPm8cDgwUPH+jm52A2R6vbzvbYxIhG0=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
 github.com/fogleman/gg v1.3.0 h1:/7zJX8F6AaYQc57WQCyN9cAIz+4bCJGO9B+dyW29am8=
@@ -139,7 +139,6 @@ github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d h1:dg1dEPuW
 github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/holiman/bloomfilter/v2 v2.0.3 h1:73e0e/V0tCydx14a0SCYS/EWCxgwLZ18CZcZKVu0fao=
 github.com/holiman/bloomfilter/v2 v2.0.3/go.mod h1:zpoh+gs7qcpqrHr3dB55AMiJwo0iURXE7ZOP9L9hSkA=
-github.com/holiman/uint256 v1.2.0/go.mod h1:y4ga/t+u+Xwd7CpDgZESaRcWy0I7XMlTMA25ApIH5Jw=
 github.com/holiman/uint256 v1.2.4 h1:jUc4Nk8fm9jZabQuqr2JzednajVmBpC+oiTiXZJEApU=
 github.com/holiman/uint256 v1.2.4/go.mod h1:EOMSn4q6Nyt9P6efbI3bueV4e1b3dGlUCXeiRV4ng7E=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
