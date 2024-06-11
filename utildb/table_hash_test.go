@@ -257,7 +257,7 @@ func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 		}
 	}
 
-	ddb := db.MakeDestroyedAccountDBFromBaseDB(aidaDb)
+	ddb := db.MakeDefaultDestroyedAccountDBFromBaseDB(aidaDb)
 
 	// Generate random number between 6-10
 	numDestroyedAccounts := rand.Intn(5) + 6
