@@ -197,6 +197,9 @@ type StateDB interface {
 	// the shadow DB can be used to query state directly. If there is no shadow DB,
 	// nil is returned.
 	GetShadowDB() StateDB
+
+	// SetTxContext is geth utility function which set transaction index and transaction hash.
+	SetTxContext(common.Hash, int)
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without
