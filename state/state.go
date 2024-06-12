@@ -20,7 +20,6 @@ package state
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
@@ -47,7 +46,7 @@ type VmStateDB interface {
 	GetBalance(common.Address) *uint256.Int
 	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
 	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
-	
+
 	// Nonce
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)

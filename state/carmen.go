@@ -18,7 +18,6 @@ package state
 
 import (
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/txcontext"

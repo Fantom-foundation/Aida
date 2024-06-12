@@ -18,10 +18,8 @@ package state
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -60,7 +58,7 @@ func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveM
 		db:            db,
 		evmState:      evmState,
 		stateRoot:     rootHash,
-		triegc:        prque.New[uint64,common.Hash](nil),
+		triegc:        prque.New[uint64, common.Hash](nil),
 		isArchiveMode: isArchiveMode,
 		chainConduit:  chainConduit,
 	}, nil
@@ -77,7 +75,7 @@ type gethStateDB struct {
 	db            vm.StateDB    // statedb
 	evmState      geth.Database // key-value database
 	stateRoot     common.Hash   // lastest root hash
-	triegc        *prque.Prque[uint64,common.Hash]
+	triegc        *prque.Prque[uint64, common.Hash]
 	isArchiveMode bool
 	chainConduit  *ChainConduit // chain configuration
 	block         uint64
@@ -369,7 +367,7 @@ func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 }
 
 type gethBulkLoad struct {
-	db *gethStateDB
+	db    *gethStateDB
 	block uint64
 }
 
