@@ -274,6 +274,9 @@ type toscaProcessor struct {
 }
 
 func bigToValue(value *big.Int) tosca.Value {
+	if value == nil {
+		return tosca.Value{}
+	}
 	var res tosca.Value
 	value.FillBytes(res[:])
 	return res
@@ -284,35 +287,36 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 	// TODO: use the registry to pick the desired EVM implementation
 	processor := tosca_geth.NewProcessorWithVm(t.vmImpl)
 
+	blockEnvironment := st.GetBlockEnvironment()
+	message := st.GetMessage()
+
 	blockInfo := tosca.BlockInfo{
 		BlockNumber: int64(block),
-		Timestamp:   int64(st.GetBlockEnvironment().GetTimestamp()),
-		/*
-			GasPrice: 0,
-			Coinbase:    Address,
-			GasLimit:    Gas,
-			PrevRandao:  Hash,
-			ChainID:     Word,
-			BaseFee:     Value,
-			BlobBaseFee: Value,
-		*/
-		Revision: tosca.R07_Istanbul,
+		Timestamp:   int64(blockEnvironment.GetTimestamp()),
+		GasPrice:    bigToValue(message.GasPrice()),
+		GasLimit:    tosca.Gas(blockEnvironment.GetGasLimit()),
+		Coinbase:    tosca.Address(blockEnvironment.GetCoinbase()),
+		ChainID:     tosca.Word(bigToValue(t.chainCfg.ChainID)),
+		PrevRandao:  tosca.Hash(bigToValue(blockEnvironment.GetDifficulty())),
+		BaseFee:     bigToValue(blockEnvironment.GetBaseFee()),
+		BlobBaseFee: tosca.Value{}, // = 0, since blobs are not supported by Fantom yet
+		Revision:    tosca.R07_Istanbul,
 	}
 
 	transaction := tosca.Transaction{
-		Sender: tosca.Address(st.GetMessage().From()),
+		Sender: tosca.Address(message.From()),
 		Recipient: func() *tosca.Address {
-			addr := st.GetMessage().To()
+			addr := message.To()
 			if addr == nil {
 				return nil
 			}
 			toscaAddr := tosca.Address(*addr)
 			return &toscaAddr
 		}(),
-		Nonce:    st.GetMessage().Nonce(),
-		Input:    st.GetMessage().Data(),
-		Value:    bigToValue(st.GetMessage().Value()),
-		GasLimit: tosca.Gas(st.GetMessage().Gas()),
+		Nonce:    message.Nonce(),
+		Input:    message.Data(),
+		Value:    bigToValue(message.Value()),
+		GasLimit: tosca.Gas(message.Gas()),
 		/*
 			AccessList []AccessTuple
 		*/
@@ -324,14 +328,14 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 	}
 
 	state := &stateAdapter{
+		blockEnvironment:   blockEnvironment,
 		transactionContext: transactionContext,
 		db:                 db,
 	}
 
-	fmt.Printf("running block %d / tx %d\n", block, tx)
+	//fmt.Printf("running block %d / tx %d\n", block, tx)
 	receipt, err := processor.Run(blockInfo, transaction, state)
 	if err != nil {
-		panic(err)
 		return transactionResult{}, err
 	}
 
@@ -366,6 +370,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 }
 
 type stateAdapter struct {
+	blockEnvironment   txcontext.BlockEnvironment
 	transactionContext tosca.TransactionContext
 	db                 state.VmStateDB
 }
@@ -430,7 +435,8 @@ func (a *stateAdapter) GetTransactionContext() tosca.TransactionContext {
 }
 
 func (a *stateAdapter) GetBlockHash(number int64) tosca.Hash {
-	panic("implement me - block hash")
+	h, _ := a.blockEnvironment.GetBlockHash(uint64(number))
+	return tosca.Hash(h)
 }
 
 func (a *stateAdapter) EmitLog(addr tosca.Address, topics []tosca.Hash, data []byte) {
@@ -467,7 +473,8 @@ func (a *stateAdapter) Call(kind tosca.CallKind, parameter tosca.CallParameter) 
 }
 
 func (a *stateAdapter) SelfDestruct(addr tosca.Address, beneficiary tosca.Address) bool {
-	panic("implement me - self destruct")
+	// TODO: move this accounts balance to the beneficiary
+	return a.db.Suicide(common.Address(addr))
 }
 
 func (a *stateAdapter) AccessAccount(addr tosca.Address) tosca.AccessStatus {
@@ -489,7 +496,7 @@ func (a *stateAdapter) AccessStorage(addr tosca.Address, key tosca.Key) tosca.Ac
 }
 
 func (a *stateAdapter) HasSelfDestructed(addr tosca.Address) bool {
-	panic("implement me - has self destructed")
+	return a.db.HasSuicided(common.Address(addr))
 }
 
 func (a *stateAdapter) CreateSnapshot() int {
