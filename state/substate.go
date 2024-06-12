@@ -27,13 +27,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/ethereum/go-ethereum/triedb"
 )
 
 // offTheChainDB is state.cachingDB clone without disk caches
 type offTheChainDB struct {
-	db *triedb.Database
+	db   *triedb.Database
+	disk ethdb.Database
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
@@ -46,7 +48,7 @@ func (db *offTheChainDB) OpenTrie(root common.Hash) (state.Trie, error) {
 }
 
 // OpenStorageTrie opens the storage trie of an account.
-func (db *offTheChainDB) OpenStorageTrie(stateRoot common.Hash, addrHash, root common.Hash) (state.Trie, error) {
+func (db *offTheChainDB) OpenStorageTrie(stateRoot common.Hash, address common.Address, root common.Hash, _ trie.Trie) (state.Trie, error) {
 	tr, err := trie.NewStateTrie(trie.StorageTrieID(stateRoot, crypto.Keccak256Hash(address.Bytes()), root), db.db)
 	if err != nil {
 		return nil, err
@@ -65,8 +67,8 @@ func (db *offTheChainDB) CopyTrie(t state.Trie) state.Trie {
 }
 
 // ContractCode retrieves a particular contract's code.
-func (db *offTheChainDB) ContractCode(addrHash, codeHash common.Hash) ([]byte, error) {
-	code := rawdb.ReadCode(db.db.DiskDB(), codeHash)
+func (db *offTheChainDB) ContractCode(address common.Address, codeHash common.Hash) ([]byte, error) {
+	code := rawdb.ReadCode(db.disk, codeHash)
 	if len(code) > 0 {
 		return code, nil
 	}
@@ -76,8 +78,8 @@ func (db *offTheChainDB) ContractCode(addrHash, codeHash common.Hash) ([]byte, e
 // ContractCodeWithPrefix retrieves a particular contract's code. If the
 // code can't be found in the cache, then check the existence with **new**
 // db scheme.
-func (db *offTheChainDB) ContractCodeWithPrefix(addrHash, codeHash common.Hash) ([]byte, error) {
-	code := rawdb.ReadCodeWithPrefix(db.db.DiskDB(), codeHash)
+func (db *offTheChainDB) ContractCodeWithPrefix(address common.Address, codeHash common.Hash) ([]byte, error) {
+	code := rawdb.ReadCodeWithPrefix(db.disk, codeHash)
 	if len(code) > 0 {
 		return code, nil
 	}
@@ -85,9 +87,14 @@ func (db *offTheChainDB) ContractCodeWithPrefix(addrHash, codeHash common.Hash) 
 }
 
 // ContractCodeSize retrieves a particular contracts code's size.
-func (db *offTheChainDB) ContractCodeSize(addrHash, codeHash common.Hash) (int, error) {
-	code, err := db.ContractCode(addrHash, codeHash)
+func (db *offTheChainDB) ContractCodeSize(address common.Address, codeHash common.Hash) (int, error) {
+	code, err := db.ContractCode(address, codeHash)
 	return len(code), err
+}
+
+// DiskDB returns the underlying key-value disk database.
+func (db *offTheChainDB) DiskDB() ethdb.KeyValueStore {
+	return db.disk
 }
 
 // TrieDB retrieves any intermediate trie-node caching layer.
@@ -101,11 +108,12 @@ func NewOffTheChainStateDB() *state.StateDB {
 	kvdb := rawdb.NewMemoryDatabase()
 
 	// zeroed trie.Config to disable Cache, Journal, Preimages, ...
-	zerodConfig := &trie.Config{}
-	tdb := trie.NewDatabaseWithConfig(kvdb, zerodConfig)
+	zerodConfig := &triedb.Config{}
+	tdb := state.NewDatabaseWithConfig(kvdb, zerodConfig)
 
 	sdb := &offTheChainDB{
-		db: tdb,
+		db:   tdb,
+		disk: kvdb,
 	}
 
 	statedb, err := state.New(common.Hash{}, sdb, nil)

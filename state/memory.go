@@ -109,7 +109,6 @@ func (db *inMemoryStateDB) CreateContract(addr common.Address) {
 	panic("CreateContract not implemented")
 }
 
-
 func (db *inMemoryStateDB) SubBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
 	if value.Sign() == 0 {
 		return
@@ -224,13 +223,25 @@ func (db *inMemoryStateDB) SetState(addr common.Address, key common.Hash, value 
 	db.state.storage[slot{addr, key}] = value
 }
 
-func (db *inMemoryStateDB) GetStorageRoot(addr common.Address, key common.Hash) common.Hash {
+func (db *inMemoryStateDB) GetStorageRoot(addr common.Address) common.Hash {
 	panic("GetStorageRoot not implemented")
+}
+
+func (db *inMemoryStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	panic("GetTransientState not implemented")
+}
+
+func (db *inMemoryStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	panic("SetTransientState not implemented")
 }
 
 func (db *inMemoryStateDB) SelfDestruct(addr common.Address) {
 	db.state.suicided[addr] = 0
 	db.state.balances[addr] = new(uint256.Int) // Apparently when you die all your money is gone.
+}
+
+func (db *inMemoryStateDB) Selfdestruct6780(addr common.Address) {
+	panic("Selfdestruct6780 not implemented")
 }
 
 func (db *inMemoryStateDB) HasSelfDestructed(addr common.Address) bool {
@@ -257,7 +268,7 @@ func (db *inMemoryStateDB) Empty(addr common.Address) bool {
 	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0 && db.GetCodeSize(addr) == 0
 }
 
-func (db *inMemoryStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (db *inMemoryStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	db.AddAddressToAccessList(sender)
 	if dest != nil {
 		db.AddAddressToAccessList(*dest)
@@ -332,7 +343,7 @@ func (db *inMemoryStateDB) AddPreimage(common.Hash, []byte) {
 	panic("not implemented")
 }
 
-func (db *inMemoryStateDB) Prepare(common.Hash, int) {
+func (db *inMemoryStateDB) SetTxContext(common.Hash, int) {
 	// nothing to do ...
 }
 
@@ -343,7 +354,7 @@ func (db *inMemoryStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash
 	panic("not implemented")
 }
 
-func (db *inMemoryStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (db *inMemoryStateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
@@ -356,7 +367,7 @@ func collectLogs(s *snapshot) []*types.Log {
 	return logs
 }
 
-func (db *inMemoryStateDB) GetLogs(txHash common.Hash, blockHash common.Hash) []*types.Log {
+func (db *inMemoryStateDB) GetLogs(txHash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	// Since the in-memory stateDB is only to be used for a single
 	// transaction, all logs are from the same transactions. But
 	// those need to be collected in the right order (inverse order
@@ -384,7 +395,7 @@ func (db *inMemoryStateDB) getEffects() substate.WorldState {
 	for addr := range touched {
 		cur := new(substate.Account)
 		cur.Nonce = db.GetNonce(addr)
-		cur.Balance = db.GetBalance(addr)
+		cur.Balance = db.GetBalance(addr).ToBig()
 		cur.Code = db.GetCode(addr)
 		cur.Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 
@@ -418,7 +429,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 		})
 		res[substatetypes.Address(addr)] = &substate.Account{
 			Nonce:   acc.GetNonce(),
-			Balance: acc.GetBalance(),
+			Balance: acc.GetBalance().ToBig(),
 			Storage: storage,
 			Code:    acc.GetCode(),
 		}

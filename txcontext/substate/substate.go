@@ -59,20 +59,20 @@ func (t *substateData) GetMessage() core.Message {
 		list = append(list, types.AccessTuple{Address: common.Address(tuple.Address), StorageKeys: keys})
 	}
 	return core.Message{
-	               (*common.Address)(t.Message.To),
-		       common.Address(t.Message.From),
-		       t.Message.Nonce,
-		       t.Message.Value,
-		       t.Message.Gas,
-		       t.Message.GasPrice,
-		       t.Message.GasFeeCap,
-		       t.Message.GasTipCap,
-		       t.Message.Data,
-		       list,
-	               nil, //TODO support BlobGasFeeCap
-	               []common.Hash{},    //TODO support BlobHashes
-		       !t.Message.CheckNonce,
-	       }
+		(*common.Address)(t.Message.To),
+		common.Address(t.Message.From),
+		t.Message.Nonce,
+		t.Message.Value,
+		t.Message.Gas,
+		t.Message.GasPrice,
+		t.Message.GasFeeCap,
+		t.Message.GasTipCap,
+		t.Message.Data,
+		list,
+		nil,             //TODO support BlobGasFeeCap
+		[]common.Hash{}, //TODO support BlobHashes
+		!t.Message.CheckNonce,
+	}
 }
 
 func (t *substateData) GetResult() txcontext.Result {
