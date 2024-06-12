@@ -24,7 +24,10 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // VmStateDB is the basic StateDB interface required by the EVM and related
@@ -32,17 +35,19 @@ import (
 type VmStateDB interface {
 	// Account management.
 	CreateAccount(common.Address)
+	CreateContract(common.Address)
 	Exist(common.Address) bool
 	Empty(common.Address) bool
 
-	Suicide(common.Address) bool
-	HasSuicided(common.Address) bool
+	SelfDestruct(common.Address)
+	Selfdestruct6780(common.Address)
+	HasSelfDestructed(common.Address) bool
 
 	// Balance
-	GetBalance(common.Address) *big.Int
-	AddBalance(common.Address, *big.Int)
-	SubBalance(common.Address, *big.Int)
-
+	GetBalance(common.Address) *uint256.Int
+	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	
 	// Nonce
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
@@ -51,6 +56,10 @@ type VmStateDB interface {
 	GetCommittedState(common.Address, common.Hash) common.Hash
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
+	GetStorageRoot(addr common.Address) common.Hash
+
+	GetTransientState(addr common.Address, key common.Hash) common.Hash
+	SetTransientState(addr common.Address, key, value common.Hash)
 
 	// Code handling.
 	GetCodeHash(common.Address) common.Hash
@@ -64,7 +73,7 @@ type VmStateDB interface {
 	GetRefund() uint64
 
 	// Access list
-	PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList)
+	Prepare(params.Rules, common.Address, common.Address, *common.Address, []common.Address, types.AccessList)
 	AddressInAccessList(addr common.Address) bool
 	SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool)
 	AddAddressToAccessList(addr common.Address)
@@ -72,7 +81,7 @@ type VmStateDB interface {
 
 	// Logging
 	AddLog(*types.Log)
-	GetLogs(common.Hash, common.Hash) []*types.Log
+	GetLogs(common.Hash, uint64, common.Hash) []*types.Log
 
 	// Transaction handling
 	// There are 4 layers of concepts governing the visibility of state effects:
@@ -93,9 +102,7 @@ type VmStateDB interface {
 	// and will be called accordingly by the tracer and EVM runner. However, implementations may
 	// chose to ignore those.
 
-	Prepare(common.Hash, int)
 	AddPreimage(common.Hash, []byte)
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----
 
@@ -176,7 +183,7 @@ type StateDB interface {
 
 	Finalise(bool)
 	IntermediateRoot(bool) common.Hash
-	Commit(bool) (common.Hash, error)
+	Commit(uint64, bool) (common.Hash, error)
 
 	// ---- Optional Development & Debugging Features ----
 
@@ -188,6 +195,9 @@ type StateDB interface {
 	// the shadow DB can be used to query state directly. If there is no shadow DB,
 	// nil is returned.
 	GetShadowDB() StateDB
+
+	// SetTxContext is geth utility function which set transaction index and transaction hash.
+	SetTxContext(common.Hash, int)
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without
@@ -195,7 +205,7 @@ type StateDB interface {
 // instances before running evaluations.
 type BulkLoad interface {
 	CreateAccount(common.Address)
-	SetBalance(common.Address, *big.Int)
+	SetBalance(common.Address, *uint256.Int)
 	SetNonce(common.Address, uint64)
 	SetState(common.Address, common.Hash, common.Hash)
 	SetCode(common.Address, []byte)

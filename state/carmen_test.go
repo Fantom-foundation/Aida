@@ -97,11 +97,8 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 				t.Fatal("failed to create carmen state DB account; should be empty")
 			}
 
-			if !csDB.Suicide(addr) {
-				t.Fatal("failed to suicide carmen state DB account;")
-			}
-
-			if !csDB.HasSuicided(addr) {
+			csDB.SelfDestruct(addr)
+			if !csDB.HasSelfDestructed(addr) {
 				t.Fatal("failed to suicide carmen state DB account;")
 			}
 		})

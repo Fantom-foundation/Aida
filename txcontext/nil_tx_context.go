@@ -31,7 +31,7 @@ func (NilTxContext) GetInputState() WorldState { return nil }
 
 func (NilTxContext) GetBlockEnvironment() BlockEnvironment { return nil }
 
-func (NilTxContext) GetMessage() core.Message { return nil }
+func (NilTxContext) GetMessage() core.Message { return core.Message{} }
 
 func (NilTxContext) GetOutputState() WorldState { return nil }
 

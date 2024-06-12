@@ -35,20 +35,22 @@ type ChainConduit struct {
 	chainConfig *params.ChainConfig
 }
 
-func (c *ChainConduit) IsFinalise(block *big.Int) bool {
+func (c *ChainConduit) IsFinalise(block uint64) bool {
+	b := big.NewInt(int64(block))
 	if !c.isEthereum {
 		return true
 	} else {
-		return c.chainConfig.IsByzantium(block)
+		return c.chainConfig.IsByzantium(b)
 	}
 }
 
-func (c *ChainConduit) DeleteEmptyObjects(block *big.Int) bool {
+func (c *ChainConduit) DeleteEmptyObjects(block uint64) bool {
 	if !c.isEthereum {
 		return true
 	} else {
-		bz := c.chainConfig.IsByzantium(block)
-		ei := c.chainConfig.IsEIP158(block)
+		b := big.NewInt(int64(block))
+		bz := c.chainConfig.IsByzantium(b)
+		ei := c.chainConfig.IsEIP158(b)
 		return bz || ei
 	}
 }

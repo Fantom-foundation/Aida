@@ -26,17 +26,19 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/triedb"
 )
 
 // offTheChainDB is state.cachingDB clone without disk caches
 type offTheChainDB struct {
-	db *trie.Database
+	db *triedb.Database
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
 func (db *offTheChainDB) OpenTrie(root common.Hash) (state.Trie, error) {
-	tr, err := trie.NewSecure(root, db.db)
+	tr, err := trie.NewStateTrie(trie.StateTrieID(root), db.db)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +46,8 @@ func (db *offTheChainDB) OpenTrie(root common.Hash) (state.Trie, error) {
 }
 
 // OpenStorageTrie opens the storage trie of an account.
-func (db *offTheChainDB) OpenStorageTrie(addrHash, root common.Hash) (state.Trie, error) {
-	tr, err := trie.NewSecure(root, db.db)
+func (db *offTheChainDB) OpenStorageTrie(stateRoot common.Hash, addrHash, root common.Hash) (state.Trie, error) {
+	tr, err := trie.NewStateTrie(trie.StorageTrieID(stateRoot, crypto.Keccak256Hash(address.Bytes()), root), db.db)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +57,7 @@ func (db *offTheChainDB) OpenStorageTrie(addrHash, root common.Hash) (state.Trie
 // CopyTrie returns an independent copy of the given trie.
 func (db *offTheChainDB) CopyTrie(t state.Trie) state.Trie {
 	switch t := t.(type) {
-	case *trie.SecureTrie:
+	case *trie.StateTrie:
 		return t.Copy()
 	default:
 		panic(fmt.Errorf("unknown trie type %T", t))
@@ -89,7 +91,7 @@ func (db *offTheChainDB) ContractCodeSize(addrHash, codeHash common.Hash) (int, 
 }
 
 // TrieDB retrieves any intermediate trie-node caching layer.
-func (db *offTheChainDB) TrieDB() *trie.Database {
+func (db *offTheChainDB) TrieDB() *triedb.Database {
 	return db.db
 }
 
