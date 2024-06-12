@@ -290,6 +290,14 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 	blockEnvironment := st.GetBlockEnvironment()
 	message := st.GetMessage()
 
+	revision := tosca.R07_Istanbul
+	if block >= int(t.chainCfg.BerlinBlock.Uint64()) {
+		revision = tosca.R09_Berlin
+	}
+	if block >= int(t.chainCfg.LondonBlock.Uint64()) {
+		revision = tosca.R10_London
+	}
+
 	blockInfo := tosca.BlockInfo{
 		BlockNumber: int64(block),
 		Timestamp:   int64(blockEnvironment.GetTimestamp()),
@@ -300,7 +308,19 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		PrevRandao:  tosca.Hash(bigToValue(blockEnvironment.GetDifficulty())),
 		BaseFee:     bigToValue(blockEnvironment.GetBaseFee()),
 		BlobBaseFee: tosca.Value{}, // = 0, since blobs are not supported by Fantom yet
-		Revision:    tosca.R07_Istanbul,
+		Revision:    revision,
+	}
+
+	accessList := []tosca.AccessTuple{}
+	for _, tuple := range message.AccessList() {
+		keys := make([]tosca.Key, len(tuple.StorageKeys))
+		for i, key := range tuple.StorageKeys {
+			keys[i] = tosca.Key(key)
+		}
+		accessList = append(accessList, tosca.AccessTuple{
+			Address: tosca.Address(tuple.Address),
+			Keys:    keys,
+		})
 	}
 
 	transaction := tosca.Transaction{
@@ -313,13 +333,11 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 			toscaAddr := tosca.Address(*addr)
 			return &toscaAddr
 		}(),
-		Nonce:    message.Nonce(),
-		Input:    message.Data(),
-		Value:    bigToValue(message.Value()),
-		GasLimit: tosca.Gas(message.Gas()),
-		/*
-			AccessList []AccessTuple
-		*/
+		Nonce:      message.Nonce(),
+		Input:      message.Data(),
+		Value:      bigToValue(message.Value()),
+		GasLimit:   tosca.Gas(message.Gas()),
+		AccessList: accessList,
 	}
 
 	transactionContext := tosca.TransactionContext{
