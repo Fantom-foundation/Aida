@@ -17,12 +17,11 @@
 package substate
 
 import (
-	"math/big"
-
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 )
 
 func NewAccount(acc *substate.Account) txcontext.Account {
@@ -37,8 +36,8 @@ func (a *account) GetNonce() uint64 {
 	return a.Nonce
 }
 
-func (a *account) GetBalance() *big.Int {
-	return a.Balance
+func (a *account) GetBalance() *uint256.Int {
+	return uint256.MustFromBig(a.Balance)
 }
 
 func (a *account) HasStorageAt(key common.Hash) bool {

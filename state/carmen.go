@@ -26,7 +26,10 @@ import (
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 func MakeCarmenStateDB(dir string, variant string, schema int, archive string) (StateDB, error) {
@@ -104,6 +107,11 @@ func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.txCtx.CreateAccount(carmen.Address(addr))
 }
 
+func (s *carmenStateDB) CreateContract(addr common.Address) {
+	panic("CreateContract not implemented")
+	return
+}
+
 func (s *carmenStateDB) Exist(addr common.Address) bool {
 	return s.txCtx.Exist(carmen.Address(addr))
 }
@@ -112,32 +120,31 @@ func (s *carmenStateDB) Empty(addr common.Address) bool {
 	return s.txCtx.Empty(carmen.Address(addr))
 }
 
-func (s *carmenStateDB) Suicide(addr common.Address) bool {
-	return s.txCtx.SelfDestruct(carmen.Address(addr))
+func (s *carmenStateDB) SelfDestruct(addr common.Address) {
+	s.txCtx.SelfDestruct(carmen.Address(addr))
 }
 
-func (s *carmenStateDB) HasSuicided(addr common.Address) bool {
+func (s *carmenStateDB) Selfdestruct6780(addr common.Address) {
+	panic("Selfdestruct6780 not implemented")
+	return
+}
+
+func (s *carmenStateDB) HasSelfDestructed(addr common.Address) bool {
 	return s.txCtx.HasSelfDestructed(carmen.Address(addr))
 }
 
-func (s *carmenStateDB) GetBalance(addr common.Address) *big.Int {
-	return s.txCtx.GetBalance(carmen.Address(addr)).ToBig()
+func (s *carmenStateDB) GetBalance(addr common.Address) *uint256.Int {
+	// TODO
+	//return &s.txCtx.GetBalance(carmen.Address(addr)).Uint256()
+	return uint256.MustFromBig(s.txCtx.GetBalance(carmen.Address(addr)).ToBig())
 }
 
-func (s *carmenStateDB) AddBalance(addr common.Address, value *big.Int) {
-	amount, err := carmen.NewAmountFromBigInt(value)
-	if err != nil {
-		amount = carmen.NewAmount()
-	}
-	s.txCtx.AddBalance(carmen.Address(addr), amount)
+func (s *carmenStateDB) AddBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
+	s.txCtx.AddBalance(carmen.Address(addr), carmen.NewAmountFromUint256(value))
 }
 
-func (s *carmenStateDB) SubBalance(addr common.Address, value *big.Int) {
-	amount, err := carmen.NewAmountFromBigInt(value)
-	if err != nil {
-		amount = carmen.NewAmount()
-	}
-	s.txCtx.SubBalance(carmen.Address(addr), amount)
+func (s *carmenStateDB) SubBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
+	s.txCtx.SubBalance(carmen.Address(addr), carmen.NewAmountFromUint256(value))
 }
 
 func (s *carmenStateDB) GetNonce(addr common.Address) uint64 {
@@ -158,6 +165,21 @@ func (s *carmenStateDB) GetState(addr common.Address, key common.Hash) common.Ha
 
 func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	s.txCtx.SetState(carmen.Address(addr), carmen.Key(key), carmen.Value(value))
+}
+
+func (s *carmenStateDB) GetStorageRoot(addr common.Address) common.Hash {
+	panic("GetStorageRoot not implemented")
+	return common.Hash{}
+}
+
+func (s *carmenStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	panic("GetTransientState not implemented")
+	return common.Hash{}
+}
+
+func (s *carmenStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	panic("SetTransientState not implemented")
+	return
 }
 
 func (s *carmenStateDB) GetCode(addr common.Address) []byte {
@@ -236,7 +258,7 @@ func (s *carmenStateDB) GetRefund() uint64 {
 	return s.txCtx.GetRefund()
 }
 
-func (s *carmenStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (s *carmenStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	s.txCtx.ClearAccessList()
 	s.txCtx.AddAddressToAccessList(carmen.Address(sender))
 	if dest != nil {
@@ -281,7 +303,7 @@ func (s *carmenStateDB) AddLog(log *types.Log) {
 	})
 }
 
-func (s *carmenStateDB) GetLogs(common.Hash, common.Hash) []*types.Log {
+func (s *carmenStateDB) GetLogs(common.Hash, uint64, common.Hash) []*types.Log {
 	list := s.txCtx.GetLogs()
 
 	res := make([]*types.Log, 0, len(list))
@@ -309,12 +331,12 @@ func (s *carmenStateDB) IntermediateRoot(bool) common.Hash {
 	return common.Hash{}
 }
 
-func (s *carmenStateDB) Commit(bool) (common.Hash, error) {
+func (s *carmenStateDB) Commit(uint64, bool) (common.Hash, error) {
 	// ignored
 	return common.Hash{}, nil
 }
 
-func (s *carmenStateDB) Prepare(common.Hash, int) {
+func (s *carmenStateDB) SetTxContext(common.Hash, int) {
 	// ignored
 }
 
@@ -330,11 +352,6 @@ func (s *carmenStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 func (s *carmenStateDB) AddPreimage(common.Hash, []byte) {
 	// ignored
 	panic("AddPreimage not implemented")
-}
-
-func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
-	// ignored
-	panic("ForEachStorage not implemented")
 }
 
 func (s *carmenStateDB) Error() error {
@@ -416,12 +433,8 @@ func (l *carmenBulkLoad) CreateAccount(addr common.Address) {
 	l.load.CreateAccount(carmen.Address(addr))
 }
 
-func (l *carmenBulkLoad) SetBalance(addr common.Address, value *big.Int) {
-	balance, err := carmen.NewAmountFromBigInt(value)
-	if err != nil {
-		balance = carmen.NewAmount()
-	}
-	l.load.SetBalance(carmen.Address(addr), balance)
+func (l *carmenBulkLoad) SetBalance(addr common.Address, value *uint256.Int) {
+	l.load.SetBalance(carmen.Address(addr), carmen.NewAmountFromUint256(value))
 }
 
 func (l *carmenBulkLoad) SetNonce(addr common.Address, nonce uint64) {
