@@ -19,7 +19,6 @@ package proxy
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -27,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
+	"github.com/holiman/uint256"
 )
 
 func makeTestShadowDBWithCarmenTestContext(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
@@ -146,7 +146,7 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 
 			// get randomized balance
 			additionBase := state.GetRandom(1, 1000*5000)
-			addition := big.NewInt(int64(additionBase))
+			addition := uint256.NewInt(int64(additionBase))
 
 			shadowDB.AddBalance(addr, addition)
 
@@ -154,8 +154,8 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := big.NewInt(int64(state.GetRandom(1, additionBase)))
-			expectedResult := big.NewInt(0).Sub(addition, subtraction)
+			subtraction := uint256.NewInt(int64(state.GetRandom(1, additionBase)))
+			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
 			shadowDB.SubBalance(addr, subtraction)
 
@@ -461,7 +461,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newBalance := big.NewInt(int64(state.GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(int64(state.GetRandom(1, 1000*5000)))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
@@ -657,7 +657,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				switch {
 				case operationType == 1:
 					// set balance
-					newBalance := big.NewInt(int64(state.GetRandom(0, 1000*5000)))
+					newBalance := uint256.NewInt(int64(state.GetRandom(0, 1000*5000)))
 
 					cbl.SetBalance(account, newBalance)
 				case operationType == 2:

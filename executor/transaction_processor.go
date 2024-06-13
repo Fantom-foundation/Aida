@@ -158,7 +158,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	// prepare tx
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
-	db.Prepare(txHash, tx)
+	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, s.chainCfg, s.vmCfg)
@@ -184,7 +184,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 	// if no prior error, create result and pass it to the data.
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-	res = newTransactionResult(db.GetLogs(txHash, blockHash), msg, msgResult, err, evm.TxContext.Origin)
+	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, err, evm.TxContext.Origin)
 	return
 }
 
