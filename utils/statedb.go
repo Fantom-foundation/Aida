@@ -265,7 +265,7 @@ func DeleteDestroyedAccountsFromStateDB(sdb state.StateDB, cfg *Config, target u
 		return err
 	}
 	for _, addr := range accounts {
-		sdb.Suicide(common.Address(addr))
+		sdb.SelfDestruct(common.Address(addr))
 		log.Debugf("Perform suicide on %v", addr)
 	}
 	err = sdb.EndTransaction()
