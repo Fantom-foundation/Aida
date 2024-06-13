@@ -21,14 +21,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // NewShadowProxy creates a StateDB instance bundling two other instances and running each
@@ -88,28 +90,31 @@ func (s *shadowVmStateDb) Empty(addr common.Address) bool {
 	return s.getBool("Empty", func(s state.VmStateDB) bool { return s.Empty(addr) }, addr)
 }
 
-func (s *shadowVmStateDb) Suicide(addr common.Address) bool {
-	return s.getBool("Suicide", func(s state.VmStateDB) bool { return s.Suicide(addr) }, addr)
-}
-
-func (s *shadowVmStateDb) HasSuicided(addr common.Address) bool {
-	return s.getBool("HasSuicided", func(s state.VmStateDB) bool { return s.HasSuicided(addr) }, addr)
-}
-
-func (s *shadowVmStateDb) GetBalance(addr common.Address) *big.Int {
-	return s.getBigInt("GetBalance", func(s state.VmStateDB) *big.Int { return s.GetBalance(addr) }, addr)
-}
-
-func (s *shadowVmStateDb) AddBalance(addr common.Address, value *big.Int) {
-	s.run("AddBalance", func(s state.VmStateDB) error {
-		s.AddBalance(addr, value)
+func (s *shadowVmStateDb) SelfDestruct(addr common.Address) {
+	s.run("SelfDestruct", func(s state.VmStateDB) error {
+		s.SelfDestruct(addr)
 		return nil
 	})
 }
 
-func (s *shadowVmStateDb) SubBalance(addr common.Address, value *big.Int) {
+func (s *shadowVmStateDb) HasSelfDestructed(addr common.Address) bool {
+	return s.getBool("HasSelfDestructed", func(s state.VmStateDB) bool { return s.HasSelfDestructed(addr) }, addr)
+}
+
+func (s *shadowVmStateDb) GetBalance(addr common.Address) *uint256.Int {
+	return s.getUint256("GetBalance", func(s state.VmStateDB) *uint256.Int { return s.GetBalance(addr) }, addr)
+}
+
+func (s *shadowVmStateDb) AddBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.run("AddBalance", func(s state.VmStateDB) error {
+		s.AddBalance(addr, value, reason)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) SubBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
 	s.run("SubBalance", func(s state.VmStateDB) error {
-		s.SubBalance(addr, value)
+		s.SubBalance(addr, value, reason)
 		return nil
 	})
 }
@@ -257,9 +262,9 @@ func (s *shadowVmStateDb) GetRefund() uint64 {
 	return s.getUint64("GetRefund", func(s state.VmStateDB) uint64 { return s.GetRefund() })
 }
 
-func (s *shadowVmStateDb) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.run("PrepareAccessList", func(s state.VmStateDB) error {
-		s.PrepareAccessList(sender, dest, precompiles, txAccesses)
+func (s *shadowVmStateDb) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	s.run("Prepare", func(s state.VmStateDB) error {
+		s.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 		return nil
 	})
 }
@@ -293,9 +298,9 @@ func (s *shadowVmStateDb) AddLog(log *types.Log) {
 	})
 }
 
-func (s *shadowVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	logsP := s.prime.GetLogs(hash, blockHash)
-	logsS := s.shadow.GetLogs(hash, blockHash)
+func (s *shadowVmStateDb) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	logsP := s.prime.GetLogs(hash, block, blockHash)
+	logsS := s.shadow.GetLogs(hash, block, blockHash)
 
 	equal := len(logsP) == len(logsS)
 	if equal {
@@ -326,10 +331,10 @@ func (s *shadowStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return s.prime.IntermediateRoot(deleteEmptyObjects)
 }
 
-func (s *shadowStateDb) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (s *shadowStateDb) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	// Do not check hashes for equivalents.
-	s.shadow.Commit(deleteEmptyObjects)
-	return s.prime.Commit(deleteEmptyObjects)
+	s.shadow.Commit(block, deleteEmptyObjects)
+	return s.prime.Commit(block, deleteEmptyObjects)
 }
 
 // GetError returns an error then reset it.
@@ -340,9 +345,9 @@ func (s *shadowVmStateDb) Error() error {
 	return err
 }
 
-func (s *shadowVmStateDb) Prepare(thash common.Hash, ti int) {
-	s.run("AddPreimage", func(s state.VmStateDB) error {
-		s.Prepare(thash, ti)
+func (s *shadowStateDb) SetTxContext(thash common.Hash, ti int) {
+	s.run("SetTxContext", func(s state.StateDB) error {
+		s.SetTxContext(thash, ti)
 		return nil
 	})
 }
@@ -365,11 +370,6 @@ func (s *shadowVmStateDb) AddPreimage(hash common.Hash, plain []byte) {
 		s.AddPreimage(hash, plain)
 		return nil
 	})
-}
-
-func (s *shadowVmStateDb) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
-	// ignored
-	panic("ForEachStorage not implemented")
 }
 
 func (s *shadowStateDb) StartBulkLoad(block uint64) (state.BulkLoad, error) {
@@ -477,7 +477,7 @@ func (l *shadowBulkLoad) CreateAccount(addr common.Address) {
 	l.shadow.CreateAccount(addr)
 }
 
-func (l *shadowBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+func (l *shadowBulkLoad) SetBalance(addr common.Address, value *uint256.Int) {
 	l.prime.SetBalance(addr, value)
 	l.shadow.SetBalance(addr, value)
 }
@@ -631,7 +631,7 @@ func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) comm
 	return resP
 }
 
-func (s *shadowVmStateDb) getBigInt(opName string, op func(s state.VmStateDB) *big.Int, args ...any) *big.Int {
+func (s *shadowVmStateDb) getUint256(opName string, op func(s state.VmStateDB) *uint256.Int, args ...any) *uint256.Int {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP.Cmp(resS) != 0 {
@@ -686,4 +686,33 @@ func (s *shadowVmStateDb) logIssue(opName string, prime, shadow any, args ...any
 		"\tPrimary: %v \n"+
 		"\tShadow: %v", getOpcodeString(opName, args), prime, shadow)
 
+}
+
+func (s *shadowVmStateDb) CreateContract(addr common.Address) {
+	s.run("CreateContract", func(s state.VmStateDB) error {
+		s.CreateContract(addr)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) Selfdestruct6780(addr common.Address) {
+	s.run("Selfdestruct6780", func(s state.VmStateDB) error {
+		s.Selfdestruct6780(addr)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
+	return s.getHash("GetStorageRoot", func(s state.VmStateDB) common.Hash { return s.GetStorageRoot(addr) }, addr)
+}
+
+func (s *shadowVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.run("SetTransientState", func(s state.VmStateDB) error {
+		s.SetTransientState(addr, key, value)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return s.getHash("GetTransientState", func(s state.VmStateDB) common.Hash { return s.GetTransientState(addr, key) }, addr, key)
 }
