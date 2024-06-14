@@ -215,7 +215,7 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 	return empty
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition with
+// Prepare handles the preparatory steps for executing a state transition with
 // regards to both EIP-2929 and EIP-2930:
 //
 // - Add sender to access list (2929)
@@ -224,7 +224,7 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 // - Add the contents of the optional tx access list (2930)
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
-func (p *ProfilerProxy) PrepareAccessList(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (p *ProfilerProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	p.do(operation.PrepareAccessListID, func() {
 		p.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 	})

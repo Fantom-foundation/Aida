@@ -133,7 +133,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error 
 		utils.ClearAccountStorage(update, newSet.DeletedAccounts)
 		// if exists in DB, suicide
 		if hasPrimed {
-			p.ctx.SuicideAccounts(stateDb, newSet.DeletedAccounts)
+			p.ctx.SelfDestructAccounts(stateDb, newSet.DeletedAccounts)
 		}
 
 		update.Merge(newSet.WorldState)
@@ -164,7 +164,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, aidaDb db.BaseDB) error 
 			return fmt.Errorf("cannot generate update-set; %w", err)
 		}
 		if hasPrimed {
-			p.ctx.SuicideAccounts(stateDb, deletedAccounts)
+			p.ctx.SelfDestructAccounts(stateDb, deletedAccounts)
 		}
 		if err = p.ctx.PrimeStateDB(substatecontext.NewWorldState(update), stateDb); err != nil {
 			return fmt.Errorf("cannot prime state-db; %w", err)
