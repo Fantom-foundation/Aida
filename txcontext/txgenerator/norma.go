@@ -44,7 +44,7 @@ func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.A
 			Env: normaTxBlockEnv{
 				blkNumber: blkNumber,
 			},
-			Message: core.Message{
+			Message: &core.Message{
 				To:                tx.To(),
 				From:              s,
 				Nonce:             tx.Nonce(),

@@ -48,7 +48,7 @@ func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return NewBlockEnvironment(t.Env)
 }
 
-func (t *substateData) GetMessage() core.Message {
+func (t *substateData) GetMessage() *core.Message {
 	// todo remove iteration once fantom types are created
 	var list types.AccessList
 	for _, tuple := range t.Message.AccessList {
@@ -58,7 +58,7 @@ func (t *substateData) GetMessage() core.Message {
 		}
 		list = append(list, types.AccessTuple{Address: common.Address(tuple.Address), StorageKeys: keys})
 	}
-	return core.Message{
+	return &core.Message{
 		(*common.Address)(t.Message.To),
 		common.Address(t.Message.From),
 		t.Message.Nonce,

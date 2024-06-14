@@ -24,6 +24,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
 	"github.com/holiman/uint256"
@@ -115,11 +116,8 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 				t.Fatal("failed to create carmen state DB account; should be empty")
 			}
 
-			if !shadowDB.Suicide(addr) {
-				t.Fatal("failed to suicide carmen state DB account;")
-			}
-
-			if !shadowDB.HasSuicided(addr) {
+			shadowDB.SelfDestruct(addr)
+			if !shadowDB.HasSelfDestructed(addr) {
 				t.Fatal("failed to suicide carmen state DB account;")
 			}
 		})
@@ -146,18 +144,18 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 
 			// get randomized balance
 			additionBase := state.GetRandom(1, 1000*5000)
-			addition := uint256.NewInt(int64(additionBase))
+			addition := uint256.NewInt(uint64(additionBase))
 
-			shadowDB.AddBalance(addr, addition)
+			shadowDB.AddBalance(addr, addition, 0)
 
 			if shadowDB.GetBalance(addr).Cmp(addition) != 0 {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := uint256.NewInt(int64(state.GetRandom(1, additionBase)))
+			subtraction := uint256.NewInt(uint64(state.GetRandom(1, additionBase)))
 			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
-			shadowDB.SubBalance(addr, subtraction)
+			shadowDB.SubBalance(addr, subtraction, 0)
 
 			if shadowDB.GetBalance(addr).Cmp(expectedResult) != 0 {
 				t.Fatal("failed to subtract balance to carmen state DB account")
@@ -362,7 +360,9 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 			}(shadowDB)
 
 			// prepare content of access list
+			rules := params.Rules{}
 			sender := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
+			coinbase := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 			dest := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 			precompiles := []common.Address{
 				common.BytesToAddress(state.MakeRandomByteSlice(t, 40)),
@@ -389,7 +389,7 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 			}
 
 			// create access list
-			shadowDB.PrepareAccessList(sender, &dest, precompiles, txAccesses)
+			shadowDB.Prepare(rules, sender, coinbase, &dest, precompiles, txAccesses)
 
 			// add some more data after the creation for good measure
 			newAddr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
@@ -461,7 +461,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newBalance := uint256.NewInt(int64(state.GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(uint64(state.GetRandom(1, 1000*5000)))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
@@ -657,7 +657,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				switch {
 				case operationType == 1:
 					// set balance
-					newBalance := uint256.NewInt(int64(state.GetRandom(0, 1000*5000)))
+					newBalance := uint256.NewInt(uint64(state.GetRandom(0, 1000*5000)))
 
 					cbl.SetBalance(account, newBalance)
 				case operationType == 2:
@@ -743,9 +743,10 @@ func TestShadowState_GetLogs_Success(t *testing.T) {
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
+	block := uint64(0)
 
-	pdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
-	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
+	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
 
 	db.GetLogs(txHash, blockHash)
 	if err := db.Error(); err != nil {

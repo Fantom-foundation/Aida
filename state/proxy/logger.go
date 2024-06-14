@@ -302,8 +302,8 @@ func (s *LoggingStateDb) Commit(block uint64, deleteEmptyObjects bool) (common.H
 	return hash, err
 }
 
-func (s *LoggingStateDb) SetTxContext(thash common.Hash, ti int) {
-	s.state.SetTxContext(thash, ti)
+func (s *loggingVmStateDb) SetTxContext(thash common.Hash, ti int) {
+	s.db.SetTxContext(thash, ti)
 	s.writeLog("SetTxContext, %v, %v", thash, ti)
 }
 
