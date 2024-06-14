@@ -19,7 +19,6 @@ package stochastic
 import (
 	"encoding/binary"
 	"fmt"
-	"math/big"
 	"math/rand"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 )
 
 // Parameterisable simulation constants
@@ -269,7 +269,7 @@ func (ss *stochasticState) prime() {
 	for i := int64(0); i <= numInitialAccounts; i++ {
 		addr := toAddress(i)
 		db.CreateAccount(addr)
-		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(BalanceRange)))
+		db.AddBalance(addr, uint256.NewInt(uint64(ss.rg.Int63n(BalanceRange))), 0)
 		pt.PrintProgress()
 	}
 	ss.log.Notice("Finalizing...")
@@ -333,7 +333,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if ss.traceDebug {
 			ss.log.Infof("value: %v", value)
 		}
-		db.AddBalance(addr, big.NewInt(value))
+		db.AddBalance(addr, uint256.NewInt(uint64(value)), 0)
 
 	case BeginBlockID:
 		if ss.traceDebug {
@@ -402,7 +402,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.GetState(addr, key)
 
 	case HasSuicidedID:
-		db.HasSuicided(addr)
+		db.HasSelfDestructed(addr)
 
 	case RevertToSnapshotID:
 		snapshotNum := len(ss.snapshot)
@@ -448,24 +448,24 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SubBalanceID:
 		shadowDB := db.GetShadowDB()
-		var balance int64
+		var balance uint64
 		if shadowDB == nil {
-			balance = db.GetBalance(addr).Int64()
+			balance = db.GetBalance(addr).Uint64()
 		} else {
-			balance = shadowDB.GetBalance(addr).Int64()
+			balance = shadowDB.GetBalance(addr).Uint64()
 		}
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
-			value := rg.Int63n(balance)
+			value := uint64(rg.Int63n(int64(balance)))
 			if ss.traceDebug {
 				ss.log.Infof(" value: %v", value)
 			}
-			db.SubBalance(addr, big.NewInt(value))
+			db.SubBalance(addr, uint256.NewInt(value), 0)
 		}
 
 	case SuicideID:
-		db.Suicide(addr)
+		db.SelfDestruct(addr)
 		if idx := find(ss.suicided, addrIdx); idx == -1 {
 			ss.suicided = append(ss.suicided, addrIdx)
 		}
