@@ -345,8 +345,8 @@ func (s *shadowVmStateDb) Error() error {
 	return err
 }
 
-func (s *shadowStateDb) SetTxContext(thash common.Hash, ti int) {
-	s.run("SetTxContext", func(s state.StateDB) error {
+func (s *shadowVmStateDb) SetTxContext(thash common.Hash, ti int) {
+	s.run("SetTxContext", func(s state.VmStateDB) error {
 		s.SetTxContext(thash, ti)
 		return nil
 	})

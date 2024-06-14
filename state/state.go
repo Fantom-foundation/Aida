@@ -82,6 +82,9 @@ type VmStateDB interface {
 	AddLog(*types.Log)
 	GetLogs(common.Hash, uint64, common.Hash) []*types.Log
 
+	// SetTxContext is geth utility function which set transaction index and transaction hash.
+	SetTxContext(common.Hash, int)
+
 	// Transaction handling
 	// There are 4 layers of concepts governing the visibility of state effects:
 	//  - snapshots .. enclosing (sub-)contract calls, supporting reverts (=rollbacks)
@@ -194,9 +197,6 @@ type StateDB interface {
 	// the shadow DB can be used to query state directly. If there is no shadow DB,
 	// nil is returned.
 	GetShadowDB() StateDB
-
-	// SetTxContext is geth utility function which set transaction index and transaction hash.
-	SetTxContext(common.Hash, int)
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without
