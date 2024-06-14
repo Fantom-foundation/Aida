@@ -29,7 +29,6 @@ import (
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
-	gethstate "github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
 )
 
@@ -58,7 +57,7 @@ last block for recording events.`,
 
 // stochasticRecordAction implements recording of events.
 func stochasticRecordAction(ctx *cli.Context) error {
-	gethstate.EnableRecordReplay()
+	//gethstate.EnableRecordReplay()
 	var err error
 
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
