@@ -19,12 +19,13 @@ package state
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"testing"
 
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid Variant
@@ -131,18 +132,18 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 
 			// get randomized balance
 			additionBase := GetRandom(1, 1000*5000)
-			addition := big.NewInt(int64(additionBase))
+			addition := uint256.NewInt(uint64(additionBase))
 
-			csDB.AddBalance(addr, addition)
+			csDB.AddBalance(addr, addition, 0)
 
 			if csDB.GetBalance(addr).Cmp(addition) != 0 {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := big.NewInt(int64(GetRandom(1, additionBase)))
-			expectedResult := big.NewInt(0).Sub(addition, subtraction)
+			subtraction := uint256.NewInt(uint64(GetRandom(1, additionBase)))
+			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
-			csDB.SubBalance(addr, subtraction)
+			csDB.SubBalance(addr, subtraction, 0)
 
 			if csDB.GetBalance(addr).Cmp(expectedResult) != 0 {
 				t.Fatal("failed to subtract balance to carmen state DB account")
@@ -414,7 +415,7 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 			}
 
 			// create access list
-			csDB.PrepareAccessList(sender, &dest, precompiles, txAccesses)
+			csDB.Prepare(params.Rules{}, sender, common.Address{}, &dest, precompiles, txAccesses)
 
 			// add some more data after the creation for good measure
 			newAddr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
@@ -549,7 +550,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newBalance := big.NewInt(int64(GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(uint64(GetRandom(1, 1000*5000)))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
@@ -772,7 +773,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				switch {
 				case operationType == 1:
 					// set balance
-					newBalance := big.NewInt(int64(GetRandom(0, 1000*5000)))
+					newBalance := uint256.NewInt(uint64(GetRandom(0, 1000*5000)))
 
 					cbl.SetBalance(account, newBalance)
 				case operationType == 2:
