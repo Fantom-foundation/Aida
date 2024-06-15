@@ -40,7 +40,7 @@ func fillDb(t *testing.T, directory string) (common.Hash, error) {
 		db.SetState(address, key, value)
 	}
 
-	hash, err := db.Commit(true)
+	hash, err := db.Commit(0, true)
 	if err != nil {
 		t.Fatalf("Failed to commit: %v", err)
 	}

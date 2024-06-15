@@ -24,10 +24,10 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/core/types"
-	"go.uber.org/mock/gomock"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
+	"go.uber.org/mock/gomock"
 )
 
 func makeTestShadowDBWithCarmenTestContext(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
@@ -748,7 +748,7 @@ func TestShadowState_GetLogs_Success(t *testing.T) {
 	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
 	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
 
-	db.GetLogs(txHash, blockHash)
+	db.GetLogs(txHash, block, blockHash)
 	if err := db.Error(); err != nil {
 		t.Fatalf("Failed to compare logs; %v", err)
 	}
@@ -762,11 +762,12 @@ func TestShadowState_GetLogsExpectError_LengthDifferent(t *testing.T) {
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
+	block := uint64(0)
 
-	pdb.EXPECT().GetLogs(txHash, blockHash).Return(nil)
-	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return(nil)
+	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
 
-	db.GetLogs(txHash, blockHash)
+	db.GetLogs(txHash, block, blockHash)
 	if err := db.Error(); err == nil {
 		t.Fatal("Expect mismatched GetLogs lengths")
 	}
@@ -781,11 +782,12 @@ func TestShadowState_GetLogsExpectError_BloomDifferent(t *testing.T) {
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
 	log2 := &types.Log{Address: common.HexToAddress("0x3")}
+	block := uint64(0)
 
-	pdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
-	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log2})
+	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
+	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log2})
 
-	db.GetLogs(txHash, blockHash)
+	db.GetLogs(txHash, block, blockHash)
 	if err := db.Error(); err == nil {
 		t.Fatal("Expect mismatched log values")
 	}

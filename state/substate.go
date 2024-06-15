@@ -33,7 +33,7 @@ import (
 
 // offTheChainDB is state.cachingDB clone without disk caches
 type offTheChainDB struct {
-	trie   *triedb.Database
+	trie *triedb.Database
 	disk ethdb.Database
 }
 
@@ -111,7 +111,7 @@ func NewOffTheChainStateDB() *state.StateDB {
 	tdb := triedb.NewDatabase(kvdb, zerodConfig)
 
 	sdb := &offTheChainDB{
-		trie:   tdb,
+		trie: tdb,
 		disk: kvdb,
 	}
 
