@@ -5,6 +5,7 @@
 //
 //	mockgen -source cache.go -destination cache_mocks.go -package state
 //
+
 // Package state is a generated GoMock package.
 package state
 
