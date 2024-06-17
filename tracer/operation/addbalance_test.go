@@ -24,6 +24,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/holiman/uint256"
 )
 
@@ -69,6 +70,6 @@ func TestAddBalanceExecute(t *testing.T) {
 	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
-	expected := []Record{{AddBalanceID, []any{addr, value}}}
+	expected := []Record{{AddBalanceID, []any{addr, value, tracing.BalanceChangeUnspecified}}}
 	mock.compareRecordings(expected, t)
 }

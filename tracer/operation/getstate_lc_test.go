@@ -25,7 +25,7 @@ import (
 )
 
 func initGetStateLc(t *testing.T) (*context.Replay, *GetStateLc, common.Address, common.Hash) {
-	storage := getRandomAddress(t).Hash()
+	storage := getRandomHash(t)
 
 	// create context context
 	ctx := context.NewReplay()
