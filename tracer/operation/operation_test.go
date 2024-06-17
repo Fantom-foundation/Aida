@@ -69,12 +69,11 @@ func (s *MockStateDB) Empty(addr common.Address) bool {
 	return false
 }
 
-func (s *MockStateDB) Suicide(addr common.Address) bool {
+func (s *MockStateDB) SelfDestruct(addr common.Address) {
 	s.recording = append(s.recording, Record{SuicideID, []any{addr}})
-	return false
 }
 
-func (s *MockStateDB) HasSuicided(addr common.Address) bool {
+func (s *MockStateDB) HasSelfDestructed(addr common.Address) bool {
 	s.recording = append(s.recording, Record{HasSuicidedID, []any{addr}})
 	return false
 }
@@ -209,7 +208,7 @@ func (s *MockStateDB) GetHash() (common.Hash, error) {
 	panic("GetHash not supported in mock")
 }
 
-func (s *MockStateDB) GetTxState(thash common.Hash, ti int) {
+func (s *MockStateDB) SetTxContext(thash common.Hash, ti int) {
 	s.recording = append(s.recording, Record{PrepareID, []any{thash, ti}})
 }
 
@@ -261,8 +260,8 @@ func (s *MockStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, c
 	return nil
 }
 
-func (s *MockStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	s.recording = append(s.recording, Record{GetLogsID, []any{hash, blockHash}})
+func (s *MockStateDB) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	s.recording = append(s.recording, Record{GetLogsID, []any{hash, block, blockHash}})
 	return nil
 }
 
@@ -273,6 +272,26 @@ func (s *MockStateDB) PrepareSubstate(substate txcontext.WorldState, block uint6
 func (s *MockStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// ignored
 	return nil
+}
+
+func (s *MockStateDB) CreateContract(addr common.Address) {
+	panic("CreateContract not supported in mock")
+}
+
+func (s *MockStateDB) Selfdestruct6780(addr common.Address) {
+	panic("Selfdestruct6780 not supported in mock")
+}
+
+func (s *MockStateDB) GetStorageRoot(addr common.Address) common.Hash {
+	panic("GetStorageRoot not supported in mock")
+}
+
+func (s *MockStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	panic("SetTransientState not supported in mock")
+}
+
+func (s *MockStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	panic("GetTransientState not supported in mock")
 }
 
 func (s *MockStateDB) Close() error {
@@ -333,6 +352,16 @@ func getRandomAddress(t *testing.T) common.Address {
 	}
 	// generate account address
 	return crypto.PubkeyToAddress(pk.PublicKey)
+}
+
+func getRandomHash(t *testing.T) common.Hash {
+	// generate hash from public key
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("failed test data build; could not create random keys; %s", err.Error())
+	}
+	pubBytes := crypto.FromECDSAPub(&pk.PublicKey)
+	return crypto.Keccak256Hash(pubBytes[:])
 }
 
 func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(f io.Reader) (Operation, error)) {

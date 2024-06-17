@@ -41,7 +41,7 @@ func initGetCommittedStateLcls(t *testing.T) (*context.Replay, *GetCommittedStat
 	addr := getRandomAddress(t)
 	ctx.EncodeContract(addr)
 
-	storage := getRandomAddress(t).Hash()
+	storage := getRandomHash(t)
 	ctx.EncodeKey(storage)
 
 	return ctx, op, addr, storage

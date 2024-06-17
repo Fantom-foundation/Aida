@@ -18,19 +18,20 @@ package operation
 
 import (
 	"fmt"
-	"math/big"
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 )
 
-func initSubBalance(t *testing.T) (*context.Replay, *SubBalance, common.Address, *big.Int) {
+func initSubBalance(t *testing.T) (*context.Replay, *SubBalance, common.Address, *uint256.Int) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
-	value := big.NewInt(rand.Int63n(100000))
+	value := uint256.NewInt(uint64(rand.Int63n(100000)))
 	// create context context
 	ctx := context.NewReplay()
 	contract := ctx.EncodeContract(addr)
@@ -69,6 +70,6 @@ func TestSubBalanceExecute(t *testing.T) {
 	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
-	expected := []Record{{SubBalanceID, []any{addr, value}}}
+	expected := []Record{{SubBalanceID, []any{addr, value, tracing.BalanceChangeUnspecified}}}
 	mock.compareRecordings(expected, t)
 }
