@@ -309,7 +309,7 @@ var emptyTx = &substate.Substate{
 	Env: &substate.Env{},
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
-		Value: big.NewInt(1),
+		Value:    big.NewInt(1),
 	},
 	Result: &substate.Result{
 		GasUsed: 1,
@@ -322,7 +322,7 @@ var testTx = &substate.Substate{
 	Env:           &substate.Env{},
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
-		Value: big.NewInt(1),
+		Value:    big.NewInt(1),
 	},
 	Result: &substate.Result{
 		GasUsed: 1,
