@@ -120,6 +120,9 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	archive.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	archive.EXPECT().EndTransaction().AnyTimes()
 	archive.EXPECT().Release().MinTimes(1)
+	archive.EXPECT().GetStorageRoot(gomock.Any()).AnyTimes()
+	archive.EXPECT().Exist(gomock.Any()).AnyTimes()
+	archive.EXPECT().CreateContract(gomock.Any()).AnyTimes()
 
 	ext := makeArchiveInquirer(&cfg, log)
 	if err := ext.PreRun(state, &context); err != nil {

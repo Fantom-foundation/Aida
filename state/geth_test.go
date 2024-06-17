@@ -32,15 +32,27 @@ func fillDb(t *testing.T, directory string) (common.Hash, error) {
 		t.Fatalf("Failed to create DB: %v", err)
 	}
 
+	if err := db.BeginBlock(0); err != nil {
+		t.Fatalf("BeginBlock failed: %v", err)
+	}
+	if err := db.BeginTransaction(0); err != nil {
+		t.Fatalf("BeginTransaction failed: %v", err)
+	}
 	for i := 0; i < N; i++ {
 		address := common.Address{byte(i), byte(i >> 8)}
+		db.CreateAccount(address)
 		db.SetNonce(address, 12)
 		key := common.Hash{byte(i >> 8), byte(i)}
 		value := common.Hash{byte(15)}
 		db.SetState(address, key, value)
 	}
-
-	hash, err := db.Commit(0, true)
+	if err := db.EndTransaction(); err != nil {
+		t.Fatalf("EndTransaction failed: %v", err)
+	}
+	if err := db.EndBlock(); err != nil {
+		t.Fatalf("EndBlock failed: %v", err)
+	}
+	hash, err := db.GetHash()
 	if err != nil {
 		t.Fatalf("Failed to commit: %v", err)
 	}

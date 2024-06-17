@@ -25,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -48,7 +49,7 @@ func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	for address, account := range testData.Pre {
 		mockState.EXPECT().Exist(address).Return(false)
 		mockLoad.EXPECT().CreateAccount(address)
-		mockLoad.EXPECT().SetBalance(address, account.Balance)
+		mockLoad.EXPECT().SetBalance(address, uint256.MustFromBig(account.Balance))
 		mockLoad.EXPECT().SetNonce(address, account.Nonce)
 		mockLoad.EXPECT().SetCode(address, account.Code)
 	}
@@ -81,7 +82,7 @@ func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t
 	mockState.EXPECT().StartBulkLoad(uint64(1)).Return(mockLoad, nil)
 	for address, account := range testData.Pre {
 		mockState.EXPECT().Exist(address).Return(true)
-		mockLoad.EXPECT().SetBalance(address, account.Balance)
+		mockLoad.EXPECT().SetBalance(address, uint256.MustFromBig(account.Balance))
 		mockLoad.EXPECT().SetNonce(address, account.Nonce)
 		mockLoad.EXPECT().SetCode(address, account.Code)
 	}

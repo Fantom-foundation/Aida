@@ -61,6 +61,7 @@ func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveM
 		triegc:        prque.New[uint64, common.Hash](nil),
 		isArchiveMode: isArchiveMode,
 		chainConduit:  chainConduit,
+		backend:       ldb,
 	}, nil
 }
 
@@ -79,6 +80,7 @@ type gethStateDB struct {
 	isArchiveMode bool
 	chainConduit  *ChainConduit // chain configuration
 	block         uint64
+	backend       ethdb.Database
 }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {
@@ -296,9 +298,11 @@ func (s *gethStateDB) Close() error {
 	if err := tdb.Commit(hash, true); err != nil {
 		return err
 	}
-
 	// Close underlying LevelDB instance.
-	return tdb.Close()
+	if err := tdb.Close(); err != nil {
+		return err
+	}
+	return s.backend.Close()
 }
 
 func (s *gethStateDB) AddRefund(gas uint64) {
