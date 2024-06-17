@@ -17,12 +17,12 @@
 package executor
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -43,7 +43,7 @@ func TestNormaTxProvider_Run(t *testing.T) {
 		dbMock.EXPECT().BeginBlock(gomock.Any()),
 		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().CreateAccount(gomock.Any()),
-		dbMock.EXPECT().AddBalance(gomock.Any(), gomock.Any()),
+		dbMock.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		dbMock.EXPECT().EndTransaction(),
 		dbMock.EXPECT().EndBlock(),
 
@@ -59,7 +59,7 @@ func TestNormaTxProvider_Run(t *testing.T) {
 		// funding accounts
 		// we return a lot of tokens, so we don't have to "fund" them
 		dbMock.EXPECT().BeginTransaction(gomock.Any()),
-		dbMock.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(1_000_000))),
+		dbMock.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(0).Mul(uint256.NewInt(params.Ether), uint256.NewInt(1_000_000))),
 		dbMock.EXPECT().EndTransaction(),
 		// nonce for account deploying the contract has to be 1
 		dbMock.EXPECT().BeginTransaction(gomock.Any()),
@@ -70,7 +70,7 @@ func TestNormaTxProvider_Run(t *testing.T) {
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)),
 		dbMock.EXPECT().EndTransaction(),
 		dbMock.EXPECT().BeginTransaction(gomock.Any()),
-		dbMock.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(1_000_000))),
+		dbMock.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(0).Mul(uint256.NewInt(params.Ether), uint256.NewInt(1_000_000))),
 		dbMock.EXPECT().EndTransaction(),
 
 		// waiting for contract deployment requires checking the nonce
@@ -105,14 +105,14 @@ func TestNormaTxProvider_RunAll(t *testing.T) {
 	provider := NewNormaTxProvider(cfg, dbMock)
 	consumer := NewMockTxConsumer(ctrl)
 
-	balance := big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(1_000_000))
+	balance := uint256.NewInt(0).Mul(uint256.NewInt(params.Ether), uint256.NewInt(1_000_000))
 
 	gomock.InOrder(
 		// treasure account initialization
 		dbMock.EXPECT().BeginBlock(gomock.Any()),
 		dbMock.EXPECT().BeginTransaction(gomock.Any()),
 		dbMock.EXPECT().CreateAccount(gomock.Any()),
-		dbMock.EXPECT().AddBalance(gomock.Any(), gomock.Any()),
+		dbMock.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		dbMock.EXPECT().EndTransaction(),
 		dbMock.EXPECT().EndBlock(),
 

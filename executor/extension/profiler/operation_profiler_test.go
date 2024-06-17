@@ -30,7 +30,10 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 	gomock "go.uber.org/mock/gomock"
 	"golang.org/x/exp/maps"
 )
@@ -100,7 +103,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 
 		// These are purposely not implemented, will be blacklisted here
 		notImplemented := make([]bool, len(ops))
-		for _, a := range []byte{14, 18, 21, 22, 23, 29} {
+		for _, a := range []byte{14, 18, 21, 22, 23, 29, 42} {
 			notImplemented[a] = true
 		}
 
@@ -288,8 +291,8 @@ func getStateDbFuncs(db state.StateDB) []func() {
 	mockHash := common.BigToHash(big.NewInt(0))
 	return []func(){
 		func() { db.CreateAccount(mockAddress) },
-		func() { db.SubBalance(mockAddress, big.NewInt(0)) },
-		func() { db.AddBalance(mockAddress, big.NewInt(0)) },
+		func() { db.SubBalance(mockAddress, uint256.NewInt(0), tracing.BalanceChangeUnspecified) },
+		func() { db.AddBalance(mockAddress, uint256.NewInt(0), tracing.BalanceChangeUnspecified) },
 		func() { db.GetBalance(mockAddress) },
 		func() { db.GetNonce(mockAddress) },
 		func() { db.SetNonce(mockAddress, 0) },
@@ -303,12 +306,14 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.GetCommittedState(mockAddress, mockHash) },
 		func() { db.GetState(mockAddress, mockHash) },
 		func() { db.SetState(mockAddress, mockHash, mockHash) },
-		func() { db.Suicide(mockAddress) },
-		func() { db.HasSuicided(mockAddress) },
+		func() { db.SelfDestruct(mockAddress) },
+		func() { db.HasSelfDestructed(mockAddress) },
 		func() { db.Exist(mockAddress) },
 		func() { db.Empty(mockAddress) },
 		func() {
-			db.PrepareAccessList(
+			db.Prepare(
+				params.Rules{},
+				mockAddress,
 				mockAddress,
 				&mockAddress,
 				[]common.Address{},
@@ -328,13 +333,12 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.BeginSyncPeriod(0) },
 		func() { db.EndSyncPeriod() },
 		func() { db.AddLog(nil) },
-		func() { db.GetLogs(mockHash, mockHash) },
+		func() { db.GetLogs(mockHash, uint64(0), mockHash) },
 		func() { db.AddPreimage(mockHash, []byte{0}) },
-		func() { db.ForEachStorage(mockAddress, func(h1, h2 common.Hash) bool { return false }) },
-		func() { db.Prepare(mockHash, 0) },
+		func() { db.SetTxContext(mockHash, 0) },
 		func() { db.Finalise(false) },
 		func() { db.IntermediateRoot(false) },
-		func() { db.Commit(false) },
+		func() { db.Commit(uint64(0), false) },
 		func() { db.Close() },
 	}
 }
@@ -343,8 +347,8 @@ func getStateDbFuncs(db state.StateDB) []func() {
 // This functions tell MockStateDB to expect any number of calls (0 or more) to each of the functions (for randomized test)
 func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
-	m.EXPECT().SubBalance(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().AddBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().GetBalance(gomock.Any()).AnyTimes()
 	m.EXPECT().GetNonce(gomock.Any()).AnyTimes()
 	m.EXPECT().SetNonce(gomock.Any(), gomock.Any()).AnyTimes()
@@ -358,11 +362,11 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().GetState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().Suicide(gomock.Any()).AnyTimes()
-	m.EXPECT().HasSuicided(gomock.Any()).AnyTimes()
+	m.EXPECT().SelfDestruct(gomock.Any()).AnyTimes()
+	m.EXPECT().HasSelfDestructed(gomock.Any()).AnyTimes()
 	m.EXPECT().Exist(gomock.Any()).AnyTimes()
 	m.EXPECT().Empty(gomock.Any()).AnyTimes()
-	m.EXPECT().PrepareAccessList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().AddAddressToAccessList(gomock.Any()).AnyTimes()
 	m.EXPECT().AddressInAccessList(gomock.Any()).AnyTimes()
 	m.EXPECT().SlotInAccessList(gomock.Any(), gomock.Any()).AnyTimes()
@@ -376,13 +380,12 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().BeginSyncPeriod(gomock.Any()).AnyTimes()
 	m.EXPECT().EndSyncPeriod().AnyTimes()
 	m.EXPECT().AddLog(gomock.Any()).AnyTimes()
-	m.EXPECT().GetLogs(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().ForEachStorage(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().Prepare(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().SetTxContext(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().Finalise(gomock.Any()).AnyTimes()
 	m.EXPECT().IntermediateRoot(gomock.Any()).AnyTimes()
-	m.EXPECT().Commit(gomock.Any()).AnyTimes()
+	m.EXPECT().Commit(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().Close().AnyTimes()
 }
 
@@ -390,8 +393,8 @@ func prepareMockStateDb(m *state.MockStateDB) {
 // This functions tell MockStateDB to expect exactly one call to each of the possible functions
 func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().CreateAccount(gomock.Any())
-	m.EXPECT().SubBalance(gomock.Any(), gomock.Any())
-	m.EXPECT().AddBalance(gomock.Any(), gomock.Any())
+	m.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().GetBalance(gomock.Any())
 	m.EXPECT().GetNonce(gomock.Any())
 	m.EXPECT().SetNonce(gomock.Any(), gomock.Any())
@@ -405,11 +408,11 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any())
 	m.EXPECT().GetState(gomock.Any(), gomock.Any())
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any())
-	m.EXPECT().Suicide(gomock.Any())
-	m.EXPECT().HasSuicided(gomock.Any())
+	m.EXPECT().SelfDestruct(gomock.Any())
+	m.EXPECT().HasSelfDestructed(gomock.Any())
 	m.EXPECT().Exist(gomock.Any())
 	m.EXPECT().Empty(gomock.Any())
-	m.EXPECT().PrepareAccessList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().AddAddressToAccessList(gomock.Any())
 	m.EXPECT().AddressInAccessList(gomock.Any())
 	m.EXPECT().SlotInAccessList(gomock.Any(), gomock.Any())
@@ -423,13 +426,12 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().BeginSyncPeriod(gomock.Any())
 	m.EXPECT().EndSyncPeriod()
 	m.EXPECT().AddLog(gomock.Any())
-	m.EXPECT().GetLogs(gomock.Any(), gomock.Any())
+	m.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any())
-	m.EXPECT().ForEachStorage(gomock.Any(), gomock.Any())
-	m.EXPECT().Prepare(gomock.Any(), gomock.Any())
+	m.EXPECT().SetTxContext(gomock.Any(), gomock.Any())
 	m.EXPECT().Finalise(gomock.Any())
 	m.EXPECT().IntermediateRoot(gomock.Any())
-	m.EXPECT().Commit(gomock.Any())
+	m.EXPECT().Commit(gomock.Any(), gomock.Any())
 	m.EXPECT().Close()
 }
 
