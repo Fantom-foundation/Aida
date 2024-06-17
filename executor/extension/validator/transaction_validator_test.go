@@ -34,6 +34,7 @@ import (
 	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -118,7 +119,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinu
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -150,7 +151,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOn
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -191,7 +192,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -277,12 +278,12 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 		log.EXPECT().Warningf(gomock.Any(), cfg.MaxNumErrors),
 		// PreTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -331,12 +332,12 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 		log.EXPECT().Warningf(gomock.Any(), cfg.MaxNumErrors),
 		// PreTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -486,7 +487,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithCont
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -518,7 +519,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinu
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -559,7 +560,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -639,12 +640,12 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 		log.EXPECT().Warningf(gomock.Any(), cfg.MaxNumErrors),
 		// PreTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
@@ -693,12 +694,12 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 		log.EXPECT().Warningf(gomock.Any(), cfg.MaxNumErrors),
 		// PreTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(uint256.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
