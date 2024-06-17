@@ -18,19 +18,19 @@ package operation
 
 import (
 	"fmt"
-	"math/big"
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 )
 
-func initAddBalance(t *testing.T) (*context.Replay, *AddBalance, common.Address, *big.Int) {
+func initAddBalance(t *testing.T) (*context.Replay, *AddBalance, common.Address, *uint256.Int) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
-	value := big.NewInt(rand.Int63n(100000))
+	value := uint256.NewInt(uint64(rand.Int63n(100000)))
 	// create context context
 	ctx := context.NewReplay()
 	contract := ctx.EncodeContract(addr)

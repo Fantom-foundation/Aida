@@ -19,7 +19,6 @@ package operation
 import (
 	"bytes"
 	"io"
-	"math/big"
 	"os"
 	"reflect"
 	"testing"
@@ -28,8 +27,11 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // MockStateDB data structure
@@ -77,17 +79,17 @@ func (s *MockStateDB) HasSuicided(addr common.Address) bool {
 	return false
 }
 
-func (s *MockStateDB) GetBalance(addr common.Address) *big.Int {
+func (s *MockStateDB) GetBalance(addr common.Address) *uint256.Int {
 	s.recording = append(s.recording, Record{GetBalanceID, []any{addr}})
-	return &big.Int{}
+	return &uint256.Int{}
 }
 
-func (s *MockStateDB) AddBalance(addr common.Address, value *big.Int) {
-	s.recording = append(s.recording, Record{AddBalanceID, []any{addr, value}})
+func (s *MockStateDB) AddBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.recording = append(s.recording, Record{AddBalanceID, []any{addr, value, reason}})
 }
 
-func (s *MockStateDB) SubBalance(addr common.Address, value *big.Int) {
-	s.recording = append(s.recording, Record{SubBalanceID, []any{addr, value}})
+func (s *MockStateDB) SubBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.recording = append(s.recording, Record{SubBalanceID, []any{addr, value, reason}})
 }
 
 func (s *MockStateDB) GetNonce(addr common.Address) uint64 {
@@ -198,8 +200,8 @@ func (s *MockStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return common.Hash{}
 }
 
-func (s *MockStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	s.recording = append(s.recording, Record{CommitID, []any{deleteEmptyObjects}})
+func (s *MockStateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
+	s.recording = append(s.recording, Record{CommitID, []any{block, deleteEmptyObjects}})
 	return common.Hash{}, nil
 }
 
@@ -207,7 +209,7 @@ func (s *MockStateDB) GetHash() (common.Hash, error) {
 	panic("GetHash not supported in mock")
 }
 
-func (s *MockStateDB) Prepare(thash common.Hash, ti int) {
+func (s *MockStateDB) GetTxState(thash common.Hash, ti int) {
 	s.recording = append(s.recording, Record{PrepareID, []any{thash, ti}})
 }
 
@@ -224,8 +226,8 @@ func (s *MockStateDB) GetRefund() uint64 {
 	return uint64(0)
 }
 
-func (s *MockStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.recording = append(s.recording, Record{PrepareAccessListID, []any{sender, dest, precompiles, txAccesses}})
+func (s *MockStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	s.recording = append(s.recording, Record{PrepareAccessListID, []any{rules, sender, coinbase, dest, precompiles, txAccesses}})
 }
 
 func (s *MockStateDB) AddressInAccessList(addr common.Address) bool {
@@ -315,8 +317,8 @@ func areEqual(v1 any, v2 any) bool {
 	case []byte:
 		c2 := v2.([]byte)
 		return bytes.Compare(c1, c2) == 0
-	case *big.Int:
-		c2 := v2.(*big.Int)
+	case *uint256.Int:
+		c2 := v2.(*uint256.Int)
 		return c2.Cmp(c1) == 0
 	default:
 		return v1 == v2

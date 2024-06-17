@@ -29,8 +29,8 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
-	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )

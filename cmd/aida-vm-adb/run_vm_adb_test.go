@@ -30,6 +30,7 @@ import (
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -75,32 +76,32 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		// Tx 1
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archiveBlockOne, nil),
 		archiveBlockOne.EXPECT().BeginTransaction(uint32(1)),
-		archiveBlockOne.EXPECT().Prepare(gomock.Any(), 1),
+		archiveBlockOne.EXPECT().SetTxContext(gomock.Any(), 1),
 		archiveBlockOne.EXPECT().Snapshot().Return(15),
-		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archiveBlockOne.EXPECT().RevertToSnapshot(15),
-		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		archiveBlockOne.EXPECT().EndTransaction(),
 		// Tx 2
 		archiveBlockOne.EXPECT().BeginTransaction(uint32(2)),
-		archiveBlockOne.EXPECT().Prepare(gomock.Any(), 2),
+		archiveBlockOne.EXPECT().SetTxContext(gomock.Any(), 2),
 		archiveBlockOne.EXPECT().Snapshot().Return(16),
-		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archiveBlockOne.EXPECT().RevertToSnapshot(16),
-		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		archiveBlockOne.EXPECT().EndTransaction(),
 		archiveBlockOne.EXPECT().Release(),
 		// Block 3
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveBlockTwo, nil),
 		archiveBlockTwo.EXPECT().BeginTransaction(uint32(1)),
-		archiveBlockTwo.EXPECT().Prepare(gomock.Any(), 1),
+		archiveBlockTwo.EXPECT().SetTxContext(gomock.Any(), 1),
 		archiveBlockTwo.EXPECT().Snapshot().Return(17),
-		archiveBlockTwo.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archiveBlockTwo.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archiveBlockTwo.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archiveBlockTwo.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archiveBlockTwo.EXPECT().RevertToSnapshot(17),
-		archiveBlockTwo.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
+		archiveBlockTwo.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		archiveBlockTwo.EXPECT().EndTransaction(),
 		archiveBlockTwo.EXPECT().Release(),
 		// Block 4
@@ -164,21 +165,21 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archiveBlockOne, nil),
 		// Tx 1
 		archiveBlockOne.EXPECT().BeginTransaction(uint32(1)),
-		archiveBlockOne.EXPECT().Prepare(gomock.Any(), 1),
+		archiveBlockOne.EXPECT().SetTxContext(gomock.Any(), 1),
 		archiveBlockOne.EXPECT().Snapshot().Return(15),
-		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archiveBlockOne.EXPECT().RevertToSnapshot(15),
-		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		archiveBlockOne.EXPECT().EndTransaction(),
 		// Tx 2
 		archiveBlockOne.EXPECT().BeginTransaction(uint32(2)),
-		archiveBlockOne.EXPECT().Prepare(gomock.Any(), 2),
+		archiveBlockOne.EXPECT().SetTxContext(gomock.Any(), 2),
 		archiveBlockOne.EXPECT().Snapshot().Return(19),
-		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archiveBlockOne.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archiveBlockOne.EXPECT().RevertToSnapshot(19),
-		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		archiveBlockOne.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		archiveBlockOne.EXPECT().EndTransaction(),
 
 		archiveBlockOne.EXPECT().Release(),
@@ -187,12 +188,12 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveBlockTwo, nil),
 		archiveBlockTwo.EXPECT().BeginTransaction(uint32(1)),
-		archiveBlockTwo.EXPECT().Prepare(gomock.Any(), 1),
+		archiveBlockTwo.EXPECT().SetTxContext(gomock.Any(), 1),
 		archiveBlockTwo.EXPECT().Snapshot().Return(17),
-		archiveBlockTwo.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archiveBlockTwo.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archiveBlockTwo.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archiveBlockTwo.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archiveBlockTwo.EXPECT().RevertToSnapshot(17),
-		archiveBlockTwo.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
+		archiveBlockTwo.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		archiveBlockTwo.EXPECT().EndTransaction(),
 		archiveBlockTwo.EXPECT().Release(),
 	)
@@ -420,16 +421,16 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		// we return correct expected data so tx does not fail
 		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(true),
-		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		archive.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		archive.EXPECT().Prepare(gomock.Any(), 1),
+		archive.EXPECT().SetTxContext(gomock.Any(), 1),
 		archive.EXPECT().Snapshot().Return(15),
-		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archive.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archive.EXPECT().RevertToSnapshot(15),
-		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		// end transaction is not called because we expect fail
 	)
 
@@ -472,16 +473,16 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		// we return correct expected data so tx does not fail
 		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(true),
-		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		archive.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		archive.EXPECT().Prepare(gomock.Any(), 1),
+		archive.EXPECT().SetTxContext(gomock.Any(), 1),
 		archive.EXPECT().Snapshot().Return(15),
-		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archive.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()),
 		archive.EXPECT().RevertToSnapshot(15),
-		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
 	// run fails but not on validation
@@ -521,7 +522,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(false), // address does not exist
-		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		archive.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
@@ -564,7 +565,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(false), // address does not exist
-		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		archive.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
@@ -588,6 +589,7 @@ var emptyTx = &substate.Substate{
 	Env: &substate.Env{},
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
+		Value:    big.NewInt(1),
 	},
 	Result: &substate.Result{
 		GasUsed: 1,
@@ -600,6 +602,7 @@ var testTx = &substate.Substate{
 	Env:           &substate.Env{},
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
+		Value:    big.NewInt(1),
 	},
 	Result: &substate.Result{
 		GasUsed: 1,
