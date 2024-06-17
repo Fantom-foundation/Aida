@@ -27,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext/txgenerator"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
 )
@@ -115,19 +116,19 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
 	return txgenerator.NewTxContext(
 		testTxBlkEnv{blkNumber},
-		types.NewMessage(
-			common.Address{0x1},
-			&common.Address{0x2},
-			0,
-			big.NewInt(1),
-			21_000,
-			big.NewInt(1),
-			big.NewInt(1),
-			big.NewInt(1),
-			[]byte{},
-			types.AccessList{},
-			false,
-		),
+		&core.Message{
+			To:                &common.Address{0x2},
+			From:              common.Address{0x1},
+			Nonce:             0,
+			Value:             big.NewInt(1),
+			GasLimit:          21_000,
+			GasPrice:          big.NewInt(1),
+			GasFeeCap:         big.NewInt(1),
+			GasTipCap:         big.NewInt(1),
+			Data:              []byte{},
+			AccessList:        types.AccessList{},
+			SkipAccountChecks: false,
+		},
 	)
 }
 
