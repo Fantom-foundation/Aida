@@ -28,7 +28,7 @@ require (
 	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
 	github.com/status-im/keycard-go v0.3.2
 	github.com/stretchr/testify v1.9.0
-	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
+	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/urfave/cli/v2 v2.27.2
 	go.uber.org/mock v0.4.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
@@ -132,5 +132,3 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 replace github.com/Fantom-foundation/lachesis-base => github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240320160249-81827a18147c
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.2.1-b.0.20240610064725-fc9986b8bf5d
-
-replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
