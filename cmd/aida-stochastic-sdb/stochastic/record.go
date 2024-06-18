@@ -57,7 +57,6 @@ last block for recording events.`,
 
 // stochasticRecordAction implements recording of events.
 func stochasticRecordAction(ctx *cli.Context) error {
-	//gethstate.EnableRecordReplay()
 	var err error
 
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
