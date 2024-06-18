@@ -41,7 +41,8 @@ type stTransaction struct {
 	GasLimit             []*BigInt           `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
-	//TODO support Blob type
+	BlobGasFeeCap        *BigInt             `json:"maxFeePerBlobGas"`
+	BlobHashes           []common.Hash       `json:"blobVersionHashes"`
 }
 
 func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*core.Message, error) {
@@ -123,8 +124,8 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*core.Messa
 		tx.MaxPriorityFeePerGas.Convert(),
 		data,
 		accessList,
-		nil,             //TODO support BlobGasFeeCap
-		[]common.Hash{}, //TODO support BlobHashes
+		tx.BlobGasFeeCap.Convert(),
+		tx.BlobHashes,
 		false,
 	}
 	return msg, nil

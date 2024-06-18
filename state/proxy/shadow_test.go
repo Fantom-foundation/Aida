@@ -144,7 +144,7 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 
 			// get randomized balance
 			additionBase := state.GetRandom(1, 1000*5000)
-			addition := uint256.NewInt(uint64(additionBase))
+			addition := uint256.NewInt(additionBase)
 
 			shadowDB.AddBalance(addr, addition, 0)
 
@@ -152,7 +152,7 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := uint256.NewInt(uint64(state.GetRandom(1, additionBase)))
+			subtraction := uint256.NewInt(state.GetRandom(1, int(additionBase)))
 			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
 			shadowDB.SubBalance(addr, subtraction, 0)
@@ -183,7 +183,7 @@ func TestShadowState_NonceOperations(t *testing.T) {
 			shadowDB.CreateAccount(addr)
 
 			// get randomized nonce
-			newNonce := uint64(state.GetRandom(1, 1000*5000))
+			newNonce := state.GetRandom(1, 1000*5000)
 
 			shadowDB.SetNonce(addr, newNonce)
 
@@ -327,7 +327,7 @@ func TestShadowState_RefundOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			refundValue := uint64(state.GetRandom(10000*4000, 10000*5000))
+			refundValue := state.GetRandom(10000*4000, 10000*5000)
 			shadowDB.AddRefund(refundValue)
 
 			if shadowDB.GetRefund() != refundValue {
@@ -461,7 +461,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newBalance := uint256.NewInt(uint64(state.GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(state.GetRandom(1, 1000*5000))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
@@ -505,7 +505,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newNonce := uint64(state.GetRandom(1, 1000*5000))
+			newNonce := state.GetRandom(1, 1000*5000)
 
 			cbl.SetNonce(addr, newNonce)
 

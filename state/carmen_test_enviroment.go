@@ -90,13 +90,13 @@ func MakeRandomByteSlice(t *testing.T, bufferLength int) []byte {
 	return buffer
 }
 
-func GetRandom(rangeLower int, rangeUpper int) int {
+func GetRandom(rangeLower int, rangeUpper int) uint64 {
 	// seed the PRNG
 	rand.Seed(time.Now().UnixNano())
 
 	// get randomized balance
 	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-	return randInt
+	return uint64(randInt)
 }
 
 func MakeCarmenDbTestContext(dir string, variant string, schema int, archive string) (StateDB, error) {
