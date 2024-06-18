@@ -49,6 +49,9 @@ func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveM
 		return nil, fmt.Errorf("failed to create a new Level DB. %v", err)
 	}
 	evmState := geth.NewDatabase(ldb)
+	if rootHash == (common.Hash{}) {
+		rootHash = types.EmptyRootHash
+	}
 	db, err := geth.New(rootHash, evmState, nil)
 	if err != nil {
 		return nil, err

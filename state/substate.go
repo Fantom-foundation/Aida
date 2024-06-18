@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
@@ -115,7 +116,7 @@ func NewOffTheChainStateDB() *state.StateDB {
 		disk: kvdb,
 	}
 
-	statedb, err := state.New(common.Hash{}, sdb, nil)
+	statedb, err := state.New(types.EmptyRootHash, sdb, nil)
 	if err != nil {
 		panic(fmt.Errorf("error calling state.New() in NewOffTheChainDB(): %v", err))
 	}
