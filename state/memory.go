@@ -74,6 +74,7 @@ type snapshot struct {
 	refund            uint64
 	createdAccounts   map[common.Address]int
 	touchedSlots      map[slot]int
+	createdContracts  map[common.Address]struct{}
 }
 
 func makeSnapshot(parent *snapshot, id int) *snapshot {
@@ -96,6 +97,7 @@ func makeSnapshot(parent *snapshot, id int) *snapshot {
 		refund:            refund,
 		createdAccounts:   map[common.Address]int{},
 		touchedSlots:      map[slot]int{},
+		createdContracts:  map[common.Address]struct{}{},
 	}
 }
 
@@ -106,7 +108,7 @@ func (db *inMemoryStateDB) CreateAccount(addr common.Address) {
 }
 
 func (db *inMemoryStateDB) CreateContract(addr common.Address) {
-	panic("CreateContract not implemented")
+	db.state.createdContracts[addr] = struct{}{}
 }
 
 func (db *inMemoryStateDB) SubBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
@@ -224,7 +226,16 @@ func (db *inMemoryStateDB) SetState(addr common.Address, key common.Hash, value 
 }
 
 func (db *inMemoryStateDB) GetStorageRoot(addr common.Address) common.Hash {
-	panic("GetStorageRoot not implemented")
+	empty := common.Hash{0}
+	notEmpty := common.Hash{1}
+	for state := db.state; state != nil; state = state.parent {
+		for key := range state.storage {
+			if key.addr == addr {
+				return notEmpty
+			}
+		}
+	}
+	return empty
 }
 
 func (db *inMemoryStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
@@ -240,8 +251,19 @@ func (db *inMemoryStateDB) SelfDestruct(addr common.Address) {
 	db.state.balances[addr] = new(uint256.Int) // Apparently when you die all your money is gone.
 }
 
+func (db *inMemoryStateDB) hasBeenCreatedInThisTransaction(addr common.Address) bool {
+	for state := db.state; state != nil; state = state.parent {
+		if _, exists := state.createdContracts[addr]; exists {
+			return true
+		}
+	}
+	return false
+}
+
 func (db *inMemoryStateDB) Selfdestruct6780(addr common.Address) {
-	panic("Selfdestruct6780 not implemented")
+	if db.hasBeenCreatedInThisTransaction(addr) {
+		db.SelfDestruct(addr)
+	}
 }
 
 func (db *inMemoryStateDB) HasSelfDestructed(addr common.Address) bool {
