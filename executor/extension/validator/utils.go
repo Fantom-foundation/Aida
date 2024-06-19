@@ -25,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
 )
@@ -163,8 +164,8 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 				"    want %v\n",
 				addr.Hex(), balance, accBalance)
 			if updateOnFail {
-				db.SubBalance(addr, balance, 0)
-				db.AddBalance(addr, accBalance, 0)
+				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
+				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
 			}
 		}
 		if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {

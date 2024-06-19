@@ -26,6 +26,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/holiman/uint256"
 )
 
@@ -72,7 +73,7 @@ func (op *SubBalance) Execute(db state.StateDB, ctx *context.Replay) time.Durati
 	amount := new(uint256.Int).SetBytes(op.Amount[:])
 	start := time.Now()
 	// Ignore reason
-	db.SubBalance(contract, amount, 0)
+	db.SubBalance(contract, amount, tracing.BalanceChangeUnspecified)
 	return time.Since(start)
 }
 

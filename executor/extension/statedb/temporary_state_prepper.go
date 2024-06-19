@@ -35,7 +35,6 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 		fallthrough
 	default:
 		// offTheChainStateDb is default value
-		//state.EnableRecordReplay()
 		return &temporaryOffTheChainStatePrepper{
 			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)),
 		}

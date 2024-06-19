@@ -90,13 +90,19 @@ func MakeRandomByteSlice(t *testing.T, bufferLength int) []byte {
 	return buffer
 }
 
-func GetRandom(rangeLower int, rangeUpper int) uint64 {
+// GetRandom produces a random uint in range [lower, upper)
+func GetRandom(t *testing.T, lower int, upper int) uint64 {
+	if upper < lower {
+		t.Fatalf("invalid range. The upper bound, %v, is smaller than the lower bound, %v.", upper, lower)
+	}
+	if lower < 0 || upper < 0 {
+		t.Fatalf("expected positive integer. (%v, %v)", lower, upper)
+	}
 	// seed the PRNG
 	rand.Seed(time.Now().UnixNano())
 
 	// get randomized balance
-	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-	return uint64(randInt)
+	return uint64(lower + rand.Intn(upper-lower))
 }
 
 func MakeCarmenDbTestContext(dir string, variant string, schema int, archive string) (StateDB, error) {

@@ -382,7 +382,7 @@ func insertRandomDataIntoStateDb(t *testing.T, ctx *executor.Context) {
 	addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
 	// get randomized balance
-	additionBase := state.GetRandom(1, 1000*5000)
+	additionBase := state.GetRandom(t, 1, 5_000_000)
 	addition := uint256.NewInt(uint64(additionBase))
 
 	ctx.State.CreateAccount(addr)

@@ -111,7 +111,7 @@ func newTxArgs(params map[string]interface{}) ethapi.TransactionArgs {
 }
 
 // newEVM creates new instance of EVM with given parameters
-func (e *EvmExecutor) newEVM(msg core.Message, hashErr *error) *vm.EVM {
+func (e *EvmExecutor) newEVM(msg *core.Message, hashErr *error) *vm.EVM {
 	var (
 		getHash  func(uint64) common.Hash
 		blockCtx vm.BlockContext
@@ -141,7 +141,7 @@ func (e *EvmExecutor) newEVM(msg core.Message, hashErr *error) *vm.EVM {
 	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = e.vmImpl
 
-	txCtx = evmcore.NewEVMTxContext(&msg)
+	txCtx = evmcore.NewEVMTxContext(msg)
 
 	return vm.NewEVM(blockCtx, txCtx, e.archive, e.chainCfg, vmConfig)
 }
@@ -163,7 +163,7 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 	}
 
 	var hashErr *error
-	evm = e.newEVM(*msg, hashErr)
+	evm = e.newEVM(msg, hashErr)
 
 	executionResult, err = evmcore.ApplyMessage(evm, msg, gp)
 	if executionResult.Err != nil {
@@ -277,7 +277,7 @@ func (e *EvmExecutor) findHiLoCap() (uint64, uint64, uint64, error) {
 	// Recap the highest gas limit with account's available balance.
 	if feeCap.BitLen() != 0 {
 		balance := e.archive.GetBalance(*e.args.From) // from can't be nil
-		available := new(big.Int).Set(balance.ToBig())
+		available := balance.ToBig()
 		if e.args.Value != nil {
 			if e.args.Value.ToInt().Cmp(available) >= 0 {
 				return 0, 0, 0, errors.New("insufficient funds for transfer")

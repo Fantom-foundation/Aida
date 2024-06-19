@@ -30,6 +30,7 @@ import (
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -109,7 +110,6 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 
 	vmCfg.InterpreterImpl = cfg.VmImpl
 	vmCfg.Tracer = nil
-	//vmCfg.Debug = false
 
 	return &TxProcessor{
 		cfg:       cfg,
@@ -192,8 +192,8 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
 func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
 	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
-		db.SubBalance(addr, db.GetBalance(addr), 0)
-		db.AddBalance(addr, acc.GetBalance(), 0)
+		db.SubBalance(addr, db.GetBalance(addr), tracing.BalanceChangeUnspecified)
+		db.AddBalance(addr, acc.GetBalance(), tracing.BalanceChangeUnspecified)
 		db.SetNonce(addr, acc.GetNonce())
 		db.SetCode(addr, acc.GetCode())
 		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {

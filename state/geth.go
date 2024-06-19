@@ -385,7 +385,7 @@ func (l *gethBulkLoad) CreateAccount(addr common.Address) {
 func (l *gethBulkLoad) SetBalance(addr common.Address, value *uint256.Int) {
 	old := l.db.GetBalance(addr)
 	value = value.Sub(value, old)
-	l.db.AddBalance(addr, value, 0)
+	l.db.AddBalance(addr, value, tracing.BalanceChangeUnspecified)
 }
 
 func (l *gethBulkLoad) SetNonce(addr common.Address, nonce uint64) {
