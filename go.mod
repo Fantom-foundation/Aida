@@ -125,7 +125,7 @@ replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
 // Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
 replace github.com/Fantom-foundation/Tosca => ./tosca
 
-replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
+replace github.com/ethereum/evmc/v11 => ./tosca/third_party/evmc
 
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240529085303-2400937cc3b1
 
