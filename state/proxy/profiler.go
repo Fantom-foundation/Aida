@@ -433,7 +433,7 @@ func (p *ProfilerProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
 }
 
-//TODO profile new operations
+// TODO profile new operations
 func (p *ProfilerProxy) CreateContract(addr common.Address) {
 	p.db.CreateContract(addr)
 }

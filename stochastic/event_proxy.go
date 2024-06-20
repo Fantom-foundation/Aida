@@ -425,7 +425,7 @@ func (p *EventProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
 }
 
-//TODO support new operations
+// TODO support new operations
 func (p *EventProxy) CreateContract(addr common.Address) {
 	p.db.CreateContract(addr)
 }
