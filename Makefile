@@ -98,6 +98,7 @@ util-updateset: carmen tosca
 
 util-db: carmen tosca
 	GOPROXY=$(GOPROXY) \
+	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/util-db \
 	./cmd/util-db

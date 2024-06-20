@@ -536,6 +536,21 @@ func (e *executor[T]) runBlocks(params Params, processor Processor[T], extension
 	return err
 }
 
+func RunUtilPrimer[T any](params Params, extensions []Extension[T]) (err error) {
+	state := State[T]{}
+	ctx := Context{State: params.State}
+
+	state.Block = params.To
+	if err = signalPreRun(state, &ctx, extensions); err != nil {
+		return err
+	}
+
+	return errors.Join(
+		err,
+		signalPostRun(state, &ctx, err, extensions),
+	)
+}
+
 func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
