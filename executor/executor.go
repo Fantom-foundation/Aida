@@ -536,9 +536,9 @@ func (e *executor[T]) runBlocks(params Params, processor Processor[T], extension
 	return err
 }
 
-func RunUtilPrimer[T any](params Params, extensions []Extension[T]) (err error) {
+func RunUtilPrimer[T any](params Params, extensions []Extension[T], aidaDb db.BaseDB) (err error) {
 	state := State[T]{}
-	ctx := Context{State: params.State}
+	ctx := Context{State: params.State, AidaDb: aidaDb}
 
 	state.Block = params.To
 	if err = signalPreRun(state, &ctx, extensions); err != nil {
