@@ -17,6 +17,8 @@
 package primer
 
 import (
+	"fmt"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -25,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 // RunPrimer performs sequential block processing on a StateDb
@@ -34,25 +37,24 @@ func RunPrimer(ctx *cli.Context) error {
 		return err
 	}
 
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer aidaDb.Close()
+
+	// set config for primming command
 	cfg.StateValidationMode = utils.SubsetCheck
-
-	// Always keep db
 	cfg.KeepDb = true
-
 	// This is necessary to pass the check inside the priming exstension
 	cfg.First = cfg.Last
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
-	if err != nil {
-		return err
-	}
-	defer substateDb.Close()
-
-	return runPriming(cfg)
+	return runPriming(cfg, aidaDb)
 }
 
 func runPriming(
 	cfg *utils.Config,
+	aidaDb db.BaseDB,
 ) error {
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
@@ -70,5 +72,7 @@ func runPriming(
 			NumWorkers:             1, // vm-sdb can run only with one worker
 			ParallelismGranularity: executor.BlockLevel,
 		},
-		extensionList)
+		extensionList,
+		aidaDb,
+	)
 }
