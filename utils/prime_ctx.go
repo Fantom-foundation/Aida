@@ -231,8 +231,8 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 	return err
 }
 
-// SuicideAccounts clears storage of all input accounts.
-func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []substatetypes.Address) {
+// SelfDestructAccounts clears storage of all input accounts.
+func (pc *PrimeContext) SelfDestructAccounts(db state.StateDB, accounts []substatetypes.Address) {
 	count := 0
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(pc.block)
@@ -240,7 +240,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []substatetyp
 	for _, addr := range accounts {
 		a := common.Address(addr)
 		if db.Exist(a) {
-			db.Suicide(a)
+			db.SelfDestruct(a)
 			pc.log.Debugf("\t\t Perform suicide on %s", a)
 			count++
 			pc.exist[a] = false

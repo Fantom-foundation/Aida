@@ -46,10 +46,10 @@ func initGetStateLccs(t *testing.T) (*context.Replay, *GetStateLccs, common.Addr
 	addr := getRandomAddress(t)
 	ctx.EncodeContract(addr)
 
-	storage := getRandomAddress(t).Hash()
+	storage := getRandomHash(t)
 	ctx.EncodeKey(storage)
 
-	storage2 := getRandomAddress(t).Hash()
+	storage2 := getRandomHash(t)
 
 	return ctx, op, addr, storage, storage2
 }

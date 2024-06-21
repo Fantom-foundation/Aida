@@ -25,7 +25,7 @@ import (
 )
 
 func initSetStateLcls(t *testing.T) (*context.Replay, *SetStateLcls, common.Address, common.Hash, common.Hash) {
-	value := getRandomAddress(t).Hash()
+	value := getRandomHash(t)
 
 	// create new operation
 	op := NewSetStateLcls(value)
@@ -43,7 +43,7 @@ func initSetStateLcls(t *testing.T) (*context.Replay, *SetStateLcls, common.Addr
 	addr := getRandomAddress(t)
 	ctx.EncodeContract(addr)
 
-	storage := getRandomAddress(t).Hash()
+	storage := getRandomHash(t)
 	ctx.EncodeKey(storage)
 
 	return ctx, op, addr, storage, value

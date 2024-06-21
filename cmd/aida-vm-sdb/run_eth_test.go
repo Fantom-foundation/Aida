@@ -19,7 +19,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"testing"
 
@@ -29,6 +28,8 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -59,27 +60,27 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetNonce(data.GetMessage().From()).Return(uint64(1)),
-		db.EXPECT().GetCodeHash(data.GetMessage().From()).Return(common.HexToHash("0x0")),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
+		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(2)),
-		db.EXPECT().Prepare(gomock.Any(), 2),
+		db.EXPECT().SetTxContext(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetNonce(data.GetMessage().From()).Return(uint64(1)),
-		db.EXPECT().GetCodeHash(data.GetMessage().From()).Return(common.HexToHash("0x0")),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
+		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 	)
@@ -198,13 +199,13 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
 		db.EXPECT().GetCode(common.HexToAddress("0x1")).Return([]byte{}),
 	)
 	gomock.InOrder(
 		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(2000)),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(2000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
 	)
@@ -213,14 +214,14 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		// Tx execution
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetNonce(data.GetMessage().From()).Return(uint64(1)),
-		db.EXPECT().GetCodeHash(data.GetMessage().From()).Return(common.HexToHash("0x0")),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
+		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		// EndTransaction is not called because execution fails
 	)
 
@@ -262,14 +263,14 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		// Validation fails on incorrect input so no db events are expected
 		// first account has correct data
 		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
 		db.EXPECT().GetCode(common.HexToAddress("0x1")).Return([]byte{}),
 	)
 	gomock.InOrder(
 		// second account has incorrect balance
 		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(9999)), // incorrect balance
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(9999)), // incorrect balance
 		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
 	)

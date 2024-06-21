@@ -22,7 +22,6 @@ import (
 	statedb "github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/state"
 )
 
 // MakeTemporaryStatePrepper creates an executor.Extension which Makes a fresh StateDb
@@ -36,7 +35,6 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 		fallthrough
 	default:
 		// offTheChainStateDb is default value
-		state.EnableRecordReplay()
 		return &temporaryOffTheChainStatePrepper{
 			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)),
 		}

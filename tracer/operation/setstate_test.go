@@ -26,8 +26,8 @@ import (
 
 func initSetState(t *testing.T) (*context.Replay, *SetState, common.Address, common.Hash, common.Hash) {
 	addr := getRandomAddress(t)
-	storage := getRandomAddress(t).Hash()
-	value := getRandomAddress(t).Hash()
+	storage := getRandomHash(t)
+	value := getRandomHash(t)
 
 	// create context context
 	ctx := context.NewReplay()

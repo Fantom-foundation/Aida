@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/Fantom-foundation/Aida/tracer/context"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 )
 
 // SubBalance data structure
@@ -42,14 +42,14 @@ func (op *SubBalance) GetId() byte {
 }
 
 // NewSubBalance creates a new sub-balance operation.
-func NewSubBalance(contract common.Address, amount *big.Int) *SubBalance {
+func NewSubBalance(contract common.Address, amount *uint256.Int) *SubBalance {
 	// check if amount requires more than 256 bits (16 bytes)
 	if amount.BitLen() > 256 {
 		log.Fatalf("Amount exceeds 256 bit")
 	}
 	ret := &SubBalance{Contract: contract}
 	// copy amount to a 16-byte array with leading zeros
-	amount.FillBytes(ret.Amount[:])
+	amount.SetBytes(ret.Amount[:])
 	return ret
 }
 
@@ -70,13 +70,14 @@ func (op *SubBalance) Write(f io.Writer) error {
 func (op *SubBalance) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	// construct bit.Int from a byte array
-	amount := new(big.Int).SetBytes(op.Amount[:])
+	amount := new(uint256.Int).SetBytes(op.Amount[:])
 	start := time.Now()
-	db.SubBalance(contract, amount)
+	// Ignore reason
+	db.SubBalance(contract, amount, tracing.BalanceChangeUnspecified)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the sub-balance operation.
 func (op *SubBalance) Debug(ctx *context.Context) {
-	fmt.Print(op.Contract, new(big.Int).SetBytes(op.Amount[:]))
+	fmt.Print(op.Contract, new(uint256.Int).SetBytes(op.Amount[:]))
 }

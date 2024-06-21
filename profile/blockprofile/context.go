@@ -119,11 +119,11 @@ func findTxAddresses(tx executor.State[txcontext.TxContext]) AddressSet {
 		addresses[addr] = struct{}{}
 	})
 	var zero common.Address
-	from := tx.Data.GetMessage().From()
+	from := tx.Data.GetMessage().From
 	if from != zero {
 		addresses[from] = struct{}{}
 	}
-	to := tx.Data.GetMessage().To()
+	to := tx.Data.GetMessage().To
 	if to != nil {
 		addresses[*to] = struct{}{}
 	}
@@ -278,8 +278,8 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 // getTransactionType reads a message and determines a transaction type.
 func getTransactionType(tx executor.State[txcontext.TxContext]) TxType {
 	msg := tx.Data.GetMessage()
-	to := msg.To()
-	from := msg.From()
+	to := msg.To
+	from := msg.From
 	alloc := tx.Data.GetInputState()
 
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")

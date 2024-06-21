@@ -59,7 +59,7 @@ func (op *HasSuicided) Write(f io.Writer) error {
 func (op *HasSuicided) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.HasSuicided(contract)
+	db.HasSelfDestructed(contract)
 	return time.Since(start)
 }
 

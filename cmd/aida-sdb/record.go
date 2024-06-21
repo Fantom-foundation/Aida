@@ -28,7 +28,6 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/urfave/cli/v2"
 )
 
@@ -66,7 +65,6 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	state.EnableRecordReplay()
 	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %w", err)

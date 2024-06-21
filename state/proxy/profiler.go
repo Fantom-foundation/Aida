@@ -18,7 +18,6 @@ package proxy
 
 import (
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -27,7 +26,10 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // ProfilerProxy data structure for capturing and recording
@@ -55,22 +57,22 @@ func (p *ProfilerProxy) CreateAccount(addr common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (p *ProfilerProxy) SubBalance(addr common.Address, amount *big.Int) {
+func (p *ProfilerProxy) SubBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	p.do(operation.SubBalanceID, func() {
-		p.db.SubBalance(addr, amount)
+		p.db.SubBalance(addr, amount, reason)
 	})
 }
 
 // AddBalance adds amount to a contract address.
-func (p *ProfilerProxy) AddBalance(addr common.Address, amount *big.Int) {
+func (p *ProfilerProxy) AddBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	p.do(operation.AddBalanceID, func() {
-		p.db.AddBalance(addr, amount)
+		p.db.AddBalance(addr, amount, reason)
 	})
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (p *ProfilerProxy) GetBalance(addr common.Address) *big.Int {
-	var res *big.Int
+func (p *ProfilerProxy) GetBalance(addr common.Address) *uint256.Int {
+	var res *uint256.Int
 	p.do(operation.GetBalanceID, func() {
 		res = p.db.GetBalance(addr)
 	})
@@ -175,22 +177,20 @@ func (p *ProfilerProxy) SetState(addr common.Address, key common.Hash, value com
 	})
 }
 
-// Suicide marks the given account as suicided. This clears the account balance.
+// SelfDestruct marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
-// return a non-nil account after Suicide.
-func (p *ProfilerProxy) Suicide(addr common.Address) bool {
-	var suicide bool
+// return a non-nil account after SelfDestruct.
+func (p *ProfilerProxy) SelfDestruct(addr common.Address) {
 	p.do(operation.SuicideID, func() {
-		suicide = p.db.Suicide(addr)
+		p.db.SelfDestruct(addr)
 	})
-	return suicide
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (p *ProfilerProxy) HasSuicided(addr common.Address) bool {
+// HasSelfDestructed checks whether a contract has been suicided.
+func (p *ProfilerProxy) HasSelfDestructed(addr common.Address) bool {
 	var res bool
 	p.do(operation.HasSuicidedID, func() {
-		res = p.db.HasSuicided(addr)
+		res = p.db.HasSelfDestructed(addr)
 	})
 	return res
 }
@@ -215,7 +215,7 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 	return empty
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition with
+// Prepare handles the preparatory steps for executing a state transition with
 // regards to both EIP-2929 and EIP-2930:
 //
 // - Add sender to access list (2929)
@@ -224,9 +224,9 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 // - Add the contents of the optional tx access list (2930)
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
-func (p *ProfilerProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (p *ProfilerProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	p.do(operation.PrepareAccessListID, func() {
-		p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+		p.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 	})
 }
 
@@ -346,10 +346,10 @@ func (p *ProfilerProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (p *ProfilerProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+func (p *ProfilerProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	var logs []*types.Log
 	p.do(operation.GetLogsID, func() {
-		logs = p.db.GetLogs(hash, blockHash)
+		logs = p.db.GetLogs(hash, block, blockHash)
 	})
 	return logs
 }
@@ -361,19 +361,10 @@ func (p *ProfilerProxy) AddPreimage(addr common.Hash, image []byte) {
 	})
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (p *ProfilerProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	var err error
-	p.do(operation.ForEachStorageID, func() {
-		err = p.db.ForEachStorage(addr, fn)
-	})
-	return err
-}
-
 // Prepare sets the current transaction hash and index.
-func (p *ProfilerProxy) Prepare(thash common.Hash, ti int) {
+func (p *ProfilerProxy) SetTxContext(thash common.Hash, ti int) {
 	p.do(operation.PrepareID, func() {
-		p.db.Prepare(thash, ti)
+		p.db.SetTxContext(thash, ti)
 	})
 }
 
@@ -395,11 +386,11 @@ func (p *ProfilerProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return hash
 }
 
-func (p *ProfilerProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (p *ProfilerProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	var hash common.Hash
 	var err error
 	p.do(operation.CommitID, func() {
-		hash, err = p.db.Commit(deleteEmptyObjects)
+		hash, err = p.db.Commit(block, deleteEmptyObjects)
 	})
 	return hash, err
 }
@@ -440,4 +431,25 @@ func (p *ProfilerProxy) GetMemoryUsage() *state.MemoryUsage {
 
 func (p *ProfilerProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
+}
+
+// TODO profile new operations
+func (p *ProfilerProxy) CreateContract(addr common.Address) {
+	p.db.CreateContract(addr)
+}
+
+func (p *ProfilerProxy) Selfdestruct6780(addr common.Address) {
+	p.db.Selfdestruct6780(addr)
+}
+
+func (p *ProfilerProxy) GetStorageRoot(addr common.Address) common.Hash {
+	return p.db.GetStorageRoot(addr)
+}
+
+func (p *ProfilerProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.db.SetTransientState(addr, key, value)
+}
+
+func (p *ProfilerProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return p.db.GetTransientState(addr, key)
 }

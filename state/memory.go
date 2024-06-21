@@ -25,7 +25,10 @@ import (
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
@@ -60,7 +63,7 @@ type snapshot struct {
 	id     int
 
 	touched           map[common.Address]int // Set of referenced accounts
-	balances          map[common.Address]*big.Int
+	balances          map[common.Address]*uint256.Int
 	nonces            map[common.Address]uint64
 	codes             map[common.Address][]byte
 	suicided          map[common.Address]int // Set of destructed accounts
@@ -71,6 +74,7 @@ type snapshot struct {
 	refund            uint64
 	createdAccounts   map[common.Address]int
 	touchedSlots      map[slot]int
+	createdContracts  map[common.Address]struct{}
 }
 
 func makeSnapshot(parent *snapshot, id int) *snapshot {
@@ -82,7 +86,7 @@ func makeSnapshot(parent *snapshot, id int) *snapshot {
 		parent:            parent,
 		id:                id,
 		touched:           map[common.Address]int{},
-		balances:          map[common.Address]*big.Int{},
+		balances:          map[common.Address]*uint256.Int{},
 		nonces:            map[common.Address]uint64{},
 		codes:             map[common.Address][]byte{},
 		suicided:          map[common.Address]int{},
@@ -93,6 +97,7 @@ func makeSnapshot(parent *snapshot, id int) *snapshot {
 		refund:            refund,
 		createdAccounts:   map[common.Address]int{},
 		touchedSlots:      map[slot]int{},
+		createdContracts:  map[common.Address]struct{}{},
 	}
 }
 
@@ -102,31 +107,35 @@ func (db *inMemoryStateDB) CreateAccount(addr common.Address) {
 	}
 }
 
-func (db *inMemoryStateDB) SubBalance(addr common.Address, value *big.Int) {
+func (db *inMemoryStateDB) CreateContract(addr common.Address) {
+	db.state.createdContracts[addr] = struct{}{}
+}
+
+func (db *inMemoryStateDB) SubBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
 	if value.Sign() == 0 {
 		return
 	}
 	db.state.touched[addr] = 0
-	db.state.balances[addr] = new(big.Int).Sub(db.GetBalance(addr), value)
+	db.state.balances[addr] = new(uint256.Int).Sub(db.GetBalance(addr), value)
 }
 
-func (db *inMemoryStateDB) AddBalance(addr common.Address, value *big.Int) {
+func (db *inMemoryStateDB) AddBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
 	db.state.touched[addr] = 0
-	db.state.balances[addr] = new(big.Int).Add(db.GetBalance(addr), value)
+	db.state.balances[addr] = new(uint256.Int).Add(db.GetBalance(addr), value)
 }
 
-func (db *inMemoryStateDB) GetBalance(addr common.Address) *big.Int {
+func (db *inMemoryStateDB) GetBalance(addr common.Address) *uint256.Int {
 	for state := db.state; state != nil; state = state.parent {
 		val, exists := state.balances[addr]
 		if exists {
-			return new(big.Int).Set(val)
+			return val
 		}
 	}
 	acc := db.ws.Get(addr)
 	if acc == nil {
-		return new(big.Int).Set(common.Big0)
+		return uint256.MustFromBig(common.Big0)
 	}
-	return new(big.Int).Set(acc.GetBalance())
+	return new(uint256.Int).Set(acc.GetBalance())
 }
 
 func (db *inMemoryStateDB) GetNonce(addr common.Address) uint64 {
@@ -195,7 +204,6 @@ func (db *inMemoryStateDB) GetCommittedState(addr common.Address, key common.Has
 }
 
 func (db *inMemoryStateDB) GetState(addr common.Address, key common.Hash) common.Hash {
-	//fmt.Printf("SLOAD: %v %v\n", addr, key)
 	slot := slot{addr, key}
 	for state := db.state; state != nil; state = state.parent {
 		val, exists := state.storage[slot]
@@ -217,12 +225,48 @@ func (db *inMemoryStateDB) SetState(addr common.Address, key common.Hash, value 
 	db.state.storage[slot{addr, key}] = value
 }
 
-func (db *inMemoryStateDB) Suicide(addr common.Address) bool {
-	db.state.suicided[addr] = 0
-	db.state.balances[addr] = new(big.Int) // Apparently when you die all your money is gone.
-	return true
+func (db *inMemoryStateDB) GetStorageRoot(addr common.Address) common.Hash {
+	empty := common.Hash{0}
+	notEmpty := common.Hash{1}
+	for state := db.state; state != nil; state = state.parent {
+		for key := range state.storage {
+			if key.addr == addr {
+				return notEmpty
+			}
+		}
+	}
+	return empty
 }
-func (db *inMemoryStateDB) HasSuicided(addr common.Address) bool {
+
+func (db *inMemoryStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	panic("GetTransientState not implemented")
+}
+
+func (db *inMemoryStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	panic("SetTransientState not implemented")
+}
+
+func (db *inMemoryStateDB) SelfDestruct(addr common.Address) {
+	db.state.suicided[addr] = 0
+	db.state.balances[addr] = new(uint256.Int) // Apparently when you die all your money is gone.
+}
+
+func (db *inMemoryStateDB) hasBeenCreatedInThisTransaction(addr common.Address) bool {
+	for state := db.state; state != nil; state = state.parent {
+		if _, exists := state.createdContracts[addr]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+func (db *inMemoryStateDB) Selfdestruct6780(addr common.Address) {
+	if db.hasBeenCreatedInThisTransaction(addr) {
+		db.SelfDestruct(addr)
+	}
+}
+
+func (db *inMemoryStateDB) HasSelfDestructed(addr common.Address) bool {
 	for state := db.state; state != nil; state = state.parent {
 		_, exists := state.suicided[addr]
 		if exists {
@@ -246,7 +290,7 @@ func (db *inMemoryStateDB) Empty(addr common.Address) bool {
 	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0 && db.GetCodeSize(addr) == 0
 }
 
-func (db *inMemoryStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (db *inMemoryStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	db.AddAddressToAccessList(sender)
 	if dest != nil {
 		db.AddAddressToAccessList(*dest)
@@ -321,12 +365,7 @@ func (db *inMemoryStateDB) AddPreimage(common.Hash, []byte) {
 	panic("not implemented")
 }
 
-func (db *inMemoryStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
-	panic("not implemented")
-	return nil
-}
-
-func (db *inMemoryStateDB) Prepare(common.Hash, int) {
+func (db *inMemoryStateDB) SetTxContext(common.Hash, int) {
 	// nothing to do ...
 }
 
@@ -337,7 +376,7 @@ func (db *inMemoryStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash
 	panic("not implemented")
 }
 
-func (db *inMemoryStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (db *inMemoryStateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
@@ -350,7 +389,7 @@ func collectLogs(s *snapshot) []*types.Log {
 	return logs
 }
 
-func (db *inMemoryStateDB) GetLogs(txHash common.Hash, blockHash common.Hash) []*types.Log {
+func (db *inMemoryStateDB) GetLogs(txHash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	// Since the in-memory stateDB is only to be used for a single
 	// transaction, all logs are from the same transactions. But
 	// those need to be collected in the right order (inverse order
@@ -378,7 +417,7 @@ func (db *inMemoryStateDB) getEffects() substate.WorldState {
 	for addr := range touched {
 		cur := new(substate.Account)
 		cur.Nonce = db.GetNonce(addr)
-		cur.Balance = db.GetBalance(addr)
+		cur.Balance = db.GetBalance(addr).ToBig()
 		cur.Code = db.GetCode(addr)
 		cur.Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 
@@ -412,7 +451,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 		})
 		res[substatetypes.Address(addr)] = &substate.Account{
 			Nonce:   acc.GetNonce(),
-			Balance: acc.GetBalance(),
+			Balance: acc.GetBalance().ToBig(),
 			Storage: storage,
 			Code:    acc.GetCode(),
 		}
@@ -446,7 +485,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	}
 
 	for key := range res {
-		if db.HasSuicided(common.Address(key)) || db.Empty(common.Address(key)) {
+		if db.HasSelfDestructed(common.Address(key)) || db.Empty(common.Address(key)) {
 			delete(res, key)
 			continue
 		}
@@ -525,7 +564,7 @@ func (l *gethInMemoryBulkLoad) CreateAccount(addr common.Address) {
 	// ignored
 }
 
-func (l *gethInMemoryBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+func (l *gethInMemoryBulkLoad) SetBalance(addr common.Address, value *uint256.Int) {
 	// ignored
 }
 
