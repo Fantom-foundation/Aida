@@ -48,7 +48,7 @@ func (c *ChainConduit) DeleteEmptyObjects(block uint64) bool {
 	if !c.isEthereum {
 		return true
 	} else {
-		b := big.NewInt(int64(block))
+		b := new(big.Int).SetUint64(block)
 		bz := c.chainConfig.IsByzantium(b)
 		ei := c.chainConfig.IsEIP158(b)
 		return bz || ei

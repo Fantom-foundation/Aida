@@ -167,39 +167,11 @@ func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value com
 }
 
 func (s *carmenStateDB) GetStorageRoot(addr common.Address) common.Hash {
-	// This function is only used in geth to determine whether the storage of
-	// the given account is empty or not, and it was introduced by EIP-7610.
-	// https://eips.ethereum.org/EIPS/eip-7610
-	// This EIP is a backward compatible safety fix to prevent the change of
-	// code of existing accounts. The corresponding vulnerability was already
-	// fixed by EIP-158, which has been part of the Tangerine Whistle hard-fork.
-	// Thus, EIP-158 has been always present in Fantom's networks. This check
-	// is thus not really needed in Fantom's networks.
-	//
-	// Background: before EIP-158 accounts could be created with an empty balance,
-	// a nonce with value 0, empty code, but with some storage state. In EIP-158
-	// it was decided that any account with an empty balance, a nonce with value 0,
-	// and no code should be considered as empty. The state was not included, since
-	// it was (presumably) assumed to be too expensive to check. Furthermore, it
-	// was defined that any new contract will get an initial nonce of 1. Thus, the
-	// nonce alone would be sufficient to check whether a contract exists or not.
-	//
-	// However, EIP-7610 reports that there are several contracts deployed on
-	// Ethereum that have been created before EIP-158 that do have an empty balance,
-	// a nonce of 0, no code, but some storage state. To protect those, and avoid
-	// accidental replacement of those contracts, EIP-7610 extends the needed check
-	// for pre-existing contracts to also include the storage root.
-	//
-	// Since Fantom has always had EIP-158, such accounts should not exist on the
-	// Fantom networks. Nevertheless, Carmen is implementing a check for the emptiness
-	// of the storage to be Ethereum compatible. Once this is offered, this function
-	// should be updated.
-
 	// Until Carmen offers a way to determine whether
 	// the storage of an account is empty or not, we return a zero hash here
 	// indicating that the storage is empty -- which corresponds to pre EIP-7610
 	// behavior.
-	// TODO: use Carmen's HasEmptyStorage function once available.
+	// TODO: use Carmen's GetStorageRoot function once available.
 	return common.Hash{}
 }
 
