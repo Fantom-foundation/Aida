@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/util-db/db"
+	"github.com/Fantom-foundation/Aida/cmd/util-db/primer"
 
 	"github.com/urfave/cli/v2"
 )
@@ -50,6 +51,9 @@ var UtilDbApp = cli.App{
 		&db.PrintTableHashCommand,
 		&db.ScrapeCommand,
 		&db.MetadataCommand,
+
+		//Priming only
+		&primer.RunPrimerCmd,
 	},
 }
 

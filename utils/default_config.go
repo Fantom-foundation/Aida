@@ -19,7 +19,6 @@ package utils
 import (
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -96,29 +95,30 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		SkipPriming:            getFlagValue(ctx, SkipPrimingFlag).(bool),
 		SkipStateHashScrapping: getFlagValue(ctx, SkipStateHashScrappingFlag).(bool),
 		SnapshotDepth:          getFlagValue(ctx, SnapshotDepthFlag).(int),
-		SrcDbReadonly:          false,
 		StateDbSrc:             getFlagValue(ctx, StateDbSrcFlag).(string),
-		StateValidationMode:    EqualityCheck,
-		SubstateDb:             getFlagValue(ctx, substate.SubstateDbFlag).(string),
-		SyncPeriodLength:       getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
-		TargetDb:               getFlagValue(ctx, TargetDbFlag).(string),
-		TargetEpoch:            getFlagValue(ctx, TargetEpochFlag).(uint64),
-		Trace:                  getFlagValue(ctx, TraceFlag).(bool),
-		TraceDirectory:         getFlagValue(ctx, TraceDirectoryFlag).(string),
-		TraceFile:              getFlagValue(ctx, TraceFileFlag).(string),
-		TrackProgress:          getFlagValue(ctx, TrackProgressFlag).(bool),
-		TransactionLength:      getFlagValue(ctx, TransactionLengthFlag).(uint64),
-		UpdateBufferSize:       getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
-		UpdateDb:               getFlagValue(ctx, UpdateDbFlag).(string),
-		UpdateOnFailure:        getFlagValue(ctx, UpdateOnFailure).(bool),
-		UpdateType:             getFlagValue(ctx, UpdateTypeFlag).(string),
-		Validate:               getFlagValue(ctx, ValidateFlag).(bool),
-		ValidateStateHashes:    getFlagValue(ctx, ValidateStateHashesFlag).(bool),
-		ValidateTxState:        getFlagValue(ctx, ValidateTxStateFlag).(bool),
-		ValuesNumber:           getFlagValue(ctx, ValuesNumberFlag).(int64),
-		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
-		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
-		TxGeneratorType:        getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
+		StateDbSrcDirectAccess: getFlagValue(ctx, SrcDbOverwriteFlag).(bool),
+		// TODO re-enable equality check once supported in Carmen
+		StateValidationMode: SubsetCheck,
+		SubstateDb:          getFlagValue(ctx, AidaDbFlag).(string),
+		SyncPeriodLength:    getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
+		TargetDb:            getFlagValue(ctx, TargetDbFlag).(string),
+		TargetEpoch:         getFlagValue(ctx, TargetEpochFlag).(uint64),
+		Trace:               getFlagValue(ctx, TraceFlag).(bool),
+		TraceDirectory:      getFlagValue(ctx, TraceDirectoryFlag).(string),
+		TraceFile:           getFlagValue(ctx, TraceFileFlag).(string),
+		TrackProgress:       getFlagValue(ctx, TrackProgressFlag).(bool),
+		TransactionLength:   getFlagValue(ctx, TransactionLengthFlag).(uint64),
+		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
+		UpdateDb:            getFlagValue(ctx, UpdateDbFlag).(string),
+		UpdateOnFailure:     getFlagValue(ctx, UpdateOnFailure).(bool),
+		UpdateType:          getFlagValue(ctx, UpdateTypeFlag).(string),
+		Validate:            getFlagValue(ctx, ValidateFlag).(bool),
+		ValidateStateHashes: getFlagValue(ctx, ValidateStateHashesFlag).(bool),
+		ValidateTxState:     getFlagValue(ctx, ValidateTxStateFlag).(bool),
+		ValuesNumber:        getFlagValue(ctx, ValuesNumberFlag).(int64),
+		VmImpl:              getFlagValue(ctx, VmImplementation).(string),
+		Workers:             getFlagValue(ctx, WorkersFlag).(int),
+		TxGeneratorType:     getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
 	}
 
 	return cfg

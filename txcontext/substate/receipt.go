@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with Aida. If not, see <http://www.gnu.org/licenses/>.
 
-package newsubstate
+package substate
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -50,7 +52,28 @@ func (r *result) GetBloom() types.Bloom {
 }
 
 func (r *result) GetLogs() []*types.Log {
-	panic("how to return without iterating")
+	// todo remove iteration once fantom types are created
+	logs := make([]*types.Log, 0)
+	for _, l := range r.Logs {
+		topics := make([]common.Hash, 0)
+		for _, t := range l.Topics {
+			topics = append(topics, common.Hash(t))
+		}
+
+		logs = append(logs, &types.Log{
+			Address:     common.Address(l.Address),
+			Topics:      topics,
+			Data:        l.Data,
+			BlockNumber: l.BlockNumber,
+			TxHash:      common.Hash(l.TxHash),
+			TxIndex:     l.TxIndex,
+			BlockHash:   common.Hash(l.BlockHash),
+			Index:       l.Index,
+			Removed:     l.Removed,
+		})
+	}
+
+	return logs
 }
 
 func (r *result) GetContractAddress() common.Address {
@@ -63,4 +86,8 @@ func (r *result) GetGasUsed() uint64 {
 
 func (r *result) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(r, y)
+}
+
+func (r *result) String() string {
+	return fmt.Sprintf("Status: %v\nBloom: %s\nContract Address: %s\nGas Used: %v\nLogs: %v\n", r.Status, string(r.Bloom.Bytes()), r.ContractAddress, r.GasUsed, r.Logs)
 }

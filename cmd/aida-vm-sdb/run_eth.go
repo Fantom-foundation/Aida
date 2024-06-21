@@ -26,7 +26,6 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -62,7 +61,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.PrimeThresholdFlag,
 
 		// Utils
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.ValidateFlag,
@@ -132,5 +131,6 @@ func runEth(
 		},
 		processor,
 		extensionList,
+		nil,
 	)
 }

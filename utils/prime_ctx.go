@@ -24,6 +24,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -230,18 +231,19 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 	return err
 }
 
-// SuicideAccounts clears storage of all input accounts.
-func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
+// SelfDestructAccounts clears storage of all input accounts.
+func (pc *PrimeContext) SelfDestructAccounts(db state.StateDB, accounts []substatetypes.Address) {
 	count := 0
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(pc.block)
 	db.BeginTransaction(0)
 	for _, addr := range accounts {
-		if db.Exist(addr) {
-			db.Suicide(addr)
-			pc.log.Debugf("\t\t Perform suicide on %v", addr)
+		a := common.Address(addr)
+		if db.Exist(a) {
+			db.SelfDestruct(a)
+			pc.log.Debugf("\t\t Perform suicide on %s", a)
 			count++
-			pc.exist[addr] = false
+			pc.exist[a] = false
 		}
 	}
 	db.EndTransaction()

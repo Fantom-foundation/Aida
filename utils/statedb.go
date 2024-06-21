@@ -25,7 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
 )
@@ -70,7 +70,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// make a copy of source statedb
-	if !cfg.SrcDbReadonly {
+	if !cfg.StateDbSrcDirectAccess {
 		// does path to state db exist?
 		if _, err = os.Stat(cfg.StateDbSrc); os.IsNotExist(err) {
 			return nil, "", fmt.Errorf("%v does not exist", cfg.StateDbSrc)
@@ -222,7 +222,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 func DeleteDestroyedAccountsFromWorldState(ws txcontext.WorldState, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	src, err := db.NewReadOnlyDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
@@ -232,9 +232,9 @@ func DeleteDestroyedAccountsFromWorldState(ws txcontext.WorldState, cfg *Config,
 		return err
 	}
 	for _, cur := range list {
-		if ws.Has(cur) {
+		if ws.Has(common.Address(cur)) {
 			log.Debugf("Remove %v from world state", cur)
-			ws.Delete(cur)
+			ws.Delete(common.Address(cur))
 		}
 	}
 	return nil
@@ -242,14 +242,10 @@ func DeleteDestroyedAccountsFromWorldState(ws txcontext.WorldState, cfg *Config,
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
+func DeleteDestroyedAccountsFromStateDB(sdb state.StateDB, cfg *Config, target uint64, aidaDb db.BaseDB) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
+	src := db.MakeDefaultDestroyedAccountDBFromBaseDB(aidaDb)
 	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
@@ -259,15 +255,27 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		// nothing to delete, skip
 		return nil
 	}
-	db.BeginSyncPeriod(0)
-	db.BeginBlock(target)
-	db.BeginTransaction(0)
+	sdb.BeginSyncPeriod(0)
+	err = sdb.BeginBlock(target)
+	if err != nil {
+		return err
+	}
+	err = sdb.BeginTransaction(0)
+	if err != nil {
+		return err
+	}
 	for _, addr := range accounts {
-		db.Suicide(addr)
+		sdb.SelfDestruct(common.Address(addr))
 		log.Debugf("Perform suicide on %v", addr)
 	}
-	db.EndTransaction()
-	db.EndBlock()
-	db.EndSyncPeriod()
+	err = sdb.EndTransaction()
+	if err != nil {
+		return err
+	}
+	err = sdb.EndBlock()
+	if err != nil {
+		return err
+	}
+	sdb.EndSyncPeriod()
 	return nil
 }

@@ -28,8 +28,8 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -65,6 +65,8 @@ func TestStateDbPrimerExtension_PrimingExistingStateDbMissingDbInfo(t *testing.T
 func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
+	stateDb := state.NewMockStateDB(ctrl)
+	aidaDbPath := t.TempDir() + "aidadb"
 
 	cfg := &utils.Config{}
 	cfg.SkipPriming = false
@@ -75,11 +77,31 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 		log.EXPECT().Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize),
 		log.EXPECT().Noticef("Priming from block %v...", uint64(0)),
 		log.EXPECT().Noticef("Priming to block %v...", cfg.First-1),
+		log.EXPECT().Debugf("\tLoading %d accounts with %d values ..", 0, 0),
+		stateDb.EXPECT().BeginBlock(uint64(0)),
+		stateDb.EXPECT().BeginTransaction(uint32(0)),
+		stateDb.EXPECT().EndTransaction(),
+		stateDb.EXPECT().EndBlock(),
+		stateDb.EXPECT().StartBulkLoad(uint64(1)).Return(nil, errors.New("stop")),
 	)
 
 	ext := makeStateDbPrimer[any](cfg, log)
 
-	ext.PreRun(executor.State[any]{}, &executor.Context{})
+	aidaDb, err := db.NewDefaultBaseDB(aidaDbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = ext.PreRun(executor.State[any]{}, &executor.Context{AidaDb: aidaDb, State: stateDb})
+	if err == nil {
+		t.Fatal("run must fail")
+	}
+
+	want := "cannot prime state-db; stop"
+
+	if err.Error() != want {
+		t.Fatalf("unexpected error\ngot: %v\nwant: %v", err, want)
+	}
 }
 
 func TestStateDbPrimerExtension_AttemptToPrimeBlockZeroDoesNotFail(t *testing.T) {
@@ -125,8 +147,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			alloc, _ := utils.MakeWorldState(t)
-			ws := substatecontext.NewWorldState(alloc)
+			ws, _ := utils.MakeWorldState(t)
 
 			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB
@@ -174,6 +195,8 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
+	aidaDbPath := t.TempDir() + "aidadb"
+	stateDb := state.NewMockStateDB(ctrl)
 
 	cfg := &utils.Config{}
 	cfg.SkipPriming = false
@@ -191,9 +214,29 @@ func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
 		log.EXPECT().Infof("Update buffer size: %v bytes", uint64(1024)),
 		log.EXPECT().Noticef("Priming from block %v...", uint64(0)),
 		log.EXPECT().Noticef("Priming to block %v...", uint64(9)),
+		log.EXPECT().Debugf("\tLoading %d accounts with %d values ..", 0, 0),
+		stateDb.EXPECT().BeginBlock(uint64(0)),
+		stateDb.EXPECT().BeginTransaction(uint32(0)),
+		stateDb.EXPECT().EndTransaction(),
+		stateDb.EXPECT().EndBlock(),
+		stateDb.EXPECT().StartBulkLoad(uint64(1)).Return(nil, errors.New("stop")),
 	)
 
-	ext.PreRun(executor.State[any]{}, &executor.Context{})
+	aidaDb, err := db.NewDefaultBaseDB(aidaDbPath)
+	if err != nil {
+		t.Fatalf("cannot open test aida-db; %v", err)
+	}
+
+	err = ext.PreRun(executor.State[any]{}, &executor.Context{AidaDb: aidaDb, State: stateDb})
+	if err == nil {
+		t.Fatal("run must fail")
+	}
+
+	want := "cannot prime state-db; failed to prime StateDB: stop"
+
+	if err.Error() != want {
+		t.Fatalf("unexpected error\ngot: %v\nwant: %v", err, want)
+	}
 }
 
 // make sure that the stateDb contains data from both the first and the second priming
@@ -213,7 +256,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := substatecontext.NewWorldState(alloc)
+			ws := txcontext.NewWorldState(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB
@@ -280,7 +323,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 				}
 			}()
 
-			err = sDB2.BeginBlock(uint64(3))
+			err = sDB2.BeginBlock(uint64(7))
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
 			}
@@ -323,16 +366,16 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 
 			// Generating randomized world state
 			alloc2, _ := utils.MakeWorldState(t)
-			ws2 := substatecontext.NewWorldState(alloc2)
+			ws2 := txcontext.NewWorldState(alloc2)
 
-			pc2 := utils.NewPrimeContext(cfg, sDB2, 4, log)
+			pc2 := utils.NewPrimeContext(cfg, sDB2, 8, log)
 			// Priming state DB
 			err = pc2.PrimeStateDB(ws2, sDB2)
 			if err != nil {
 				t.Fatalf("failed to prime state DB2: %v", err)
 			}
 
-			err = sDB2.BeginBlock(uint64(6))
+			err = sDB2.BeginBlock(uint64(10))
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
 			}

@@ -17,40 +17,36 @@
 package substate
 
 import (
-	"math/big"
-
 	"github.com/Fantom-foundation/Aida/txcontext"
-	oldSubstate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 )
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use NewSubstateAccount instead.
-func NewAccount(acc *oldSubstate.SubstateAccount) txcontext.Account {
+func NewAccount(acc *substate.Account) txcontext.Account {
 	return &account{acc}
 }
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use substateAccount instead.
 type account struct {
-	*oldSubstate.SubstateAccount
+	*substate.Account
 }
 
 func (a *account) GetNonce() uint64 {
 	return a.Nonce
 }
 
-func (a *account) GetBalance() *big.Int {
-	return a.Balance
+func (a *account) GetBalance() *uint256.Int {
+	return uint256.MustFromBig(a.Balance)
 }
 
 func (a *account) HasStorageAt(key common.Hash) bool {
-	_, ok := a.Storage[key]
+	_, ok := a.Storage[substatetypes.Hash(key)]
 	return ok
 }
 
 func (a *account) GetStorageAt(hash common.Hash) common.Hash {
-	return a.Storage[hash]
+	return common.Hash(a.Storage[substatetypes.Hash(hash)])
 }
 
 func (a *account) GetCode() []byte {
@@ -63,7 +59,7 @@ func (a *account) GetStorageSize() int {
 
 func (a *account) ForEachStorage(h txcontext.StorageHandler) {
 	for keyHash, valueHash := range a.Storage {
-		h(keyHash, valueHash)
+		h(common.Hash(keyHash), common.Hash(valueHash))
 	}
 }
 

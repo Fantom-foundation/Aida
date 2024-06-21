@@ -30,6 +30,7 @@ import (
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -109,7 +110,6 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 
 	vmCfg.InterpreterImpl = cfg.VmImpl
 	vmCfg.Tracer = nil
-	vmCfg.Debug = false
 
 	return &TxProcessor{
 		cfg:       cfg,
@@ -158,7 +158,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	// prepare tx
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
-	db.Prepare(txHash, tx)
+	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, s.chainCfg, s.vmCfg)
@@ -184,7 +184,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 	// if no prior error, create result and pass it to the data.
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-	res = newTransactionResult(db.GetLogs(txHash, blockHash), msg, msgResult, err, evm.TxContext.Origin)
+	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, err, evm.TxContext.Origin)
 	return
 }
 
@@ -192,8 +192,8 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
 func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
 	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
-		db.SubBalance(addr, db.GetBalance(addr))
-		db.AddBalance(addr, acc.GetBalance())
+		db.SubBalance(addr, db.GetBalance(addr), tracing.BalanceChangeUnspecified)
+		db.AddBalance(addr, acc.GetBalance(), tracing.BalanceChangeUnspecified)
 		db.SetNonce(addr, acc.GetNonce())
 		db.SetCode(addr, acc.GetCode())
 		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
@@ -216,7 +216,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 		Transfer:    core.Transfer,
 		Coinbase:    inputEnv.GetCoinbase(),
 		BlockNumber: new(big.Int).SetUint64(inputEnv.GetNumber()),
-		Time:        new(big.Int).SetUint64(inputEnv.GetTimestamp()),
+		Time:        inputEnv.GetTimestamp(),
 		Difficulty:  inputEnv.GetDifficulty(),
 		GasLimit:    inputEnv.GetGasLimit(),
 		GetHash:     getHash,

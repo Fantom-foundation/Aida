@@ -17,6 +17,8 @@
 package executor
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
@@ -68,15 +70,19 @@ func (r transactionResult) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(r, y)
 }
 
-func newTransactionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
+func (r transactionResult) String() string {
+	return fmt.Sprintf("Status: %v\nBloom: %s\nContract Address: %s\nGas Used: %v\nLogs: %v\n", r.status, string(r.bloom.Bytes()), r.contractAddress, r.gasUsed, r.logs)
+}
+
+func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64
 		status   uint64
 	)
 
-	if to := msg.To(); to == nil {
-		contract = crypto.CreateAddress(origin, msg.Nonce())
+	if msg.To == nil {
+		contract = crypto.CreateAddress(origin, msg.Nonce)
 	}
 
 	var returnData []byte

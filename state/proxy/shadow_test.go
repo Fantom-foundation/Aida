@@ -19,13 +19,14 @@ package proxy
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -115,11 +116,8 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 				t.Fatal("failed to create carmen state DB account; should be empty")
 			}
 
-			if !shadowDB.Suicide(addr) {
-				t.Fatal("failed to suicide carmen state DB account;")
-			}
-
-			if !shadowDB.HasSuicided(addr) {
+			shadowDB.SelfDestruct(addr)
+			if !shadowDB.HasSelfDestructed(addr) {
 				t.Fatal("failed to suicide carmen state DB account;")
 			}
 		})
@@ -145,19 +143,19 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 			shadowDB.CreateAccount(addr)
 
 			// get randomized balance
-			additionBase := state.GetRandom(1, 1000*5000)
-			addition := big.NewInt(int64(additionBase))
+			additionBase := state.GetRandom(t, 1, 5_000_000)
+			addition := uint256.NewInt(additionBase)
 
-			shadowDB.AddBalance(addr, addition)
+			shadowDB.AddBalance(addr, addition, 0)
 
 			if shadowDB.GetBalance(addr).Cmp(addition) != 0 {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := big.NewInt(int64(state.GetRandom(1, additionBase)))
-			expectedResult := big.NewInt(0).Sub(addition, subtraction)
+			subtraction := uint256.NewInt(state.GetRandom(t, 1, int(additionBase)))
+			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
-			shadowDB.SubBalance(addr, subtraction)
+			shadowDB.SubBalance(addr, subtraction, 0)
 
 			if shadowDB.GetBalance(addr).Cmp(expectedResult) != 0 {
 				t.Fatal("failed to subtract balance to carmen state DB account")
@@ -185,7 +183,7 @@ func TestShadowState_NonceOperations(t *testing.T) {
 			shadowDB.CreateAccount(addr)
 
 			// get randomized nonce
-			newNonce := uint64(state.GetRandom(1, 1000*5000))
+			newNonce := state.GetRandom(t, 1, 5_000_000)
 
 			shadowDB.SetNonce(addr, newNonce)
 
@@ -329,7 +327,7 @@ func TestShadowState_RefundOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			refundValue := uint64(state.GetRandom(10000*4000, 10000*5000))
+			refundValue := state.GetRandom(t, 40_000_000, 50_000_000)
 			shadowDB.AddRefund(refundValue)
 
 			if shadowDB.GetRefund() != refundValue {
@@ -362,7 +360,9 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 			}(shadowDB)
 
 			// prepare content of access list
+			rules := params.Rules{}
 			sender := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
+			coinbase := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 			dest := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 			precompiles := []common.Address{
 				common.BytesToAddress(state.MakeRandomByteSlice(t, 40)),
@@ -389,7 +389,7 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 			}
 
 			// create access list
-			shadowDB.PrepareAccessList(sender, &dest, precompiles, txAccesses)
+			shadowDB.Prepare(rules, sender, coinbase, &dest, precompiles, txAccesses)
 
 			// add some more data after the creation for good measure
 			newAddr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
@@ -461,7 +461,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newBalance := big.NewInt(int64(state.GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(state.GetRandom(t, 1, 5_000_000))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
@@ -505,7 +505,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newNonce := uint64(state.GetRandom(1, 1000*5000))
+			newNonce := state.GetRandom(t, 1, 5_000_000)
 
 			cbl.SetNonce(addr, newNonce)
 
@@ -644,7 +644,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				t.Fatalf("cannot end block; %v", err)
 			}
 
-			cbl, err := shadowDB.StartBulkLoad(2)
+			cbl, err := shadowDB.StartBulkLoad(7)
 			if err != nil {
 				t.Fatal(err)
 
@@ -652,12 +652,12 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 
 			for _, account := range accounts {
 				// randomized operation
-				operationType := state.GetRandom(0, 4)
+				operationType := state.GetRandom(t, 0, 4)
 
 				switch {
 				case operationType == 1:
 					// set balance
-					newBalance := big.NewInt(int64(state.GetRandom(0, 1000*5000)))
+					newBalance := uint256.NewInt(uint64(state.GetRandom(t, 0, 5_000_000)))
 
 					cbl.SetBalance(account, newBalance)
 				case operationType == 2:
@@ -673,7 +673,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 					cbl.SetState(account, key, value)
 				case operationType == 4:
 					// set nonce
-					newNonce := uint64(state.GetRandom(0, 1000*5000))
+					newNonce := uint64(state.GetRandom(t, 0, 5_000_000))
 
 					cbl.SetNonce(account, newNonce)
 				default:
@@ -743,11 +743,12 @@ func TestShadowState_GetLogs_Success(t *testing.T) {
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
+	block := uint64(0)
 
-	pdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
-	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
+	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
 
-	db.GetLogs(txHash, blockHash)
+	db.GetLogs(txHash, block, blockHash)
 	if err := db.Error(); err != nil {
 		t.Fatalf("Failed to compare logs; %v", err)
 	}
@@ -761,11 +762,12 @@ func TestShadowState_GetLogsExpectError_LengthDifferent(t *testing.T) {
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
+	block := uint64(0)
 
-	pdb.EXPECT().GetLogs(txHash, blockHash).Return(nil)
-	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return(nil)
+	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
 
-	db.GetLogs(txHash, blockHash)
+	db.GetLogs(txHash, block, blockHash)
 	if err := db.Error(); err == nil {
 		t.Fatal("Expect mismatched GetLogs lengths")
 	}
@@ -780,11 +782,12 @@ func TestShadowState_GetLogsExpectError_BloomDifferent(t *testing.T) {
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
 	log2 := &types.Log{Address: common.HexToAddress("0x3")}
+	block := uint64(0)
 
-	pdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
-	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log2})
+	pdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log1})
+	sdb.EXPECT().GetLogs(txHash, block, blockHash).Return([]*types.Log{log2})
 
-	db.GetLogs(txHash, blockHash)
+	db.GetLogs(txHash, block, blockHash)
 	if err := db.Error(); err == nil {
 		t.Fatal("Expect mismatched log values")
 	}

@@ -97,7 +97,7 @@ func TestChainConduit_IsFinalise(t *testing.T) {
 	}
 	for _, test := range tests {
 		c := NewChainConduit(test.isEthereum, test.chainConfig)
-		got := c.IsFinalise(test.block)
+		got := c.IsFinalise(test.block.Uint64())
 		if got != test.want {
 			t.Errorf("ChainConduit.IsFinalise(%v)[%v, %v] = %v, want %v", test.block, test.isEthereum, test.chainConfig, got, test.want)
 		}
@@ -144,7 +144,7 @@ func TestChainConduit_DeleteEmptyObjects(t *testing.T) {
 	}
 	for _, test := range tests {
 		c := NewChainConduit(test.isEthereum, test.chainConfig)
-		got := c.DeleteEmptyObjects(test.block)
+		got := c.DeleteEmptyObjects(test.block.Uint64())
 		if got != test.want {
 			t.Errorf("ChainConduit.DeleteEmptyObjects(%v)[%v, %v] = %v, want %v", test.block, test.isEthereum, test.chainConfig, got, test.want)
 		}

@@ -27,6 +27,7 @@ type Result interface {
 	GetReceipt() Receipt
 	GetRawResult() ([]byte, error)
 	GetGasUsed() uint64
+	String() string
 }
 
 // Receipt represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.
@@ -49,6 +50,49 @@ type Receipt interface {
 	// Equal checks if the current result is equal to the provided result.
 	// Note: Have a look at ReceiptEqual.
 	Equal(y Receipt) bool
+}
+
+func NewResult(status uint64, bloom types.Bloom, logs []*types.Log, contractAddress common.Address, gasUsed uint64) Receipt {
+	return &result{
+		status:          status,
+		bloom:           bloom,
+		logs:            logs,
+		contractAddress: contractAddress,
+		gasUsed:         gasUsed,
+	}
+}
+
+// Result is the transaction result - hence receipt
+type result struct {
+	status          uint64
+	bloom           types.Bloom
+	logs            []*types.Log
+	contractAddress common.Address
+	gasUsed         uint64
+}
+
+func (r result) GetStatus() uint64 {
+	return r.status
+}
+
+func (r result) GetBloom() types.Bloom {
+	return r.bloom
+}
+
+func (r result) GetLogs() []*types.Log {
+	return r.logs
+}
+
+func (r result) GetContractAddress() common.Address {
+	return r.contractAddress
+}
+
+func (r result) GetGasUsed() uint64 {
+	return r.gasUsed
+}
+
+func (r result) Equal(y Receipt) bool {
+	return ReceiptEqual(r, y)
 }
 
 func ReceiptEqual(x, y Receipt) bool {

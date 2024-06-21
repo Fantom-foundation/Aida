@@ -21,20 +21,16 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use NewSubstateEnv instead.
-func NewBlockEnvironment(env *substate.SubstateEnv) txcontext.BlockEnvironment {
+func NewBlockEnvironment(env *substate.Env) txcontext.BlockEnvironment {
 	return &blockEnvironment{env}
 }
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use substateEnv instead.
 type blockEnvironment struct {
-	*substate.SubstateEnv
+	*substate.Env
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
@@ -49,7 +45,7 @@ func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
 }
 
 func (e *blockEnvironment) GetCoinbase() common.Address {
-	return e.Coinbase
+	return common.Address(e.Coinbase)
 }
 
 func (e *blockEnvironment) GetDifficulty() *big.Int {

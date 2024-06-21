@@ -17,33 +17,27 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 )
 
 // GenerateUpdateSet generates an update set for a block range.
-func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
+func GenerateUpdateSet(first uint64, last uint64, cfg *Config, aidaDb db.BaseDB) (substate.WorldState, []substatetypes.Address, error) {
 	var (
-		deletedAccountDB *substate.DestroyedAccountDB
-		deletedAccounts  []common.Address
-		err              error
+		deletedAccountDB *db.DestroyedAccountDB
+		deletedAccounts  []substatetypes.Address
 	)
-	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
-	update := make(substate.SubstateAlloc)
+	sdb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
+	stateIter := sdb.NewSubstateIterator(int(first), cfg.Workers)
+	update := make(substate.WorldState)
 	defer stateIter.Release()
 
 	// Todo rewrite in wrapping functions
-	deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer deletedAccountDB.Close()
-
+	deletedAccountDB = db.MakeDefaultDestroyedAccountDBFromBaseDB(aidaDb)
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		// exceeded block range?
@@ -53,8 +47,7 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 
 		// if this transaction has suicided accounts, clear their states.
 		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
-
-		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
+		if err != nil {
 			return update, deletedAccounts, fmt.Errorf("failed to get deleted account. %v", err)
 		}
 		// reset storagea
@@ -67,23 +60,23 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 		}
 
 		// merge output substate to update
-		update.Merge(tx.Substate.OutputAlloc)
+		update.Merge(tx.OutputSubstate)
 	}
 	return update, deletedAccounts, nil
 }
 
 // GenerateWorldStateFromUpdateDB generates an initial world-state
 // from pre-computed update-set
-func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.SubstateAlloc, error) {
-	ws := make(substate.SubstateAlloc)
+func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.WorldState, error) {
+	ws := make(substate.WorldState)
 	block := uint64(0)
 	// load pre-computed update-set from update-set db
-	db, err := substate.OpenUpdateDBReadOnly(cfg.AidaDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
-	updateIter := substate.NewUpdateSetIterator(db, block, target)
+	defer udb.Close()
+	updateIter := udb.NewUpdateSetIterator(block, target)
 	for updateIter.Next() {
 		blk := updateIter.Value()
 		if blk.Block > target {
@@ -94,13 +87,13 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 		// The known accessed storage locations in the updateset range has already been
 		// reset when generating the update set database.
 		ClearAccountStorage(ws, blk.DeletedAccounts)
-		ws.Merge(*blk.UpdateSet)
+		ws.Merge(blk.WorldState)
 		block++
 	}
 	updateIter.Release()
 
 	// advance from the latest precomputed updateset to the target block
-	update, _, err := GenerateUpdateSet(block, target, cfg)
+	update, _, err := GenerateUpdateSet(block, target, cfg, udb)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +103,10 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 }
 
 // ClearAccountStorage clears storage of all input accounts.
-func ClearAccountStorage(update substate.SubstateAlloc, accounts []common.Address) {
+func ClearAccountStorage(update substate.WorldState, accounts []substatetypes.Address) {
 	for _, addr := range accounts {
 		if _, found := update[addr]; found {
-			update[addr].Storage = make(map[common.Hash]common.Hash)
+			update[addr].Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 		}
 	}
 }

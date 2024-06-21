@@ -20,7 +20,9 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -32,7 +34,7 @@ var GetCodeSizeCommand = cli.Command{
 	Usage:     "reports code size and nonce of smart contracts in the specified block range",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 	},
@@ -46,11 +48,11 @@ last block of the inclusive range of blocks to replay transactions.
 Output log format: (block, timestamp, transaction, account, code size, nonce, transaction type)`,
 }
 
-func GetTxType(to *common.Address, alloc substate.SubstateAlloc) string {
+func GetTxType(to *common.Address, alloc substate.WorldState) string {
 	if to == nil {
 		return "create"
 	}
-	account, hasReceiver := alloc[*to]
+	account, hasReceiver := alloc[substatetypes.Address(*to)]
 	if to != nil && (!hasReceiver || len(account.Code) == 0) {
 		return "transfer"
 	}
@@ -61,27 +63,27 @@ func GetTxType(to *common.Address, alloc substate.SubstateAlloc) string {
 }
 
 // getCodeSizeTask returns codesize and nonce of accounts in a substate
-func getCodeSizeTask(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func getCodeSizeTask(block uint64, tx int, st *substate.Substate, taskPool *db.SubstateTaskPool) error {
 	to := st.Message.To
 	timestamp := st.Env.Timestamp
-	txType := GetTxType(to, st.InputAlloc)
-	for account, accountInfo := range st.OutputAlloc {
+	txType := GetTxType((*common.Address)(to), st.InputSubstate)
+	for account, accountInfo := range st.OutputSubstate {
 		fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n",
 			block,
 			timestamp,
 			tx,
-			account.Hex(),
+			account.String(),
 			len(accountInfo.Code),
 			accountInfo.Nonce,
 			txType)
 	}
-	for account, accountInfo := range st.InputAlloc {
-		if _, found := st.OutputAlloc[account]; !found {
+	for account, accountInfo := range st.InputSubstate {
+		if _, found := st.OutputSubstate[account]; !found {
 			fmt.Printf("metric: %v,%v,%v,%v,%v,%v,%v\n",
 				block,
 				timestamp,
 				tx,
-				account.Hex(),
+				account.String(),
 				len(accountInfo.Code),
 				accountInfo.Nonce,
 				txType)
@@ -101,11 +103,12 @@ func getCodeSizeAction(ctx *cli.Context) error {
 
 	fmt.Printf("chain-id: %v\n", cfg.ChainID)
 
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
 
-	taskPool := substate.NewSubstateTaskPool("aida-vm storage", getCodeSizeTask, cfg.First, cfg.Last, ctx)
+	taskPool := sdb.NewSubstateTaskPool("aida-vm storage", getCodeSizeTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

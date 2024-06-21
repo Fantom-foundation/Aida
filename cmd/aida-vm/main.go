@@ -22,7 +22,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,7 +34,7 @@ func main() {
 		ArgsUsage: "<blockNumFirst> <blockNumLast>",
 		// TODO: derive supported flags from utilized executor extensions.
 		Flags: []cli.Flag{
-			&substate.WorkersFlag,
+			&utils.WorkersFlag,
 			//&substate.SkipTransferTxsFlag,
 			//&substate.SkipCallTxsFlag,
 			//&substate.SkipCreateTxsFlag,
@@ -56,6 +55,7 @@ func main() {
 			&utils.ErrorLoggingFlag,
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbLoggingFlag,
+			&utils.CacheFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

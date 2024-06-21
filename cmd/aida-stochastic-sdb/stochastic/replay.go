@@ -71,7 +71,8 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("missing simulation file and simulation length as parameter")
 	}
-	simLength, perr := strconv.ParseInt(ctx.Args().Get(0), 10, 64)
+
+	simLength, perr := strconv.Atoi(ctx.Args().Get(0))
 	if perr != nil {
 		return fmt.Errorf("simulation length is not an integer; %v", perr)
 	}
@@ -119,7 +120,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// run simulation.
 	log.Info("Run simulation")
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, logger.NewLogger(cfg.LogLevel, "Stochastic"))
+	runErr := stochastic.RunStochasticReplay(db, simulation, simLength, cfg, logger.NewLogger(cfg.LogLevel, "Stochastic"))
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {

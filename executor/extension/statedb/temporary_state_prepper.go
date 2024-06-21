@@ -22,7 +22,6 @@ import (
 	statedb "github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 )
 
 // MakeTemporaryStatePrepper creates an executor.Extension which Makes a fresh StateDb
@@ -31,12 +30,11 @@ import (
 func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	switch cfg.DbImpl {
 	case "in-memory", "memory":
-		return temporaryInMemoryStatePrepper{}
+		return &temporaryInMemoryStatePrepper{}
 	case "off-the-chain":
 		fallthrough
 	default:
 		// offTheChainStateDb is default value
-		substate.RecordReplay = true
 		return &temporaryOffTheChainStatePrepper{
 			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)),
 		}
@@ -49,7 +47,7 @@ type temporaryInMemoryStatePrepper struct {
 	extension.NilExtension[txcontext.TxContext]
 }
 
-func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (p *temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	alloc := state.Data.GetInputState()
 	ctx.State = statedb.MakeInMemoryStateDB(alloc, uint64(state.Block))
 	return nil

@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"math/big"
 	"strings"
 	"testing"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -70,13 +70,13 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		// Req 1
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
 		archiveOne.EXPECT().BeginTransaction(uint32(1)),
-		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
 		archiveOne.EXPECT().EndTransaction(),
 		archiveOne.EXPECT().Release(),
 		// Req 2
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveTwo, nil),
 		archiveTwo.EXPECT().BeginTransaction(uint32(2)),
-		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
 		archiveTwo.EXPECT().EndTransaction(),
 		archiveTwo.EXPECT().Release(),
 		// Req 3
@@ -133,7 +133,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		// Req 1
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
 		archiveOne.EXPECT().BeginTransaction(uint32(1)),
-		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
 		archiveOne.EXPECT().EndTransaction(),
 		archiveOne.EXPECT().Release(),
 	)
@@ -354,7 +354,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		archive.EXPECT().BeginTransaction(uint32(1)),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
 		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
@@ -396,7 +396,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		archive.EXPECT().BeginTransaction(uint32(1)),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
 		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
@@ -438,7 +438,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		archive.EXPECT().BeginTransaction(uint32(1)),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(2)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(2)),
 		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
@@ -484,7 +484,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		archive.EXPECT().BeginTransaction(uint32(1)),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(2)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(2)),
 		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)

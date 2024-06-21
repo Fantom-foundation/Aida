@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -113,12 +113,12 @@ func MakeTestConfig(testCase StateDbTestCase) *Config {
 }
 
 // MakeWorldState generates randomized world state containing 100 accounts
-func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
+func MakeWorldState(t *testing.T) (txcontext.AidaWorldState, []common.Address) {
 	// create list of addresses
 	var addrList []common.Address
 
 	// create world state
-	ws := make(substate.SubstateAlloc)
+	ws := make(map[common.Address]txcontext.Account)
 
 	for i := 0; i < 100; i++ {
 		// create random address
@@ -127,13 +127,13 @@ func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 		// add to address list
 		addrList = append(addrList, addr)
 
-		acc := substate.SubstateAccount{
-			Nonce:   uint64(GetRandom(1, 1000*5000)),
-			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
-			Storage: MakeAccountStorage(t),
-			Code:    MakeRandomByteSlice(t, 2048),
-		}
-		ws[addr] = &acc
+		acc := txcontext.NewAccount(
+			MakeRandomByteSlice(t, 2048),
+			MakeAccountStorage(t),
+			big.NewInt(int64(GetRandom(1, 1000*5000))),
+			uint64(GetRandom(1, 1000*5000)),
+		)
+		ws[addr] = acc
 
 		// create account
 

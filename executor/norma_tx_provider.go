@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // treasureAccountPrivateKey is the private key of the treasure account.
@@ -167,7 +168,7 @@ func (p normaTxProvider) initializeTreasureAccount(blkNumber int) (*app.Account,
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
 	// fund the treasure account directly in the state database
-	amount := big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(2_000_000_000))
+	amount := uint256.NewInt(0).Mul(uint256.NewInt(params.Ether), uint256.NewInt(2_000_000_000))
 	// we need to begin and end the block and transaction to be able to create an account
 	// and add balance to it (otherwise the account would not be funded for geth storage implementation)
 	err = p.stateDb.BeginBlock(uint64(blkNumber))
@@ -179,7 +180,7 @@ func (p normaTxProvider) initializeTreasureAccount(blkNumber int) (*app.Account,
 		return nil, fmt.Errorf("cannot begin transaction; %w", err)
 	}
 	p.stateDb.CreateAccount(fromAddress)
-	p.stateDb.AddBalance(fromAddress, amount)
+	p.stateDb.AddBalance(fromAddress, amount, 0)
 	err = p.stateDb.EndTransaction()
 	if err != nil {
 		return nil, fmt.Errorf("cannot end transaction; %w", err)
@@ -258,7 +259,7 @@ func (f fakeRpcClient) BalanceAt(_ context.Context, account common.Address, _ *b
 	if err != nil {
 		return nil, err
 	}
-	return balance, nil
+	return balance.ToBig(), nil
 }
 
 func (f fakeRpcClient) Close() {

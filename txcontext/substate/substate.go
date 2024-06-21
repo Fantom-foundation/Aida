@@ -18,9 +18,10 @@ package substate
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func NewTxContext(data *substate.Substate) txcontext.TxContext {
@@ -31,45 +32,49 @@ type substateData struct {
 	*substate.Substate
 }
 
-func (t *substateData) GetResult() txcontext.Result {
-	return NewResult(t.Result)
-}
-
 func (t *substateData) GetStateHash() common.Hash {
-	// ignored
 	return common.Hash{}
 }
 
 func (t *substateData) GetInputState() txcontext.WorldState {
-	return NewWorldState(t.InputAlloc)
+	return NewWorldState(t.InputSubstate)
 }
 
 func (t *substateData) GetOutputState() txcontext.WorldState {
-	return NewWorldState(t.OutputAlloc)
+	return NewWorldState(t.OutputSubstate)
 }
 
 func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return NewBlockEnvironment(t.Env)
 }
 
-func (t *substateData) GetMessage() core.Message {
-	return t.Message.AsMessage()
+func (t *substateData) GetMessage() *core.Message {
+	// todo remove iteration once fantom types are created
+	var list types.AccessList
+	for _, tuple := range t.Message.AccessList {
+		var keys []common.Hash
+		for _, key := range tuple.StorageKeys {
+			keys = append(keys, common.Hash(key))
+		}
+		list = append(list, types.AccessTuple{Address: common.Address(tuple.Address), StorageKeys: keys})
+	}
+	return &core.Message{
+		(*common.Address)(t.Message.To),
+		common.Address(t.Message.From),
+		t.Message.Nonce,
+		t.Message.Value,
+		t.Message.Gas,
+		t.Message.GasPrice,
+		t.Message.GasFeeCap,
+		t.Message.GasTipCap,
+		t.Message.Data,
+		list,
+		nil,             //TODO support BlobGasFeeCap
+		[]common.Hash{}, //TODO support BlobHashes
+		!t.Message.CheckNonce,
+	}
 }
 
-type substateResult struct {
-}
-
-func (s substateResult) GetReceipt() txcontext.Receipt {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s substateResult) GetRawResult() ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s substateResult) GetGasUsed() uint64 {
-	//TODO implement me
-	panic("implement me")
+func (t *substateData) GetResult() txcontext.Result {
+	return NewReceipt(t.Result)
 }

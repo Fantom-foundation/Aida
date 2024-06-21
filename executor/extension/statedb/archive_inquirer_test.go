@@ -29,8 +29,9 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -104,21 +105,24 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	db.EXPECT().GetArchiveState(uint64(14)).MinTimes(1).Return(archive, nil)
 
 	archive.EXPECT().BeginTransaction(gomock.Any()).MinTimes(1)
-	archive.EXPECT().Prepare(gomock.Any(), gomock.Any()).AnyTimes()
+	archive.EXPECT().SetTxContext(gomock.Any(), gomock.Any()).AnyTimes()
 	archive.EXPECT().Snapshot().AnyTimes()
-	archive.EXPECT().GetBalance(gomock.Any()).AnyTimes().Return(big.NewInt(1000))
+	archive.EXPECT().GetBalance(gomock.Any()).AnyTimes().Return(uint256.NewInt(1000))
 	archive.EXPECT().GetNonce(gomock.Any()).AnyTimes().Return(uint64(0))
 	archive.EXPECT().SetNonce(gomock.Any(), gomock.Any()).AnyTimes().Return()
 	archive.EXPECT().GetCodeHash(gomock.Any()).AnyTimes().Return(common.Hash{})
-	archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	archive.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	archive.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
-	archive.EXPECT().AddBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	archive.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	archive.EXPECT().SetCode(gomock.Any(), gomock.Any()).AnyTimes()
 	archive.EXPECT().GetRefund().AnyTimes()
 	archive.EXPECT().RevertToSnapshot(gomock.Any()).AnyTimes()
-	archive.EXPECT().GetLogs(gomock.Any(), gomock.Any()).AnyTimes()
+	archive.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	archive.EXPECT().EndTransaction().AnyTimes()
 	archive.EXPECT().Release().MinTimes(1)
+	archive.EXPECT().GetStorageRoot(gomock.Any()).AnyTimes()
+	archive.EXPECT().Exist(gomock.Any()).AnyTimes()
+	archive.EXPECT().CreateContract(gomock.Any()).AnyTimes()
 
 	ext := makeArchiveInquirer(&cfg, log)
 	if err := ext.PreRun(state, &context); err != nil {
@@ -150,15 +154,15 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 func makeValidSubstate() txcontext.TxContext {
 	// This Substate is a minimal data that can be successfully processed.
 	sub := &substate.Substate{
-		Env: &substate.SubstateEnv{
+		Env: &substate.Env{
 			GasLimit: 100_000_000,
 		},
-		Message: &substate.SubstateMessage{
+		Message: &substate.Message{
 			Gas:      100_000,
 			GasPrice: big.NewInt(0),
 			Value:    big.NewInt(0),
 		},
-		Result: &substate.SubstateResult{
+		Result: &substate.Result{
 			GasUsed: 1,
 		},
 	}

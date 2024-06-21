@@ -62,7 +62,7 @@ func (s *StJSON) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return &s.Env
 }
 
-func (s *StJSON) GetMessage() core.Message {
+func (s *StJSON) GetMessage() *core.Message {
 	baseFee := s.Env.BaseFee
 	if baseFee == nil {
 		// ethereum uses `0x10` for genesis baseFee. Therefore, it defaults to

@@ -19,12 +19,13 @@ package stochastic
 // TODO: Provide Mocking tests for proxy
 
 import (
-	"math/big"
-
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // EventProxy data structure for capturing StateDB events
@@ -53,25 +54,25 @@ func (p *EventProxy) CreateAccount(address common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {
+func (p *EventProxy) SubBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	// register event
 	p.registry.RegisterAddressOp(SubBalanceID, &address)
 
 	// call real StateDB
-	p.db.SubBalance(address, amount)
+	p.db.SubBalance(address, amount, reason)
 }
 
 // AddBalance adds amount to a contract address.
-func (p *EventProxy) AddBalance(address common.Address, amount *big.Int) {
+func (p *EventProxy) AddBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	// register event
 	p.registry.RegisterAddressOp(AddBalanceID, &address)
 
 	// call real StateDB
-	p.db.AddBalance(address, amount)
+	p.db.AddBalance(address, amount, reason)
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (p *EventProxy) GetBalance(address common.Address) *big.Int {
+func (p *EventProxy) GetBalance(address common.Address) *uint256.Int {
 	// register event
 	p.registry.RegisterAddressOp(GetBalanceID, &address)
 
@@ -187,22 +188,22 @@ func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) com
 	return p.db.GetState(addr, key)
 }
 
-// Suicide an account.
-func (p *EventProxy) Suicide(address common.Address) bool {
+// SelfDestruct an account.
+func (p *EventProxy) SelfDestruct(address common.Address) {
 	// register event
 	p.registry.RegisterAddressOp(SuicideID, &address)
 
 	// call real StateDB
-	return p.db.Suicide(address)
+	p.db.SelfDestruct(address)
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (p *EventProxy) HasSuicided(address common.Address) bool {
+// HasSelfDestructed checks whether a contract has been suicided.
+func (p *EventProxy) HasSelfDestructed(address common.Address) bool {
 	// register event
 	p.registry.RegisterAddressOp(HasSuicidedID, &address)
 
 	// call real StateDB
-	return p.db.HasSuicided(address)
+	return p.db.HasSelfDestructed(address)
 }
 
 // Exist checks whether the contract exists in the StateDB.
@@ -224,10 +225,10 @@ func (p *EventProxy) Empty(address common.Address) bool {
 	return p.db.Empty(address)
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition.
-func (p *EventProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+// Prepare handles the preparatory steps for executing a state transition.
+func (p *EventProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	// call real StateDB
-	p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+	p.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 }
 
 // AddAddressToAccessList adds an address to the access list.
@@ -296,9 +297,9 @@ func (p *EventProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (p *EventProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+func (p *EventProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	// call real StateDB
-	return p.db.GetLogs(hash, blockHash)
+	return p.db.GetLogs(hash, block, blockHash)
 }
 
 // AddPreimage adds a SHA3 preimage.
@@ -307,16 +308,10 @@ func (p *EventProxy) AddPreimage(address common.Hash, image []byte) {
 	p.db.AddPreimage(address, image)
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (p *EventProxy) ForEachStorage(address common.Address, fn func(common.Hash, common.Hash) bool) error {
+// SetTxContext sets the current transaction hash and index.
+func (p *EventProxy) SetTxContext(thash common.Hash, ti int) {
 	// call real StateDB
-	return p.db.ForEachStorage(address, fn)
-}
-
-// Prepare sets the current transaction hash and index.
-func (p *EventProxy) Prepare(thash common.Hash, ti int) {
-	// call real StateDB
-	p.db.Prepare(thash, ti)
+	p.db.SetTxContext(thash, ti)
 }
 
 // Finalise the state in StateDB.
@@ -332,9 +327,9 @@ func (p *EventProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 }
 
 // Commit StateDB
-func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (p *EventProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	// call real StateDB
-	return p.db.Commit(deleteEmptyObjects)
+	return p.db.Commit(block, deleteEmptyObjects)
 }
 
 func (p *EventProxy) GetHash() (common.Hash, error) {
@@ -437,4 +432,25 @@ func (p *EventProxy) GetArchiveBlockHeight() (uint64, bool, error) {
 
 func (p *EventProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
+}
+
+// TODO support new operations
+func (p *EventProxy) CreateContract(addr common.Address) {
+	p.db.CreateContract(addr)
+}
+
+func (p *EventProxy) Selfdestruct6780(addr common.Address) {
+	p.db.Selfdestruct6780(addr)
+}
+
+func (p *EventProxy) GetStorageRoot(addr common.Address) common.Hash {
+	return p.db.GetStorageRoot(addr)
+}
+
+func (p *EventProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.db.SetTransientState(addr, key, value)
+}
+
+func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return p.db.GetTransientState(addr, key)
 }

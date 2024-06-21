@@ -18,14 +18,16 @@ package proxy
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // RecorderProxy data structure for capturing and recording
@@ -56,21 +58,21 @@ func (r *RecorderProxy) CreateAccount(addr common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (r *RecorderProxy) SubBalance(addr common.Address, amount *big.Int) {
+func (r *RecorderProxy) SubBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewSubBalance(contract, amount))
-	r.db.SubBalance(addr, amount)
+	r.db.SubBalance(addr, amount, reason)
 }
 
 // AddBalance adds amount to a contract address.
-func (r *RecorderProxy) AddBalance(addr common.Address, amount *big.Int) {
+func (r *RecorderProxy) AddBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewAddBalance(contract, amount))
-	r.db.AddBalance(addr, amount)
+	r.db.AddBalance(addr, amount, reason)
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (r *RecorderProxy) GetBalance(addr common.Address) *big.Int {
+func (r *RecorderProxy) GetBalance(addr common.Address) *uint256.Int {
 	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewGetBalance(contract))
 	balance := r.db.GetBalance(addr)
@@ -194,6 +196,7 @@ func (r *RecorderProxy) SetState(addr common.Address, key common.Hash, value com
 	r.db.SetState(addr, key, value)
 }
 
+
 func (r *RecorderProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
 	previousContract := r.ctx.PrevContract()
 	contract := r.ctx.EncodeContract(addr)
@@ -228,20 +231,19 @@ func (r *RecorderProxy) GetTransientState(addr common.Address, key common.Hash) 
 	return value
 }
 
-// Suicide marks the given account as suicided. This clears the account balance.
+// SelfDestruct marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
-// return a non-nil account after Suicide.
-func (r *RecorderProxy) Suicide(addr common.Address) bool {
+// return a non-nil account after SelfDestruct.
+func (r *RecorderProxy) SelfDestruct(addr common.Address) {
 	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewSuicide(contract))
-	ok := r.db.Suicide(addr)
-	return ok
+	r.db.SelfDestruct(addr)
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (r *RecorderProxy) HasSuicided(addr common.Address) bool {
-	hasSuicided := r.db.HasSuicided(addr)
-	return hasSuicided
+// HasSelfDestructed checks whether a contract has been suicided.
+func (r *RecorderProxy) HasSelfDestructed(addr common.Address) bool {
+	hasSelfDestructed := r.db.HasSelfDestructed(addr)
+	return hasSelfDestructed
 }
 
 // Exist checks whether the contract exists in the StateDB.
@@ -268,8 +270,8 @@ func (r *RecorderProxy) Empty(addr common.Address) bool {
 // - Add the contents of the optional tx access list (2930)
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
-func (r *RecorderProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	r.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+func (r *RecorderProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	r.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 }
 
 // AddAddressToAccessList adds an address to the access list.
@@ -314,8 +316,8 @@ func (r *RecorderProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (r *RecorderProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	return r.db.GetLogs(hash, blockHash)
+func (r *RecorderProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	return r.db.GetLogs(hash, block, blockHash)
 }
 
 // AddPreimage adds a SHA3 preimage.
@@ -323,15 +325,9 @@ func (r *RecorderProxy) AddPreimage(addr common.Hash, image []byte) {
 	r.db.AddPreimage(addr, image)
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (r *RecorderProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	err := r.db.ForEachStorage(addr, fn)
-	return err
-}
-
-// Prepare sets the current transaction hash and index.
-func (r *RecorderProxy) Prepare(thash common.Hash, ti int) {
-	r.db.Prepare(thash, ti)
+// SetTxContext sets the current transaction hash and index.
+func (r *RecorderProxy) SetTxContext(thash common.Hash, ti int) {
+	r.db.SetTxContext(thash, ti)
 }
 
 // Finalise the state in StateDB.
@@ -347,8 +343,8 @@ func (r *RecorderProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return r.db.IntermediateRoot(deleteEmptyObjects)
 }
 
-func (r *RecorderProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return r.db.Commit(deleteEmptyObjects)
+func (r *RecorderProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
+	return r.db.Commit(block, deleteEmptyObjects)
 }
 
 func (r *RecorderProxy) Error() error {
@@ -425,4 +421,15 @@ func (r *RecorderProxy) GetMemoryUsage() *state.MemoryUsage {
 
 func (r *RecorderProxy) GetShadowDB() state.StateDB {
 	return r.db.GetShadowDB()
+}
+func (r *RecorderProxy) CreateContract(addr common.Address) {
+	r.db.CreateContract(addr)
+}
+
+func (r *RecorderProxy) Selfdestruct6780(addr common.Address) {
+	r.db.Selfdestruct6780(addr)
+}
+
+func (r *RecorderProxy) GetStorageRoot(addr common.Address) common.Hash {
+	return r.db.GetStorageRoot(addr)
 }

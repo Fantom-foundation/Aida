@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/state"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	gomock "go.uber.org/mock/gomock"
 )
 

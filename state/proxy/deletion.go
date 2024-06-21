@@ -17,13 +17,14 @@
 package proxy
 
 import (
-	"math/big"
-
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 type ContractLiveliness struct {
@@ -55,17 +56,17 @@ func (r *DeletionProxy) CreateAccount(addr common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (r *DeletionProxy) SubBalance(addr common.Address, amount *big.Int) {
-	r.db.SubBalance(addr, amount)
+func (r *DeletionProxy) SubBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
+	r.db.SubBalance(addr, amount, reason)
 }
 
 // AddBalance adds amount to a contract address.
-func (r *DeletionProxy) AddBalance(addr common.Address, amount *big.Int) {
-	r.db.AddBalance(addr, amount)
+func (r *DeletionProxy) AddBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
+	r.db.AddBalance(addr, amount, reason)
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (r *DeletionProxy) GetBalance(addr common.Address) *big.Int {
+func (r *DeletionProxy) GetBalance(addr common.Address) *uint256.Int {
 	balance := r.db.GetBalance(addr)
 	return balance
 }
@@ -145,21 +146,18 @@ func (r *DeletionProxy) GetTransientState(addr common.Address, key common.Hash) 
 	return r.db.GetTransientState(addr, key)
 }
 
-// Suicide marks the given account as suicided. This clears the account balance.
+// SelfDestruct marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
-// return a non-nil account after Suicide.
-func (r *DeletionProxy) Suicide(addr common.Address) bool {
-	ok := r.db.Suicide(addr)
-	if ok {
-		r.ch <- ContractLiveliness{Addr: addr, IsDeleted: true}
-	}
-	return ok
+// return a non-nil account after SelfDestruct.
+func (r *DeletionProxy) SelfDestruct(addr common.Address) {
+	r.db.SelfDestruct(addr)
+	r.ch <- ContractLiveliness{Addr: addr, IsDeleted: true}
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (r *DeletionProxy) HasSuicided(addr common.Address) bool {
-	hasSuicided := r.db.HasSuicided(addr)
-	return hasSuicided
+// HasSelfDestructed checks whether a contract has been suicided.
+func (r *DeletionProxy) HasSelfDestructed(addr common.Address) bool {
+	hasSelfDestructed := r.db.HasSelfDestructed(addr)
+	return hasSelfDestructed
 }
 
 // Exist checks whether the contract exists in the StateDB.
@@ -175,7 +173,7 @@ func (r *DeletionProxy) Empty(addr common.Address) bool {
 	return empty
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition with
+// Prepare handles the preparatory steps for executing a state transition with
 // regards to both EIP-2929 and EIP-2930:
 //
 // - Add sender to access list (2929)
@@ -184,8 +182,8 @@ func (r *DeletionProxy) Empty(addr common.Address) bool {
 // - Add the contents of the optional tx access list (2930)
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
-func (r *DeletionProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	r.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+func (r *DeletionProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	r.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 }
 
 // AddAddressToAccessList adds an address to the access list.
@@ -227,8 +225,8 @@ func (r *DeletionProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (r *DeletionProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	return r.db.GetLogs(hash, blockHash)
+func (r *DeletionProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	return r.db.GetLogs(hash, block, blockHash)
 }
 
 // AddPreimage adds a SHA3 preimage.
@@ -236,14 +234,9 @@ func (r *DeletionProxy) AddPreimage(addr common.Hash, image []byte) {
 	r.db.AddPreimage(addr, image)
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (r *DeletionProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	return r.db.ForEachStorage(addr, fn)
-}
-
 // Prepare sets the current transaction hash and index.
-func (r *DeletionProxy) Prepare(thash common.Hash, ti int) {
-	r.db.Prepare(thash, ti)
+func (r *DeletionProxy) SetTxContext(thash common.Hash, ti int) {
+	r.db.SetTxContext(thash, ti)
 }
 
 // Finalise the state in StateDB.
@@ -258,8 +251,8 @@ func (r *DeletionProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return r.db.IntermediateRoot(deleteEmptyObjects)
 }
 
-func (r *DeletionProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return r.db.Commit(deleteEmptyObjects)
+func (r *DeletionProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
+	return r.db.Commit(block, deleteEmptyObjects)
 }
 
 func (r *DeletionProxy) GetHash() (common.Hash, error) {
@@ -326,4 +319,16 @@ func (r *DeletionProxy) GetMemoryUsage() *state.MemoryUsage {
 
 func (r *DeletionProxy) GetShadowDB() state.StateDB {
 	return r.db.GetShadowDB()
+}
+
+func (r *DeletionProxy) CreateContract(addr common.Address) {
+	r.db.CreateContract(addr)
+}
+
+func (r *DeletionProxy) Selfdestruct6780(addr common.Address) {
+	r.db.Selfdestruct6780(addr)
+}
+
+func (r *DeletionProxy) GetStorageRoot(addr common.Address) common.Hash {
+	return r.db.GetStorageRoot(addr)
 }

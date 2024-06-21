@@ -29,8 +29,8 @@ import (
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Substate/db"
 	_ "github.com/Fantom-foundation/Tosca/go/geth_adapter"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -204,8 +204,8 @@ type Config struct {
 	SkipPriming            bool           // skip priming of the state DB
 	SkipStateHashScrapping bool           // if enabled, then state-hashes are not loaded from rpc
 	SnapshotDepth          int            // depth of snapshot history
-	SrcDbReadonly          bool           // if false, make a copy the source statedb
 	StateDbSrc             string         // directory to load an existing State DB data
+	StateDbSrcDirectAccess bool           // if true, read and write directly from the source database
 	StateValidationMode    ValidationMode // state validation mode
 	SubstateDb             string         // substate directory
 	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
@@ -303,6 +303,10 @@ func (cc *configContext) setAidaDbRepositoryUrl() error {
 		return fmt.Errorf("invalid chain id %d", cc.cfg.ChainID)
 	}
 	return nil
+}
+
+func (cfg *Config) SetSrcDirectAccess() {
+	cfg.StateDbSrcDirectAccess = true
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -457,7 +461,7 @@ func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, error) {
 	}
 
 	// read meta data
-	aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true)
+	aidaDb, err := db.NewReadOnlyBaseDB(cc.cfg.AidaDb)
 	if err != nil {
 		cc.log.Warningf("Cannot open AidaDB; %v", err)
 		return defaultFirst, defaultLast, defaultLastPatch, nil
@@ -511,6 +515,8 @@ func (cc *configContext) adjustBlockRange(firstArg, lastArg uint64) (uint64, uin
 	}
 }
 
+//test
+
 // setChainId set config chainID to the default (mainnet) or user specified chainID
 // if the chainID is unknown type, it'll be loaded from aidaDB
 func (cc *configContext) setChainId() error {
@@ -519,7 +525,7 @@ func (cc *configContext) setChainId() error {
 		cc.log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
-		if aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true); err == nil {
+		if aidaDb, err := db.OpenBaseDB(cc.cfg.AidaDb); err == nil {
 			md := NewAidaDbMetadata(aidaDb, cc.cfg.LogLevel)
 
 			cc.cfg.ChainID = md.GetChainID()

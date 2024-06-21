@@ -65,7 +65,7 @@ func TestSdbReplay_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[[]operation.Operation](1), gomock.Any(), nil),
 	)
 
-	if err := replay(cfg, provider, processor, []executor.Extension[[]operation.Operation]{ext}); err != nil {
+	if err := replay(cfg, provider, processor, []executor.Extension[[]operation.Operation]{ext}, nil); err != nil {
 		t.Errorf("record failed: %v", err)
 	}
 }

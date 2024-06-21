@@ -21,7 +21,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -33,7 +32,7 @@ var GetKeyStatsCommand = cli.Command{
 	Usage:     "computes usage statistics of accessed storage locations",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
@@ -54,14 +53,14 @@ Statistics on the usage of accessed storage locations are printed to the console
 func getKeyStatsAction(ctx *cli.Context) error {
 	return getReferenceStatsActionWithConsumer(ctx, "key-stats", func(info *TransactionInfo) []common.Hash {
 		keys := []common.Hash{}
-		for _, account := range info.st.InputAlloc {
+		for _, account := range info.st.InputSubstate {
 			for key := range account.Storage {
-				keys = append(keys, key)
+				keys = append(keys, common.Hash(key))
 			}
 		}
-		for _, account := range info.st.OutputAlloc {
+		for _, account := range info.st.InputSubstate {
 			for key := range account.Storage {
-				keys = append(keys, key)
+				keys = append(keys, common.Hash(key))
 			}
 		}
 		return keys

@@ -23,8 +23,8 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"go.uber.org/mock/gomock"
 )
 
@@ -32,8 +32,8 @@ func TestStatePrepper_PreparesStateBeforeEachTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
-	allocA := substatecontext.NewTxContext(&substate.Substate{InputAlloc: substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{}}})
-	allocB := substatecontext.NewTxContext(&substate.Substate{InputAlloc: substate.SubstateAlloc{common.Address{2}: &substate.SubstateAccount{}}})
+	allocA := substatecontext.NewTxContext(&substate.Substate{InputSubstate: substate.WorldState{substatetypes.Address{1}: &substate.Account{}}})
+	allocB := substatecontext.NewTxContext(&substate.Substate{InputSubstate: substate.WorldState{substatetypes.Address{2}: &substate.Account{}}})
 	ctx := &executor.Context{State: db}
 
 	gomock.InOrder(

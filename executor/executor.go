@@ -28,7 +28,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 // ----------------------------------------------------------------------------
@@ -93,7 +93,7 @@ type Executor[T any] interface {
 	// PostXXX events are delivered in reverse order. If any of the extensions
 	// reports an error during processing of an event, the same event is still
 	// delivered to the remaining extensions before processing is aborted.
-	Run(params Params, processor Processor[T], extensions []Extension[T]) error
+	Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) error
 }
 
 // NewExecutor creates a new executor based on the given provider.
@@ -224,7 +224,7 @@ type Context struct {
 	StateDbPath string
 
 	// AidaDb is an optional LevelDb readonly database containing data for testing StateDb (i.e. state hashes).
-	AidaDb ethdb.Database
+	AidaDb db.BaseDB
 
 	// ErrorInput is used if continue-on-failure is enabled or if log-file is definer so that at the end
 	// of the run, we log all errors into a file. This chanel should be only used for processing errors,
@@ -245,9 +245,9 @@ type executor[T any] struct {
 	log      logger.Logger
 }
 
-func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) (err error) {
+func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) (err error) {
 	state := State[T]{}
-	ctx := Context{State: params.State}
+	ctx := Context{State: params.State, AidaDb: aidaDb}
 
 	defer func() {
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
@@ -534,6 +534,21 @@ func (e *executor[T]) runBlocks(params Params, processor Processor[T], extension
 		state.Block = params.To
 	}
 	return err
+}
+
+func RunUtilPrimer[T any](params Params, extensions []Extension[T], aidaDb db.BaseDB) (err error) {
+	state := State[T]{}
+	ctx := Context{State: params.State, AidaDb: aidaDb}
+
+	state.Block = params.To
+	if err = signalPreRun(state, &ctx, extensions); err != nil {
+		return err
+	}
+
+	return errors.Join(
+		err,
+		signalPostRun(state, &ctx, err, extensions),
+	)
 }
 
 func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {

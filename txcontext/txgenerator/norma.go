@@ -22,6 +22,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -43,19 +44,21 @@ func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.A
 			Env: normaTxBlockEnv{
 				blkNumber: blkNumber,
 			},
-			Message: types.NewMessage(
-				s,
-				tx.To(),
-				tx.Nonce(),
-				tx.Value(),
-				tx.Gas(),
-				tx.GasPrice(),
-				tx.GasFeeCap(),
-				tx.GasTipCap(),
-				tx.Data(),
-				tx.AccessList(),
-				false,
-			),
+			Message: &core.Message{
+				To:                tx.To(),
+				From:              s,
+				Nonce:             tx.Nonce(),
+				Value:             tx.Value(),
+				GasLimit:          tx.Gas(),
+				GasPrice:          tx.GasPrice(),
+				GasFeeCap:         tx.GasFeeCap(),
+				GasTipCap:         tx.GasTipCap(),
+				Data:              tx.Data(),
+				AccessList:        tx.AccessList(),
+				SkipAccountChecks: false,
+				BlobGasFeeCap:     tx.BlobGasFeeCap(),
+				BlobHashes:        tx.BlobHashes(),
+			},
 		},
 	}, nil
 }

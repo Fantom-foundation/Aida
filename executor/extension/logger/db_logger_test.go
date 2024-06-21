@@ -19,7 +19,6 @@ package logger
 import (
 	"fmt"
 	"io"
-	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -32,6 +31,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -91,7 +91,7 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 		t.Fatalf("pre-transaction returned err; %v", err)
 	}
 
-	balance := new(big.Int).SetInt64(10)
+	balance := new(uint256.Int).SetUint64(10)
 
 	beginBlock := fmt.Sprintf("BeginBlock, %v", 1)
 	beginTransaction := fmt.Sprintf("BeginTransaction, %v", 0)

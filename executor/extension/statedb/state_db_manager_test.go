@@ -19,7 +19,6 @@ package statedb
 import (
 	"fmt"
 	"io"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +28,8 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -260,7 +261,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.DbTmp = tmpOutDir
 	cfg.StateDbSrc = sourcePath
 	cfg.KeepDb = false
-	cfg.SrcDbReadonly = true
+	cfg.SetSrcDirectAccess()
 
 	ext = MakeStateDbManager[any](cfg, "")
 
@@ -381,11 +382,11 @@ func insertRandomDataIntoStateDb(t *testing.T, ctx *executor.Context) {
 	addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
 	// get randomized balance
-	additionBase := state.GetRandom(1, 1000*5000)
-	addition := big.NewInt(int64(additionBase))
+	additionBase := state.GetRandom(t, 1, 5_000_000)
+	addition := uint256.NewInt(uint64(additionBase))
 
 	ctx.State.CreateAccount(addr)
-	ctx.State.AddBalance(addr, addition)
+	ctx.State.AddBalance(addr, addition, tracing.BalanceChangeUnspecified)
 }
 
 func IsEmptyDirectory(name string) (bool, error) {

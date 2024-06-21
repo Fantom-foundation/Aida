@@ -27,20 +27,22 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
+	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
 func TestTableHash_Empty(t *testing.T) {
 	tmpDir := t.TempDir() + "/aidaDb"
-	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
+	database, err := db.NewDefaultBaseDB(tmpDir)
 	if err != nil {
-		t.Fatalf("error opening leveldb %s: %v", tmpDir, err)
+		t.Fatal(err)
 	}
+
+	defer database.Close()
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -62,14 +64,18 @@ func TestTableHash_Empty(t *testing.T) {
 	)
 
 	// Call the function
-	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	err = TableHash(cfg, database, log) // Pass a logger if needed
 	assert.NoError(t, err)
 }
 
 func TestTableHash_Filled(t *testing.T) {
 	tmpDir := t.TempDir() + "/aidaDb"
-	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
-	assert.NoError(t, err)
+	database, err := db.NewDefaultBaseDB(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer database.Close()
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -81,7 +87,7 @@ func TestTableHash_Filled(t *testing.T) {
 		Last:        100, // None of the following generators must not generate record higher than this number
 	}
 
-	substateCount, deleteCount, updateCount, stateHashCount := fillFakeAidaDb(t, aidaDb)
+	substateCount, deleteCount, updateCount, stateHashCount := fillFakeAidaDb(t, database)
 
 	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
@@ -95,14 +101,18 @@ func TestTableHash_Filled(t *testing.T) {
 	)
 
 	// Call the function
-	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	err = TableHash(cfg, database, log) // Pass a logger if needed
 	assert.NoError(t, err)
 }
 
 func TestTableHash_JustSubstate(t *testing.T) {
 	tmpDir := t.TempDir() + "/aidaDb"
-	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
-	assert.NoError(t, err)
+	database, err := db.NewDefaultBaseDB(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer database.Close()
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -114,7 +124,7 @@ func TestTableHash_JustSubstate(t *testing.T) {
 		Last:        100, // None of the following generators must not generate record higher than this number
 	}
 
-	substateCount, _, _, _ := fillFakeAidaDb(t, aidaDb)
+	substateCount, _, _, _ := fillFakeAidaDb(t, database)
 
 	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
@@ -122,14 +132,18 @@ func TestTableHash_JustSubstate(t *testing.T) {
 	)
 
 	// Call the function
-	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	err = TableHash(cfg, database, log) // Pass a logger if needed
 	assert.NoError(t, err)
 }
 
 func TestTableHash_JustDelete(t *testing.T) {
 	tmpDir := t.TempDir() + "/aidaDb"
-	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
-	assert.NoError(t, err)
+	database, err := db.NewDefaultBaseDB(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer database.Close()
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -141,7 +155,7 @@ func TestTableHash_JustDelete(t *testing.T) {
 		Last:        100, // None of the following generators must not generate record higher than this number
 	}
 
-	_, deleteCount, _, _ := fillFakeAidaDb(t, aidaDb)
+	_, deleteCount, _, _ := fillFakeAidaDb(t, database)
 
 	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
@@ -149,14 +163,18 @@ func TestTableHash_JustDelete(t *testing.T) {
 	)
 
 	// Call the function
-	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	err = TableHash(cfg, database, log) // Pass a logger if needed
 	assert.NoError(t, err)
 }
 
 func TestTableHash_JustUpdate(t *testing.T) {
 	tmpDir := t.TempDir() + "/aidaDb"
-	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
-	assert.NoError(t, err)
+	database, err := db.NewDefaultBaseDB(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer database.Close()
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -168,7 +186,7 @@ func TestTableHash_JustUpdate(t *testing.T) {
 		Last:        100, // None of the following generators must not generate record higher than this number
 	}
 
-	_, _, updateCount, _ := fillFakeAidaDb(t, aidaDb)
+	_, _, updateCount, _ := fillFakeAidaDb(t, database)
 
 	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
@@ -176,14 +194,18 @@ func TestTableHash_JustUpdate(t *testing.T) {
 	)
 
 	// Call the function
-	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	err = TableHash(cfg, database, log) // Pass a logger if needed
 	assert.NoError(t, err)
 }
 
 func TestTableHash_JustStateHash(t *testing.T) {
 	tmpDir := t.TempDir() + "/aidaDb"
-	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
-	assert.NoError(t, err)
+	database, err := db.NewDefaultBaseDB(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer database.Close()
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -195,7 +217,7 @@ func TestTableHash_JustStateHash(t *testing.T) {
 		Last:        100, // None of the following generators must not generate record higher than this number
 	}
 
-	_, _, _, stateHashCount := fillFakeAidaDb(t, aidaDb)
+	_, _, _, stateHashCount := fillFakeAidaDb(t, database)
 
 	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
@@ -203,57 +225,70 @@ func TestTableHash_JustStateHash(t *testing.T) {
 	)
 
 	// Call the function
-	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	err = TableHash(cfg, database, log) // Pass a logger if needed
 	assert.NoError(t, err)
 }
 
-func fillFakeAidaDb(t *testing.T, aidaDb ethdb.Database) (int, int, int, int) {
+func fillFakeAidaDb(t *testing.T, aidaDb db.BaseDB) (int, int, int, int) {
 	// Seed the random number generator
 	rand.NewSource(time.Now().UnixNano())
 
-	substate.SetSubstateDbBackend(aidaDb)
+	sdb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
 	// Generate a random number between 1 and 5
 	numSubstates := rand.Intn(5) + 1
+	acc := substate.NewAccount(1, big.NewInt(1), []byte{1})
 
 	for i := 0; i < numSubstates; i++ {
 		state := substate.Substate{
-			Env: &substate.SubstateEnv{Number: uint64(i)},
-			Message: &substate.SubstateMessage{
+			Block:       uint64(i),
+			Transaction: 0,
+			Env:         &substate.Env{Number: uint64(i)},
+			Message: &substate.Message{
 				Value: big.NewInt(int64(rand.Intn(100))),
 			},
-			InputAlloc:  substate.SubstateAlloc{},
-			OutputAlloc: substate.SubstateAlloc{},
-			Result:      &substate.SubstateResult{},
+			InputSubstate:  substate.WorldState{substatetypes.Address{0x0}: acc},
+			OutputSubstate: substate.WorldState{substatetypes.Address{0x0}: acc},
+			Result:         &substate.Result{},
 		}
 
-		substate.PutSubstate(uint64(i), 0, &state)
+		err := sdb.PutSubstate(&state)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	ddb := substate.NewDestroyedAccountDB(aidaDb)
+	ddb := db.MakeDefaultDestroyedAccountDBFromBaseDB(aidaDb)
 
 	// Generate random number between 6-10
 	numDestroyedAccounts := rand.Intn(5) + 6
 
 	for i := 0; i < numDestroyedAccounts; i++ {
-		err := ddb.SetDestroyedAccounts(uint64(i), 0, []common.Address{common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))}, []common.Address{})
+		err := ddb.SetDestroyedAccounts(uint64(i), 0, []substatetypes.Address{substatetypes.BytesToAddress(utils.MakeRandomByteSlice(t, 40))}, []substatetypes.Address{})
 		if err != nil {
 			t.Fatalf("error setting destroyed accounts: %v", err)
 		}
 	}
 
-	udb := substate.NewUpdateDB(aidaDb)
+	udb := db.MakeDefaultUpdateDBFromBaseDB(aidaDb)
 
 	// Generate random number between 11-15
 	numUpdates := rand.Intn(5) + 11
 
 	for i := 0; i < numUpdates; i++ {
-		sa := new(substate.SubstateAccount)
+		sa := new(substate.Account)
 		sa.Balance = big.NewInt(int64(utils.GetRandom(1, 1000*5000)))
-		randomAddress := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
-		updateSet := substate.SubstateAlloc{
+		randomAddress := substatetypes.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
+		worldState := substate.WorldState{
+
 			randomAddress: sa,
 		}
-		udb.PutUpdateSet(uint64(i), &updateSet, []common.Address{})
+		err := udb.PutUpdateSet(&updateset.UpdateSet{
+			WorldState: worldState,
+			Block:      uint64(i),
+		}, []substatetypes.Address{})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Generate random number between 16-20

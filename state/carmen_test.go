@@ -19,12 +19,13 @@ package state
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"testing"
 
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid Variant
@@ -97,11 +98,8 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 				t.Fatal("failed to create carmen state DB account; should be empty")
 			}
 
-			if !csDB.Suicide(addr) {
-				t.Fatal("failed to suicide carmen state DB account;")
-			}
-
-			if !csDB.HasSuicided(addr) {
+			csDB.SelfDestruct(addr)
+			if !csDB.HasSelfDestructed(addr) {
 				t.Fatal("failed to suicide carmen state DB account;")
 			}
 		})
@@ -133,19 +131,19 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 			csDB.CreateAccount(addr)
 
 			// get randomized balance
-			additionBase := GetRandom(1, 1000*5000)
-			addition := big.NewInt(int64(additionBase))
+			additionBase := GetRandom(t, 1, 5_000_000)
+			addition := uint256.NewInt(additionBase)
 
-			csDB.AddBalance(addr, addition)
+			csDB.AddBalance(addr, addition, 0)
 
 			if csDB.GetBalance(addr).Cmp(addition) != 0 {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := big.NewInt(int64(GetRandom(1, additionBase)))
-			expectedResult := big.NewInt(0).Sub(addition, subtraction)
+			subtraction := uint256.NewInt(GetRandom(t, 1, int(additionBase)))
+			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
-			csDB.SubBalance(addr, subtraction)
+			csDB.SubBalance(addr, subtraction, 0)
 
 			if csDB.GetBalance(addr).Cmp(expectedResult) != 0 {
 				t.Fatal("failed to subtract balance to carmen state DB account")
@@ -180,7 +178,7 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 			csDB.CreateAccount(addr)
 
 			// get randomized nonce
-			newNonce := uint64(GetRandom(1, 1000*5000))
+			newNonce := GetRandom(t, 1, 5_000_000)
 
 			csDB.SetNonce(addr, newNonce)
 
@@ -351,7 +349,7 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			refundValue := uint64(GetRandom(10000*4000, 10000*5000))
+			refundValue := GetRandom(t, 40_000_000, 50_000_000)
 			csDB.AddRefund(refundValue)
 
 			if csDB.GetRefund() != refundValue {
@@ -417,7 +415,7 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 			}
 
 			// create access list
-			csDB.PrepareAccessList(sender, &dest, precompiles, txAccesses)
+			csDB.Prepare(params.Rules{}, sender, common.Address{}, &dest, precompiles, txAccesses)
 
 			// add some more data after the creation for good measure
 			newAddr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
@@ -552,7 +550,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newBalance := big.NewInt(int64(GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(GetRandom(t, 1, 5_000_000))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
@@ -602,7 +600,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			cbl.CreateAccount(addr)
 
-			newNonce := uint64(GetRandom(1, 1000*5000))
+			newNonce := GetRandom(t, 1, 5_000_000)
 
 			cbl.SetNonce(addr, newNonce)
 
@@ -763,19 +761,19 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				t.Fatalf("cannot end block; %v", err)
 			}
 
-			cbl, err := csDB.StartBulkLoad(2)
+			cbl, err := csDB.StartBulkLoad(7)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			for _, account := range accounts {
 				// randomized operation
-				operationType := GetRandom(0, 4)
+				operationType := GetRandom(t, 0, 4)
 
 				switch {
 				case operationType == 1:
 					// set balance
-					newBalance := big.NewInt(int64(GetRandom(0, 1000*5000)))
+					newBalance := uint256.NewInt(GetRandom(t, 0, 5_000_000))
 
 					cbl.SetBalance(account, newBalance)
 				case operationType == 2:
@@ -791,7 +789,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 					cbl.SetState(account, key, value)
 				case operationType == 4:
 					// set nonce
-					newNonce := uint64(GetRandom(0, 1000*5000))
+					newNonce := GetRandom(t, 0, 5_000_000)
 
 					cbl.SetNonce(account, newNonce)
 				default:

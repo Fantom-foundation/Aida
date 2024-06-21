@@ -27,7 +27,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/urfave/cli/v2"
 )
@@ -423,7 +423,7 @@ func TestUtilsConfig_setChainIdFromFlag(t *testing.T) {
 }
 
 // TestUtilsConfig_getDefaultChainId tests if unknown chainID will be replaced with the mainnet chainID
-func TestUtilsConafig_setDefaultChainId(t *testing.T) {
+func TestUtilsConfig_setDefaultChainId(t *testing.T) {
 	// prepare components
 	var (
 		err      error
@@ -763,7 +763,7 @@ func createFakeAidaDb(cfg *Config) error {
 	)
 
 	// open fake aidaDB
-	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
+	testDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open patch db; %v", err)
 	}
