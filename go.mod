@@ -103,9 +103,6 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 
-// todo remove
-replace github.com/Fantom-foundation/Substate => github.com/Fantom-foundation/Substate v0.0.0-20240520082918-8c0338cc5a0a
-
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.0.0-a
