@@ -520,9 +520,6 @@ func (a *transactionContextAdaptor) GetLogs() []tosca.Log {
 }
 
 func (a *transactionContextAdaptor) SelfDestruct(addr tosca.Address, beneficiary tosca.Address) bool {
-	balance := a.GetBalance(addr)
-	a.db.SubBalance(common.Address(addr), balance.ToU256(), tracing.BalanceDecreaseSelfdestruct)
-	a.db.AddBalance(common.Address(beneficiary), balance.ToU256(), tracing.BalanceIncreaseSelfdestruct)
 	a.db.SelfDestruct(common.Address(addr))
 	return true
 }
