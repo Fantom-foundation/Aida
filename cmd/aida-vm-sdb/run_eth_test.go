@@ -58,7 +58,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	gomock.InOrder(
 		// Tx 1
-		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
@@ -71,7 +71,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
-		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(2)),
 		db.EXPECT().SetTxContext(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(15),
@@ -134,7 +134,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 
 		// Block 2
 		// Tx 1
-		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
@@ -142,7 +142,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Tx 2
-		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
@@ -151,7 +151,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 		//
 		//// Block 3
-		db.EXPECT().BeginBlock(uint64(3)),
+		db.EXPECT().BeginBlock(uint64(4)),
 		db.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
@@ -160,7 +160,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 		//
 		//// Block 4
-		db.EXPECT().BeginBlock(uint64(4)),
+		db.EXPECT().BeginBlock(uint64(5)),
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
@@ -212,7 +212,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 
 	gomock.InOrder(
 		// Tx execution
-		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
@@ -274,7 +274,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
 	)
-	db.EXPECT().BeginBlock(uint64(2))
+	db.EXPECT().BeginBlock(uint64(3))
 	db.EXPECT().BeginTransaction(uint32(1))
 
 	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)

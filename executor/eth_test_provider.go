@@ -18,16 +18,18 @@ package executor
 
 import (
 	statetest "github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
-	return ethTestProvider{cfg}
+	return ethTestProvider{cfg, logger.NewLogger(cfg.LogLevel, "eth-state-test-provider")}
 }
 
 type ethTestProvider struct {
 	cfg *utils.Config
+	log logger.Logger
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
@@ -36,8 +38,14 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 		return err
 	}
 
+	var (
+		numTestFiles int
+		maxTestFiles = len(b)
+	)
+
 	// iterate all state json files
 	for _, t := range b {
+		numTestFiles++
 		// divide them by fork
 		for i, dt := range t.Divide(e.cfg.ChainID) {
 			err = consumer(TransactionInfo[txcontext.TxContext]{
@@ -46,6 +54,13 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 				Data:        dt,
 			})
 		}
+		if numTestFiles%1000 == 0 {
+			e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
+		}
+	}
+
+	if err != nil {
+		e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
 	}
 
 	return nil

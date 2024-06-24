@@ -38,7 +38,7 @@ func RunVmAdb(ctx *cli.Context) error {
 		return err
 	}
 
-	cfg.SetSrcDirectAccess()
+	cfg.SetStateDbSrcReadOnly()
 	cfg.StateValidationMode = utils.SubsetCheck
 
 	// executing archive blocks always calls ArchiveDb with block -1
