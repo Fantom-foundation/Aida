@@ -196,7 +196,6 @@ func (r *RecorderProxy) SetState(addr common.Address, key common.Hash, value com
 	r.db.SetState(addr, key, value)
 }
 
-
 func (r *RecorderProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
 	previousContract := r.ctx.PrevContract()
 	contract := r.ctx.EncodeContract(addr)
