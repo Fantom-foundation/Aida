@@ -26,7 +26,7 @@ import (
 
 func initGetTransientState(t *testing.T) (*context.Replay, *GetTransientState, common.Address, common.Hash) {
 	addr := getRandomAddress(t)
-	storage := common.BytesToHash(getRandomAddress(t).Bytes())
+	storage := getRandomHash(t)
 
 	// create context context
 	ctx := context.NewReplay()

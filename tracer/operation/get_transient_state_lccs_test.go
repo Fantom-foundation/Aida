@@ -46,10 +46,10 @@ func initGetTransientStateLccs(t *testing.T) (*context.Replay, *GetTransientStat
 	addr := getRandomAddress(t)
 	ctx.EncodeContract(addr)
 
-	storage := common.BytesToHash(getRandomAddress(t).Bytes())
+	storage := getRandomHash(t)
 	ctx.EncodeKey(storage)
 
-	storage2 := common.BytesToHash(getRandomAddress(t).Bytes())
+	storage2 := getRandomHash(t)
 
 	return ctx, op, addr, storage, storage2
 }
