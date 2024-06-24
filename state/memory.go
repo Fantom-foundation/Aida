@@ -250,14 +250,6 @@ func (db *inMemoryStateDB) GetStorageRoot(addr common.Address) common.Hash {
 	return empty
 }
 
-func (db *inMemoryStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	panic("GetTransientState not implemented")
-}
-
-func (db *inMemoryStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	panic("SetTransientState not implemented")
-}
-
 func (db *inMemoryStateDB) SelfDestruct(addr common.Address) {
 	db.state.suicided[addr] = 0
 	db.state.balances[addr] = new(uint256.Int) // Apparently when you die all your money is gone.

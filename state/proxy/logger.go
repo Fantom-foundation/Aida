@@ -391,17 +391,6 @@ func (s *loggingVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
 	return res
 }
 
-func (s *loggingVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	s.writeLog("SetTransientState, %v, %v, %v", addr, key, value)
-	s.db.SetTransientState(addr, key, value)
-}
-
-func (s *loggingVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	value := s.db.GetTransientState(addr, key)
-	s.writeLog("GetTransientState, %v, %v, %v", value, addr, key)
-	return value
-}
-
 func (s *loggingNonCommittableStateDb) Release() error {
 	s.writeLog("Release")
 	s.nonCommittableStateDB.Release()

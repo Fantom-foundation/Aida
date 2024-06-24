@@ -140,17 +140,17 @@ func (s *shadowVmStateDb) GetState(addr common.Address, key common.Hash) common.
 }
 
 func (s *shadowVmStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	s.run("SetState", func(s state.VmStateDB) error {
+	s.err = errors.Join(s.err, s.run("SetState", func(s state.VmStateDB) error {
 		s.SetState(addr, key, value)
 		return nil
-	})
+	}))
 }
 
 func (s *shadowVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	s.run("SetTransientState", func(s state.VmStateDB) error {
+	s.err = errors.Join(s.err, s.run("SetTransientState", func(s state.VmStateDB) error {
 		s.SetTransientState(addr, key, value)
 		return nil
-	})
+	}))
 }
 
 func (s *shadowVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
@@ -715,15 +715,4 @@ func (s *shadowVmStateDb) Selfdestruct6780(addr common.Address) {
 
 func (s *shadowVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
 	return s.getHash("GetStorageRoot", func(s state.VmStateDB) common.Hash { return s.GetStorageRoot(addr) }, addr)
-}
-
-func (s *shadowVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	s.run("SetTransientState", func(s state.VmStateDB) error {
-		s.SetTransientState(addr, key, value)
-		return nil
-	})
-}
-
-func (s *shadowVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	return s.getHash("GetTransientState", func(s state.VmStateDB) common.Hash { return s.GetTransientState(addr, key) }, addr, key)
 }

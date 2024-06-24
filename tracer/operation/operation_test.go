@@ -295,14 +295,6 @@ func (s *MockStateDB) GetStorageRoot(addr common.Address) common.Hash {
 	panic("GetStorageRoot not supported in mock")
 }
 
-func (s *MockStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	panic("SetTransientState not supported in mock")
-}
-
-func (s *MockStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	panic("GetTransientState not supported in mock")
-}
-
 func (s *MockStateDB) Close() error {
 	s.recording = append(s.recording, Record{CloseID, []any{}})
 	return nil
