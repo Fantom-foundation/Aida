@@ -25,9 +25,12 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func MakeEthStateTestDbPrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	// Disable spam from eth logger when creating database
+	log.SetDefault(log.NewLogger(log.DiscardHandler()))
 	return makeEthStateTestDbPrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
 }
 

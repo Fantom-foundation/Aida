@@ -17,6 +17,8 @@
 package logger
 
 import (
+	"strings"
+
 	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -27,9 +29,10 @@ import (
 
 type ethStateTestLogger struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg     *utils.Config
-	log     logger.Logger
-	overall int
+	cfg                                *utils.Config
+	log                                logger.Logger
+	previousTestLabel, previousNetwork string
+	overall                            int
 }
 
 func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -48,7 +51,17 @@ func makeEthStateTestLogger(cfg *utils.Config, log logger.Logger) executor.Exten
 func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext], _ *executor.Context) error {
 	// cast state.Data to stJSON
 	c := s.Data.(*ethtest.StJSON)
-	l.log.Noticef("Run %v - (%v)", c.TestLabel, c.UsedNetwork)
+
+	// Print only new version of test
+	if strings.Compare(l.previousTestLabel, c.TestLabel) != 0 {
+		l.log.Noticef("Currently running %v", c.TestLabel)
+		l.previousTestLabel = c.TestLabel
+	}
+	if strings.Compare(l.previousNetwork, c.UsedNetwork) != 0 {
+		l.log.Infof(" Tested fork: %v", c.UsedNetwork)
+		l.previousNetwork = c.UsedNetwork
+	}
+
 	l.overall++
 	return nil
 }
