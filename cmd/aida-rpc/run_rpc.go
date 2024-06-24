@@ -38,7 +38,7 @@ func RunRpc(ctx *cli.Context) error {
 		return err
 	}
 
-	cfg.SetSrcDirectAccess()
+	cfg.SetStateDbSrcReadOnly()
 
 	rpcSource, err := executor.OpenRpcRecording(cfg, ctx)
 	if err != nil {

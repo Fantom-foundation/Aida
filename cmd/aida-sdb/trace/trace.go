@@ -46,6 +46,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
 		&utils.StateDbSrcFlag,
+		&utils.StateDbSrcOverwriteFlag,
 		&utils.VmImplementation,
 		&utils.DbTmpFlag,
 		&utils.UpdateBufferSizeFlag,
