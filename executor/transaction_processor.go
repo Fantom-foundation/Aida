@@ -142,7 +142,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		}
 		evm := tosca.GetProcessor(cfg.EvmImpl, interpreter)
 		if evm == nil {
-			available := maps.Keys(tosca.GetAllRegisteredInterpreters())
+			available := maps.Keys(tosca.GetAllRegisteredProcessorFactories())
 			return nil, fmt.Errorf("unknown EVM implementation: %s, supported: %v", cfg.EvmImpl, available)
 		}
 
