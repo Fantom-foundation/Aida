@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -128,11 +129,11 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
-	case "", "aida", "opera":
-		processor = &operaProcessor{
+	case "", "aida":
+		processor = &aidaProcessor{
 			vmCfg:    vmCfg,
 			chainCfg: utils.GetChainConfig(cfg.ChainID),
-			log:      logger.NewLogger(cfg.LogLevel, "OperaProcessor"),
+			log:      logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
 		}
 	default:
 		interpreter := tosca.GetInterpreter(cfg.VmImpl)
@@ -143,6 +144,8 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		evm := tosca.GetProcessor(cfg.EvmImpl, interpreter)
 		if evm == nil {
 			available := maps.Keys(tosca.GetAllRegisteredProcessorFactories())
+			available = append(available, "aida")
+			slices.Sort(available)
 			return nil, fmt.Errorf("unknown EVM implementation: %s, supported: %v", cfg.EvmImpl, available)
 		}
 
@@ -192,14 +195,14 @@ type processor interface {
 	processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (transactionResult, error)
 }
 
-type operaProcessor struct {
+type aidaProcessor struct {
 	vmCfg    vm.Config
 	chainCfg *params.ChainConfig
 	log      logger.Logger
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *operaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
+func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
 		gasPool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
