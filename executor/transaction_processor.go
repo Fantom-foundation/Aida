@@ -291,19 +291,6 @@ type toscaProcessor struct {
 	log       logger.Logger
 }
 
-func bigToValue(value *big.Int) tosca.Value {
-	if value == nil {
-		return tosca.Value{}
-	}
-	var res tosca.Value
-	value.FillBytes(res[:])
-	return res
-}
-
-func uint256ToValue(value *uint256.Int) tosca.Value {
-	return tosca.Uint256ToValue(value)
-}
-
 func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	processor := t.processor
 
@@ -563,4 +550,17 @@ func (a *transactionContextAdaptor) IsAddressInAccessList(addr tosca.Address) bo
 
 func (a *transactionContextAdaptor) IsSlotInAccessList(addr tosca.Address, key tosca.Key) (addressPresent, slotPresent bool) {
 	return a.db.SlotInAccessList(common.Address(addr), common.Hash(key))
+}
+
+func bigToValue(value *big.Int) tosca.Value {
+	if value == nil {
+		return tosca.Value{}
+	}
+	var res tosca.Value
+	value.FillBytes(res[:])
+	return res
+}
+
+func uint256ToValue(value *uint256.Int) tosca.Value {
+	return tosca.Uint256ToValue(value)
 }
