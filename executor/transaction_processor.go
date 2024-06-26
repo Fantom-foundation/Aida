@@ -292,6 +292,8 @@ type toscaProcessor struct {
 }
 
 func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
+	// The main task of this function is to link the context provided through parameters
+	// with the context required by a Tosca Processor implementation to execute a transaction.
 	processor := t.processor
 
 	blockEnvironment := st.GetBlockEnvironment()
@@ -347,7 +349,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		AccessList: accessList,
 	}
 
-	context := &transactionContextAdaptor{
+	context := &transactionContextAdapter{
 		blockEnvironment: blockEnvironment,
 		db:               db,
 	}
@@ -388,14 +390,15 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 	return newTransactionResult(log, msg, result, nil, msg.From), nil
 }
 
-type transactionContextAdaptor struct {
+// transactionContextAdapter is a bridge between Tosca's transaction context and the one provided by the executor.
+type transactionContextAdapter struct {
 	blockEnvironment txcontext.BlockEnvironment
 	db               state.VmStateDB
 }
 
-var _ tosca.TransactionContext = &transactionContextAdaptor{}
+var _ tosca.TransactionContext = &transactionContextAdapter{}
 
-func (a *transactionContextAdaptor) CreateAccount(addr tosca.Address, code tosca.Code) bool {
+func (a *transactionContextAdapter) CreateAccount(addr tosca.Address, code tosca.Code) bool {
 	if a.db.Exist(common.Address(addr)) {
 		return false
 	}
@@ -404,15 +407,15 @@ func (a *transactionContextAdaptor) CreateAccount(addr tosca.Address, code tosca
 	return true
 }
 
-func (a *transactionContextAdaptor) AccountExists(addr tosca.Address) bool {
+func (a *transactionContextAdapter) AccountExists(addr tosca.Address) bool {
 	return a.db.Exist(common.Address(addr))
 }
 
-func (a *transactionContextAdaptor) GetBalance(addr tosca.Address) tosca.Value {
+func (a *transactionContextAdapter) GetBalance(addr tosca.Address) tosca.Value {
 	return uint256ToValue(a.db.GetBalance(common.Address(addr)))
 }
 
-func (a *transactionContextAdaptor) SetBalance(addr tosca.Address, balance tosca.Value) {
+func (a *transactionContextAdapter) SetBalance(addr tosca.Address, balance tosca.Value) {
 	want := balance.ToU256()
 	account := common.Address(addr)
 	cur := a.db.GetBalance(account)
@@ -428,59 +431,59 @@ func (a *transactionContextAdaptor) SetBalance(addr tosca.Address, balance tosca
 	}
 }
 
-func (a *transactionContextAdaptor) GetNonce(addr tosca.Address) uint64 {
+func (a *transactionContextAdapter) GetNonce(addr tosca.Address) uint64 {
 	return a.db.GetNonce(common.Address(addr))
 }
 
-func (a *transactionContextAdaptor) SetNonce(addr tosca.Address, nonce uint64) {
+func (a *transactionContextAdapter) SetNonce(addr tosca.Address, nonce uint64) {
 	a.db.SetNonce(common.Address(addr), nonce)
 }
 
-func (a *transactionContextAdaptor) GetCodeSize(addr tosca.Address) int {
+func (a *transactionContextAdapter) GetCodeSize(addr tosca.Address) int {
 	return a.db.GetCodeSize(common.Address(addr))
 }
 
-func (a *transactionContextAdaptor) GetCodeHash(addr tosca.Address) tosca.Hash {
+func (a *transactionContextAdapter) GetCodeHash(addr tosca.Address) tosca.Hash {
 	return tosca.Hash(a.db.GetCodeHash(common.Address(addr)))
 }
 
-func (a *transactionContextAdaptor) GetCode(addr tosca.Address) tosca.Code {
+func (a *transactionContextAdapter) GetCode(addr tosca.Address) tosca.Code {
 	return a.db.GetCode(common.Address(addr))
 }
 
-func (a *transactionContextAdaptor) SetCode(addr tosca.Address, code tosca.Code) {
+func (a *transactionContextAdapter) SetCode(addr tosca.Address, code tosca.Code) {
 	a.db.SetCode(common.Address(addr), code)
 }
 
-func (a *transactionContextAdaptor) GetStorage(addr tosca.Address, key tosca.Key) tosca.Word {
+func (a *transactionContextAdapter) GetStorage(addr tosca.Address, key tosca.Key) tosca.Word {
 	return tosca.Word(a.db.GetState(common.Address(addr), common.Hash(key)))
 }
 
-func (a *transactionContextAdaptor) GetCommittedStorage(addr tosca.Address, key tosca.Key) tosca.Word {
+func (a *transactionContextAdapter) GetCommittedStorage(addr tosca.Address, key tosca.Key) tosca.Word {
 	return tosca.Word(a.db.GetCommittedState(common.Address(addr), common.Hash(key)))
 }
 
-func (a *transactionContextAdaptor) SetStorage(addr tosca.Address, key tosca.Key, value tosca.Word) tosca.StorageStatus {
+func (a *transactionContextAdapter) SetStorage(addr tosca.Address, key tosca.Key, value tosca.Word) tosca.StorageStatus {
 	original := a.GetCommittedStorage(addr, key)
 	current := a.GetStorage(addr, key)
 	a.db.SetState(common.Address(addr), common.Hash(key), common.Hash(value))
 	return tosca.GetStorageStatus(original, current, value)
 }
 
-func (a *transactionContextAdaptor) GetTransientStorage(addr tosca.Address, key tosca.Key) tosca.Word {
+func (a *transactionContextAdapter) GetTransientStorage(addr tosca.Address, key tosca.Key) tosca.Word {
 	return tosca.Word(a.db.GetTransientState(common.Address(addr), common.Hash(key)))
 }
 
-func (a *transactionContextAdaptor) SetTransientStorage(addr tosca.Address, key tosca.Key, value tosca.Word) {
+func (a *transactionContextAdapter) SetTransientStorage(addr tosca.Address, key tosca.Key, value tosca.Word) {
 	a.db.SetTransientState(common.Address(addr), common.Hash(key), common.Hash(value))
 }
 
-func (a *transactionContextAdaptor) GetBlockHash(number int64) tosca.Hash {
+func (a *transactionContextAdapter) GetBlockHash(number int64) tosca.Hash {
 	h, _ := a.blockEnvironment.GetBlockHash(uint64(number))
 	return tosca.Hash(h)
 }
 
-func (a *transactionContextAdaptor) EmitLog(log tosca.Log) {
+func (a *transactionContextAdapter) EmitLog(log tosca.Log) {
 	tpcs := make([]common.Hash, len(log.Topics))
 	for i, t := range log.Topics {
 		tpcs[i] = common.Hash(t)
@@ -493,7 +496,7 @@ func (a *transactionContextAdaptor) EmitLog(log tosca.Log) {
 	})
 }
 
-func (a *transactionContextAdaptor) GetLogs() []tosca.Log {
+func (a *transactionContextAdapter) GetLogs() []tosca.Log {
 	res := []tosca.Log{}
 	for _, l := range a.db.GetLogs(common.Hash{}, 0, common.Hash{}) {
 		topics := make([]tosca.Hash, len(l.Topics))
@@ -509,12 +512,12 @@ func (a *transactionContextAdaptor) GetLogs() []tosca.Log {
 	return res
 }
 
-func (a *transactionContextAdaptor) SelfDestruct(addr tosca.Address, beneficiary tosca.Address) bool {
+func (a *transactionContextAdapter) SelfDestruct(addr tosca.Address, beneficiary tosca.Address) bool {
 	a.db.SelfDestruct(common.Address(addr))
 	return true
 }
 
-func (a *transactionContextAdaptor) AccessAccount(addr tosca.Address) tosca.AccessStatus {
+func (a *transactionContextAdapter) AccessAccount(addr tosca.Address) tosca.AccessStatus {
 	res := a.IsAddressInAccessList(addr)
 	a.db.AddAddressToAccessList(common.Address(addr))
 	if res {
@@ -523,7 +526,7 @@ func (a *transactionContextAdaptor) AccessAccount(addr tosca.Address) tosca.Acce
 	return tosca.ColdAccess
 }
 
-func (a *transactionContextAdaptor) AccessStorage(addr tosca.Address, key tosca.Key) tosca.AccessStatus {
+func (a *transactionContextAdapter) AccessStorage(addr tosca.Address, key tosca.Key) tosca.AccessStatus {
 	_, res := a.IsSlotInAccessList(addr, key)
 	a.db.AddSlotToAccessList(common.Address(addr), common.Hash(key))
 	if res {
@@ -532,23 +535,23 @@ func (a *transactionContextAdaptor) AccessStorage(addr tosca.Address, key tosca.
 	return tosca.ColdAccess
 }
 
-func (a *transactionContextAdaptor) HasSelfDestructed(addr tosca.Address) bool {
+func (a *transactionContextAdapter) HasSelfDestructed(addr tosca.Address) bool {
 	return a.db.HasSelfDestructed(common.Address(addr))
 }
 
-func (a *transactionContextAdaptor) CreateSnapshot() tosca.Snapshot {
+func (a *transactionContextAdapter) CreateSnapshot() tosca.Snapshot {
 	return tosca.Snapshot(a.db.Snapshot())
 }
 
-func (a *transactionContextAdaptor) RestoreSnapshot(snapshot tosca.Snapshot) {
+func (a *transactionContextAdapter) RestoreSnapshot(snapshot tosca.Snapshot) {
 	a.db.RevertToSnapshot(int(snapshot))
 }
 
-func (a *transactionContextAdaptor) IsAddressInAccessList(addr tosca.Address) bool {
+func (a *transactionContextAdapter) IsAddressInAccessList(addr tosca.Address) bool {
 	return a.db.AddressInAccessList(common.Address(addr))
 }
 
-func (a *transactionContextAdaptor) IsSlotInAccessList(addr tosca.Address, key tosca.Key) (addressPresent, slotPresent bool) {
+func (a *transactionContextAdapter) IsSlotInAccessList(addr tosca.Address, key tosca.Key) (addressPresent, slotPresent bool) {
 	return a.db.SlotInAccessList(common.Address(addr), common.Hash(key))
 }
 
