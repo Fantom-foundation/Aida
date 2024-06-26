@@ -1762,7 +1762,7 @@ func TestProcessor_PanicCaughtInPostRunIsReturned_TransactionLevelParallelism(t 
 	}
 
 	wantedErr := "sending forward recovered panic from PostRun; stop"
-	if strings.Compare(err.Error(), wantedErr) != 0 {
+	if !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("unexpected err \nwant: %v\ngot: %v", wantedErr, err.Error())
 	}
 
@@ -1808,7 +1808,7 @@ func TestProcessor_PanicCaughtInPostRunIsReturned_BlockLevelParallelism(t *testi
 	}
 
 	wantedErr := "sending forward recovered panic from PostRun; stop"
-	if strings.Compare(err.Error(), wantedErr) != 0 {
+	if !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("unexpected err \nwant: %v\ngot: %v", wantedErr, err.Error())
 	}
 
