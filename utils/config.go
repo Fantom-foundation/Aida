@@ -88,6 +88,9 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"muirglacier": 0, // todo muirglacier block for mainnet?
 		"berlin":      37_455_223,
 		"london":      37_534_833,
+		"paris":       400_000_000,
+		"shanghai":    500_000_000, // todo update once fixed for network
+		"cancun":      600_000_000, // todo update once fixed for network
 		"first":       0,
 		"last":        maxLastBlock,
 		"lastpatch":   0,
@@ -99,6 +102,9 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"muirglacier": 0, // todo muirglacier block for testnet?
 		"berlin":      1_559_470,
 		"london":      7_513_335,
+		"paris":       400_000_000,
+		"shanghai":    500_000_000, // todo update once fixed for network
+		"cancun":      600_000_000, // todo update once fixed for network
 		"first":       0,
 		"last":        maxLastBlock,
 		"lastpatch":   0,
@@ -112,9 +118,31 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"muirglacier": 9_200_000,
 		"berlin":      12_244_000,
 		"london":      12_965_000,
+		"paris":       400_000_000,
+		"shanghai":    500_000_000, // todo update once fixed for network
+		"cancun":      600_000_000, // todo update once fixed for network
 		"first":       0,
 		"last":        maxLastBlock,
 		"lastpatch":   0,
+	},
+}
+
+// todo update once fixed for networks
+var KeywordTimes = map[ChainID]map[string]uint64{
+	MainnetChainID: {
+		"paris":    1000,
+		"shanghai": 2000,
+		"cancun":   3000,
+	},
+	TestnetChainID: {
+		"paris":    1000,
+		"shanghai": 2000,
+		"cancun":   3000,
+	},
+	EthereumChainID: {
+		"paris":    1000,
+		"shanghai": 2000,
+		"cancun":   3000,
 	},
 }
 
@@ -330,6 +358,12 @@ func GetChainConfig(chainId ChainID) *params.ChainConfig {
 
 	chainConfig.BerlinBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["berlin"])
 	chainConfig.LondonBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["london"])
+	// chainConfig.MergeNetsplitBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["merge"]
+	shanghaiTime := KeywordTimes[chainId]["shanghai"]
+	chainConfig.ShanghaiTime = &shanghaiTime
+	cancunTimes := KeywordTimes[chainId]["cancun"]
+	chainConfig.CancunTime = &cancunTimes
+
 	return &chainConfig
 }
 

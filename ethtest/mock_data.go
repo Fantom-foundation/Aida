@@ -28,8 +28,8 @@ import (
 func CreateTestData(t *testing.T) *StJSON {
 	bInt := new(big.Int).SetUint64(1)
 	return &StJSON{
-		TestLabel:   "TestLabel",
-		UsedNetwork: "TestNetwork",
+		TestLabel: "TestLabel",
+		Fork:      "TestNetwork",
 		Env: stEnv{
 			blockNumber: 1,
 			Coinbase:    common.Address{},

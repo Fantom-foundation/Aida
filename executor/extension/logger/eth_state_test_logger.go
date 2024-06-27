@@ -57,9 +57,9 @@ func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext
 		l.log.Noticef("Currently running %v", c.TestLabel)
 		l.previousTestLabel = c.TestLabel
 	}
-	if strings.Compare(l.previousNetwork, c.UsedNetwork) != 0 {
-		l.log.Infof(" Tested fork: %v", c.UsedNetwork)
-		l.previousNetwork = c.UsedNetwork
+	if strings.Compare(l.previousNetwork, c.Fork) != 0 {
+		l.log.Infof(" Tested fork: %v", c.Fork)
+		l.previousNetwork = c.Fork
 	}
 
 	l.overall++

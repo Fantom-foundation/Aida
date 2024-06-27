@@ -17,7 +17,9 @@
 package ethtest
 
 import (
+	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -29,19 +31,19 @@ import (
 
 type StJSON struct {
 	txcontext.NilTxContext
-	TestLabel   string
-	UsedNetwork string
-	Env         stEnv                    `json:"env"`
-	Pre         core.GenesisAlloc        `json:"pre"`
-	Tx          stTransaction            `json:"transaction"`
-	Out         hexutil.Bytes            `json:"out"`
-	Post        map[string][]stPostState `json:"post"`
+	TestLabel string
+	Fork      string
+	Env       stEnv                    `json:"env"`
+	Pre       core.GenesisAlloc        `json:"pre"`
+	Tx        stTransaction            `json:"transaction"`
+	Out       hexutil.Bytes            `json:"out"`
+	Post      map[string][]stPostState `json:"post"`
 }
 
 func (s *StJSON) GetStateHash() common.Hash {
-	for _, n := range usableForks {
-		if p, ok := s.Post[n]; ok {
-			return p[0].RootHash
+	for postState := range s.Post {
+		if strings.EqualFold(postState, s.Fork) {
+			return s.Post[postState][0].RootHash
 		}
 	}
 
@@ -80,7 +82,7 @@ func (s *StJSON) GetMessage() *core.Message {
 }
 
 func (s *StJSON) getPostState() stPostState {
-	return s.Post[s.UsedNetwork][0]
+	return s.Post[s.Fork][0]
 }
 
 type stPostState struct {
@@ -102,15 +104,25 @@ func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 	// each test contains multiple validation data for different forks.
 	// we create a test for each usable fork
 
-	for _, fork := range usableForks {
+	for fork := range s.Post {
 		var test StJSON
-		if _, ok := s.Post[fork]; ok {
-			test = *s               // copy all the test data
-			test.UsedNetwork = fork // add correct fork name
+		if slices.Contains(usableForks, strings.ToLower(fork)) {
+			test = *s        // copy all the test data
+			test.Fork = fork // add correct fork name
 
 			// add block number to env (+1 just to make sure we are within wanted fork)
+
+			if _, isIn := utils.KeywordBlocks[chainId][strings.ToLower(fork)]; !isIn {
+				panic(fmt.Sprintf("unknown fork block for revision: %v and chainid: %v", strings.ToLower(fork), chainId))
+			}
+			if _, isIn := utils.KeywordTimes[chainId][strings.ToLower(fork)]; !isIn {
+				panic(fmt.Sprintf("unknown fork time for revision: %v and chainid: %v", strings.ToLower(fork), chainId))
+			}
 			test.Env.blockNumber = utils.KeywordBlocks[chainId][strings.ToLower(fork)] + 1
+			test.Env.Timestamp = &BigInt{*big.NewInt(int64(utils.KeywordTimes[chainId][strings.ToLower(fork)]) + 1)}
 			dividedTests = append(dividedTests, &test)
+		} else {
+			panic(fmt.Sprintf("Fork %v is not supported", fork))
 		}
 	}
 

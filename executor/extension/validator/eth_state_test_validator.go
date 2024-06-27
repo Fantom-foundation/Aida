@@ -68,7 +68,7 @@ func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxCon
 	c := s.Data.(*ethtest.StJSON)
 
 	if got != want {
-		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())
+		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.Fork, got.Hex(), want.Hex())
 		if e.cfg.ContinueOnFailure {
 			e.log.Error(err)
 		} else {
@@ -76,7 +76,7 @@ func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxCon
 		}
 	} else {
 		e.passed++
-		e.log.Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", c.TestLabel, c.UsedNetwork, s.Block, s.Transaction, got.Hex())
+		e.log.Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", c.TestLabel, c.Fork, s.Block, s.Transaction, got.Hex())
 	}
 
 	e.overall++
