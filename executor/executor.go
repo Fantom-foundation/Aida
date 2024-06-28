@@ -21,6 +21,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -253,7 +254,8 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
 		// on the state of anything, and PostRun operations may deadlock or cause damage.
 		if r := recover(); r != nil {
-			panic(r)
+			msg := fmt.Sprintf("%v\n%s", r, string(debug.Stack()))
+			panic(msg)
 		}
 		err = errors.Join(
 			err,
@@ -297,7 +299,8 @@ func runBlock[T any](
 	defer func() {
 		if r := recover(); r != nil {
 			abort.Signal() // stop forwarder and other workers too
-			cachedPanic.Store(r)
+			msg := fmt.Sprintf("worker %v recovered panic; %v\n%s", workerNumber, r, string(debug.Stack()))
+			cachedPanic.Store(msg)
 		}
 		wg.Done()
 	}()
@@ -444,7 +447,8 @@ func (e *executor[T]) runTransactions(params Params, processor Processor[T], ext
 			defer func() {
 				if r := recover(); r != nil {
 					abort.Signal() // stop forwarder and other workers too
-					cachedPanic.Store(r)
+					msg := fmt.Sprintf("worker %v recovered panic; %v\n%s", i, r, string(debug.Stack()))
+					cachedPanic.Store(msg)
 				}
 				wg.Done()
 			}()
@@ -554,7 +558,7 @@ func RunUtilPrimer[T any](params Params, extensions []Extension[T], aidaDb db.Ba
 func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PreRun; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PreRun; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -567,7 +571,7 @@ func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]
 func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []Extension[T]) (recoveredPanic error) {
 	defer func() {
 		if r := recover(); r != nil {
-			recoveredPanic = fmt.Errorf("sending forward recovered panic from PostRun; %v", r)
+			recoveredPanic = fmt.Errorf("sending forward recovered panic from PostRun; %v\n%s", r, string(debug.Stack()))
 			return
 		}
 
@@ -580,7 +584,7 @@ func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []
 func signalPreBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PreBlock; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PreBlock; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -593,7 +597,7 @@ func signalPreBlock[T any](state State[T], ctx *Context, extensions []Extension[
 func signalPostBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PostBlock; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PostBlock; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -606,7 +610,7 @@ func signalPostBlock[T any](state State[T], ctx *Context, extensions []Extension
 func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PreTransaction; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PreTransaction; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -619,7 +623,7 @@ func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Exte
 func signalPostTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PostTransaction; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PostTransaction; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 

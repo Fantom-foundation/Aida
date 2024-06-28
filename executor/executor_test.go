@@ -1762,7 +1762,7 @@ func TestProcessor_PanicCaughtInPostRunIsReturned_TransactionLevelParallelism(t 
 	}
 
 	wantedErr := "sending forward recovered panic from PostRun; stop"
-	if strings.Compare(err.Error(), wantedErr) != 0 {
+	if !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("unexpected err \nwant: %v\ngot: %v", wantedErr, err.Error())
 	}
 
@@ -1808,8 +1808,34 @@ func TestProcessor_PanicCaughtInPostRunIsReturned_BlockLevelParallelism(t *testi
 	}
 
 	wantedErr := "sending forward recovered panic from PostRun; stop"
-	if strings.Compare(err.Error(), wantedErr) != 0 {
+	if !strings.Contains(err.Error(), wantedErr) {
 		t.Errorf("unexpected err \nwant: %v\ngot: %v", wantedErr, err.Error())
 	}
 
+}
+
+func secretFunctionThatPanics() {
+	panic("no surprise here")
+}
+
+func TestExecutor_RecoverPanicStack(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	extension := NewMockExtension[any](ctrl)
+
+	extension.EXPECT().PreRun(gomock.Any(), gomock.Any()).Do(func(any, any) {
+		secretFunctionThatPanics()
+	})
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("program must panic")
+		}
+		print := fmt.Sprintf("%v", r)
+		if !strings.Contains(print, "secretFunctionThatPanics") {
+			t.Errorf("stack trace should contain the secret function")
+		}
+	}()
+
+	signalPreRun(State[any]{}, nil, []Extension[any]{extension})
 }
