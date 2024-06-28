@@ -131,4 +131,4 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 
 replace github.com/Fantom-foundation/lachesis-base => github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240320160249-81827a18147c
 
-replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.2.1-b.0.20240628092951-60ad0682862d
+replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.2.1-b.0.20240628130111-8dc0221d67b1
