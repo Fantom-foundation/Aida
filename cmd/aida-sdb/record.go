@@ -74,7 +74,12 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
 	defer substateIterator.Close()
 
-	return record(cfg, substateIterator, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return record(cfg, substateIterator, processor, nil)
 }
 
 func record(

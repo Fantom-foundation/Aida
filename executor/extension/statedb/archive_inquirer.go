@@ -34,23 +34,27 @@ import (
 
 // MakeArchiveInquirer creates an extension running historic queries against
 // archive states in the background to the main executor process.
-func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeArchiveInquirer(cfg *utils.Config) (executor.Extension[txcontext.TxContext], error) {
 	return makeArchiveInquirer(cfg, logger.NewLogger(cfg.LogLevel, "Archive Inquirer"))
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) (executor.Extension[txcontext.TxContext], error) {
 	if cfg.ArchiveQueryRate <= 0 {
-		return extension.NilExtension[txcontext.TxContext]{}
+		return extension.NilExtension[txcontext.TxContext]{}, nil
+	}
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		return nil, err
 	}
 	return &archiveInquirer{
-		ArchiveDbTxProcessor: executor.MakeArchiveDbTxProcessor(cfg),
+		ArchiveDbTxProcessor: processor,
 		cfg:                  cfg,
 		log:                  log,
 		throttler:            newThrottler(cfg.ArchiveQueryRate),
 		finished:             utils.MakeEvent(),
 		history:              newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
 		validator:            validator.MakeArchiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
-	}
+	}, nil
 }
 
 type archiveInquirer struct {
