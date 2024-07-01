@@ -80,6 +80,13 @@ const (
 	PrepareID
 	SubRefundID
 
+	GetTransientStateID
+	GetTransientStateLccsID
+	GetTransientStateLcID
+	GetTransientStateLclsID
+	SetTransientStateID
+	SetTransientStateLclsID
+
 	// WARNING: New IDs should be added here. Any change in the order of the
 	// IDs above invalidates persisted data -- in particular storage traces.
 
@@ -145,6 +152,14 @@ var opDict = map[byte]OperationDictionary{
 	PrepareID:                {label: "Prepare", readfunc: ReadPanic},
 	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
 	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
+
+	// Transient Storage
+	GetTransientStateID:     {label: "GetTransientState", readfunc: ReadGetTransientState},
+	GetTransientStateLcID:   {label: "GetTransientStateLc", readfunc: ReadGetTransientStateLc},
+	GetTransientStateLccsID: {label: "GetTransientStateLccs", readfunc: ReadGetTransientStateLccs},
+	GetTransientStateLclsID: {label: "GetTransientStateLcls", readfunc: ReadGetTransientStateLcls},
+	SetTransientStateID:     {label: "SetTransientState", readfunc: ReadSetTransientState},
+	SetTransientStateLclsID: {label: "SetTransientStateLcls", readfunc: ReadSetTransientStateLcls},
 }
 
 // GetLabel retrieves a label of a state operation.

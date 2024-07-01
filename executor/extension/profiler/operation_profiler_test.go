@@ -103,7 +103,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 
 		// These are purposely not implemented, will be blacklisted here
 		notImplemented := make([]bool, len(ops))
-		for _, a := range []byte{14, 18, 21, 22, 23, 29, 42} {
+		for _, a := range []byte{14, 18, 21, 22, 23, 29, 42, 49, 50, 51, 53} {
 			notImplemented[a] = true
 		}
 
@@ -305,7 +305,9 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.GetRefund() },
 		func() { db.GetCommittedState(mockAddress, mockHash) },
 		func() { db.GetState(mockAddress, mockHash) },
+		func() { db.GetTransientState(mockAddress, mockHash) },
 		func() { db.SetState(mockAddress, mockHash, mockHash) },
+		func() { db.SetTransientState(mockAddress, mockHash, mockHash) },
 		func() { db.SelfDestruct(mockAddress) },
 		func() { db.HasSelfDestructed(mockAddress) },
 		func() { db.Exist(mockAddress) },
@@ -361,7 +363,9 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().GetRefund().AnyTimes()
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().GetState(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetTransientState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().SetTransientState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SelfDestruct(gomock.Any()).AnyTimes()
 	m.EXPECT().HasSelfDestructed(gomock.Any()).AnyTimes()
 	m.EXPECT().Exist(gomock.Any()).AnyTimes()
@@ -407,7 +411,9 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().GetRefund()
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any())
 	m.EXPECT().GetState(gomock.Any(), gomock.Any())
+	m.EXPECT().GetTransientState(gomock.Any(), gomock.Any())
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().SetTransientState(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().SelfDestruct(gomock.Any())
 	m.EXPECT().HasSelfDestructed(gomock.Any())
 	m.EXPECT().Exist(gomock.Any())

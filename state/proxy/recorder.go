@@ -196,6 +196,40 @@ func (r *RecorderProxy) SetState(addr common.Address, key common.Hash, value com
 	r.db.SetState(addr, key, value)
 }
 
+func (r *RecorderProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
+	key, kPos := r.ctx.EncodeKey(key)
+
+	if contract == previousContract && kPos == 0 {
+		r.write(operation.NewSetTransientStateLcls(value))
+	} else {
+		r.write(operation.NewSetTransientState(contract, key, value))
+	}
+	r.db.SetState(addr, key, value)
+}
+
+func (r *RecorderProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
+	key, kPos := r.ctx.EncodeKey(key)
+	var op operation.Operation
+	if contract == previousContract {
+		if kPos == 0 {
+			op = operation.NewGetTransientStateLcls()
+		} else if kPos != -1 {
+			op = operation.NewGetTransientStateLccs(kPos)
+		} else {
+			op = operation.NewGetTransientStateLc(key)
+		}
+	} else {
+		op = operation.NewGetTransientState(contract, key)
+	}
+	r.write(op)
+	value := r.db.GetTransientState(addr, key)
+	return value
+}
+
 // SelfDestruct marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
 // return a non-nil account after SelfDestruct.
@@ -397,12 +431,4 @@ func (r *RecorderProxy) Selfdestruct6780(addr common.Address) {
 
 func (r *RecorderProxy) GetStorageRoot(addr common.Address) common.Hash {
 	return r.db.GetStorageRoot(addr)
-}
-
-func (r *RecorderProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	r.db.SetTransientState(addr, key, value)
-}
-
-func (r *RecorderProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	return r.db.GetTransientState(addr, key)
 }

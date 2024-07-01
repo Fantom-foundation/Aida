@@ -177,6 +177,20 @@ func (p *ProfilerProxy) SetState(addr common.Address, key common.Hash, value com
 	})
 }
 
+func (p *ProfilerProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.do(operation.SetTransientStateID, func() {
+		p.db.SetTransientState(addr, key, value)
+	})
+}
+
+func (p *ProfilerProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	var res common.Hash
+	p.do(operation.GetTransientStateID, func() {
+		res = p.db.GetTransientState(addr, key)
+	})
+	return res
+}
+
 // SelfDestruct marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
 // return a non-nil account after SelfDestruct.
@@ -444,12 +458,4 @@ func (p *ProfilerProxy) Selfdestruct6780(addr common.Address) {
 
 func (p *ProfilerProxy) GetStorageRoot(addr common.Address) common.Hash {
 	return p.db.GetStorageRoot(addr)
-}
-
-func (p *ProfilerProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	p.db.SetTransientState(addr, key, value)
-}
-
-func (p *ProfilerProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	return p.db.GetTransientState(addr, key)
 }

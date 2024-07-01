@@ -50,6 +50,8 @@ const (
 	SnapshotID
 	SubBalanceID
 	SuicideID
+	GetTransientStateID
+	SetTransientStateID
 
 	NumOps
 )
@@ -84,6 +86,8 @@ var opText = map[int]string{
 	SnapshotID:          "Snapshot",
 	SubBalanceID:        "SubBalance",
 	SuicideID:           "Suicide",
+	GetTransientStateID: "GetTransientState",
+	SetTransientStateID: "SetTransientState",
 }
 
 // opMnemo is a mnemonics table for operations.
@@ -113,6 +117,8 @@ var opMnemo = map[int]string{
 	SnapshotID:          "SN",
 	SubBalanceID:        "SB",
 	SuicideID:           "SU",
+	GetTransientStateID: "GT",
+	SetTransientStateID: "ST",
 }
 
 // opNumArgs is an argument number table for operations.
@@ -142,6 +148,8 @@ var opNumArgs = map[int]int{
 	SnapshotID:          0,
 	SubBalanceID:        1,
 	SuicideID:           1,
+	GetTransientStateID: 2,
+	SetTransientStateID: 3,
 }
 
 // opId is an operation ID table.
@@ -171,6 +179,8 @@ var opId = map[string]int{
 	"SB": SubBalanceID,
 	"SS": SetStateID,
 	"SU": SuicideID,
+	"ST": SetTransientStateID,
+	"GT": GetTransientStateID,
 }
 
 // argMnemo is the argument-class mnemonics table.

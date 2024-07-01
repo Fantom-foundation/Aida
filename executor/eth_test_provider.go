@@ -43,6 +43,8 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 		maxTestFiles = len(b)
 	)
 
+	e.log.Noticef("There is %v test files.", maxTestFiles)
+
 	// iterate all state json files
 	for _, t := range b {
 		numTestFiles++
@@ -54,7 +56,7 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 				Data:        dt,
 			})
 		}
-		if numTestFiles%1000 == 0 {
+		if numTestFiles%100 == 0 {
 			e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
 		}
 	}

@@ -114,6 +114,15 @@ func (s *MockStateDB) SetState(addr common.Address, key common.Hash, value commo
 	s.recording = append(s.recording, Record{SetStateID, []any{addr, key, value}})
 }
 
+func (s *MockStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.recording = append(s.recording, Record{SetTransientStateID, []any{addr, key, value}})
+}
+
+func (s *MockStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	s.recording = append(s.recording, Record{GetTransientStateID, []any{addr, key}})
+	return common.Hash{}
+}
+
 func (s *MockStateDB) GetCode(addr common.Address) []byte {
 	s.recording = append(s.recording, Record{GetCodeID, []any{addr}})
 	return []byte{}
@@ -284,14 +293,6 @@ func (s *MockStateDB) Selfdestruct6780(addr common.Address) {
 
 func (s *MockStateDB) GetStorageRoot(addr common.Address) common.Hash {
 	panic("GetStorageRoot not supported in mock")
-}
-
-func (s *MockStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	panic("SetTransientState not supported in mock")
-}
-
-func (s *MockStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	panic("GetTransientState not supported in mock")
 }
 
 func (s *MockStateDB) Close() error {
