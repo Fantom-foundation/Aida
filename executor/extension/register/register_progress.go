@@ -18,7 +18,6 @@ package register
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -42,10 +41,6 @@ const (
 
 const (
 	ArchiveDbDirectoryName = "archive"
-
-	TxGeneratorCommandName = "tx-generator"
-
-	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
 	RegisterProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
@@ -76,26 +71,9 @@ const (
 // MakeRegisterProgress creates an extention that
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
-func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.TxContext] {
+func MakeRegisterProgress(cfg *utils.Config, reportFrequency int, when WhenToPrint) executor.Extension[txcontext.TxContext] {
 	if cfg.RegisterRun == "" {
 		return extension.NilExtension[txcontext.TxContext]{}
-	}
-
-	if reportFrequency == 0 {
-		switch {
-		case cfg.CommandName == TxGeneratorCommandName && cfg.BlockLength != 0:
-			reportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
-		default:
-			reportFrequency = RegisterProgressDefaultReportFrequency
-		}
-	}
-
-	var when WhenToPrint
-	switch {
-	case cfg.CommandName == TxGeneratorCommandName:
-		when = OnPreTransaction
-	default:
-		when = OnPreBlock
 	}
 
 	return &registerProgress{
