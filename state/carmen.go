@@ -135,15 +135,16 @@ func (s *carmenStateDB) HasSelfDestructed(addr common.Address) bool {
 }
 
 func (s *carmenStateDB) GetBalance(addr common.Address) *uint256.Int {
-	return uint256.MustFromBig(s.txCtx.GetBalance(carmen.Address(addr)))
+	value := s.txCtx.GetBalance(carmen.Address(addr)).Uint256()
+	return &value
 }
 
 func (s *carmenStateDB) AddBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
-	s.txCtx.AddBalance(carmen.Address(addr), value.ToBig())
+	s.txCtx.AddBalance(carmen.Address(addr), carmen.NewAmountFromUint256(value))
 }
 
 func (s *carmenStateDB) SubBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
-	s.txCtx.SubBalance(carmen.Address(addr), value.ToBig())
+	s.txCtx.SubBalance(carmen.Address(addr), carmen.NewAmountFromUint256(value))
 }
 
 func (s *carmenStateDB) GetNonce(addr common.Address) uint64 {
@@ -437,7 +438,7 @@ func (l *carmenBulkLoad) CreateAccount(addr common.Address) {
 }
 
 func (l *carmenBulkLoad) SetBalance(addr common.Address, value *uint256.Int) {
-	l.load.SetBalance(carmen.Address(addr), value.ToBig())
+	l.load.SetBalance(carmen.Address(addr), carmen.NewAmountFromUint256(value))
 }
 
 func (l *carmenBulkLoad) SetNonce(addr common.Address, nonce uint64) {
