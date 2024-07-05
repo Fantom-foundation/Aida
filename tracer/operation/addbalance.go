@@ -33,7 +33,8 @@ import (
 // AddBalance data structure
 type AddBalance struct {
 	Contract common.Address
-	Amount   [16]byte // truncated amount to 16 bytes
+	Amount   [32]byte // truncated amount to 32 bytes
+	Reason   tracing.BalanceChangeReason
 }
 
 // GetId returns the add-balance operation identifier.
@@ -42,14 +43,12 @@ func (op *AddBalance) GetId() byte {
 }
 
 // NewAddBalance creates a new add-balance operation.
-func NewAddBalance(contract common.Address, amount *uint256.Int) *AddBalance {
-	// check if amount requires more than 256 bits (16 bytes)
-	if amount.BitLen() > 256 {
-		log.Fatalf("Amount exceeds 256 bit")
+func NewAddBalance(contract common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) *AddBalance {
+	// check if amount requires more than 32 bytes
+	if amount.ByteLen() > 32 {
+		log.Fatalf("Amount exceeds 32 bytes")
 	}
-	ret := &AddBalance{Contract: contract}
-	// copy amount to a 16-byte array with leading zeros
-	amount.SetBytes(ret.Amount[:])
+	ret := &AddBalance{Contract: contract, Amount: amount.Bytes32(), Reason: reason}
 	return ret
 }
 
@@ -73,11 +72,11 @@ func (op *AddBalance) Execute(db state.StateDB, ctx *context.Replay) time.Durati
 	amount := new(uint256.Int).SetBytes(op.Amount[:])
 	start := time.Now()
 	// ignore reason
-	db.AddBalance(contract, amount, tracing.BalanceChangeUnspecified)
+	db.AddBalance(contract, amount, op.Reason)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the add-balance operation.
 func (op *AddBalance) Debug(ctx *context.Context) {
-	fmt.Print(op.Contract, new(uint256.Int).SetBytes(op.Amount[:]))
+	fmt.Print(op.Contract, new(uint256.Int).SetBytes(op.Amount[:]), op.Reason)
 }

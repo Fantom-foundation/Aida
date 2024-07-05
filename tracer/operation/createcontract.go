@@ -28,43 +28,43 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-// CreateAccount data structure
-type CreateAccount struct {
+// CreateContract data structure
+type CreateContract struct {
 	Contract common.Address
 }
 
 // GetId returns the create-account operation identifier.
-func (op *CreateAccount) GetId() byte {
-	return CreateAccountID
+func (op *CreateContract) GetId() byte {
+	return CreateContractID
 }
 
-// NewCreateAccount creates a new create-account operation.
-func NewCreateAccount(contract common.Address) *CreateAccount {
-	return &CreateAccount{Contract: contract}
+// NewCreateContract creates a new create-account operation.
+func NewCreateContract(contract common.Address) *CreateContract {
+	return &CreateContract{Contract: contract}
 }
 
-// ReadCreateAccount reads a create-account operation from a file.
-func ReadCreateAccount(f io.Reader) (Operation, error) {
-	data := new(CreateAccount)
+// ReadCreateContract reads a create-account operation from a file.
+func ReadCreateContract(f io.Reader) (Operation, error) {
+	data := new(CreateContract)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the create-account operation to file.
-func (op *CreateAccount) Write(f io.Writer) error {
+func (op *CreateContract) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
 // Execute the create-account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+func (op *CreateContract) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.CreateAccount(contract)
+	db.CreateContract(contract)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the create-account operation.
-func (op *CreateAccount) Debug(ctx *context.Context) {
+func (op *CreateContract) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

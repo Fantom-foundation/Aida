@@ -60,14 +60,14 @@ func (r *RecorderProxy) CreateAccount(addr common.Address) {
 // SubBalance subtracts amount from a contract address.
 func (r *RecorderProxy) SubBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	contract := r.ctx.EncodeContract(addr)
-	r.write(operation.NewSubBalance(contract, amount))
+	r.write(operation.NewSubBalance(contract, amount, reason))
 	r.db.SubBalance(addr, amount, reason)
 }
 
 // AddBalance adds amount to a contract address.
 func (r *RecorderProxy) AddBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	contract := r.ctx.EncodeContract(addr)
-	r.write(operation.NewAddBalance(contract, amount))
+	r.write(operation.NewAddBalance(contract, amount, reason))
 	r.db.AddBalance(addr, amount, reason)
 }
 
@@ -235,13 +235,14 @@ func (r *RecorderProxy) GetTransientState(addr common.Address, key common.Hash) 
 // return a non-nil account after SelfDestruct.
 func (r *RecorderProxy) SelfDestruct(addr common.Address) {
 	contract := r.ctx.EncodeContract(addr)
-	r.write(operation.NewSuicide(contract))
+	r.write(operation.NewSelfDestruct(contract))
 	r.db.SelfDestruct(addr)
 }
 
 // HasSelfDestructed checks whether a contract has been suicided.
 func (r *RecorderProxy) HasSelfDestructed(addr common.Address) bool {
 	hasSelfDestructed := r.db.HasSelfDestructed(addr)
+	r.write(operation.NewHasSelfDestructed(addr))
 	return hasSelfDestructed
 }
 

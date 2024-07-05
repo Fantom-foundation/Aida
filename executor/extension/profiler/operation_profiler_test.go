@@ -101,9 +101,20 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 		totalOpCount := make([]int, int(ext.depth)+1)
 		ops := operation.CreateIdLabelMap()
 
-		// These are purposely not implemented, will be blacklisted here
+		// Exclude special tracing operations (LC/LS/CS surfix)
 		notImplemented := make([]bool, len(ops))
-		for _, a := range []byte{14, 18, 21, 22, 23, 29, 42, 49, 50, 51, 53} {
+		for _, a := range []byte{
+			operation.GetCodeHashLcID,
+			operation.GetCommittedStateLclsID,
+			operation.GetStateLccsID,
+			operation.GetStateLcID,
+			operation.GetStateLclsID,
+			operation.GetTransientStateLccsID,
+			operation.GetTransientStateLcID,
+			operation.GetTransientStateLclsID,
+			operation.SetStateLclsID,
+			operation.SetTransientStateLclsID,
+		} {
 			notImplemented[a] = true
 		}
 
@@ -291,6 +302,7 @@ func getStateDbFuncs(db state.StateDB) []func() {
 	mockHash := common.BigToHash(big.NewInt(0))
 	return []func(){
 		func() { db.CreateAccount(mockAddress) },
+		func() { db.CreateContract(mockAddress) },
 		func() { db.SubBalance(mockAddress, uint256.NewInt(0), tracing.BalanceChangeUnspecified) },
 		func() { db.AddBalance(mockAddress, uint256.NewInt(0), tracing.BalanceChangeUnspecified) },
 		func() { db.GetBalance(mockAddress) },
@@ -305,10 +317,12 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.GetRefund() },
 		func() { db.GetCommittedState(mockAddress, mockHash) },
 		func() { db.GetState(mockAddress, mockHash) },
+		func() { db.GetStorageRoot(mockAddress) },
 		func() { db.GetTransientState(mockAddress, mockHash) },
 		func() { db.SetState(mockAddress, mockHash, mockHash) },
 		func() { db.SetTransientState(mockAddress, mockHash, mockHash) },
 		func() { db.SelfDestruct(mockAddress) },
+		func() { db.Selfdestruct6780(mockAddress) },
 		func() { db.HasSelfDestructed(mockAddress) },
 		func() { db.Exist(mockAddress) },
 		func() { db.Empty(mockAddress) },
@@ -349,6 +363,7 @@ func getStateDbFuncs(db state.StateDB) []func() {
 // This functions tell MockStateDB to expect any number of calls (0 or more) to each of the functions (for randomized test)
 func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
+	m.EXPECT().CreateContract(gomock.Any()).AnyTimes()
 	m.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().GetBalance(gomock.Any()).AnyTimes()
@@ -363,10 +378,12 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().GetRefund().AnyTimes()
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().GetState(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetStorageRoot(gomock.Any()).AnyTimes()
 	m.EXPECT().GetTransientState(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SetTransientState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SelfDestruct(gomock.Any()).AnyTimes()
+	m.EXPECT().Selfdestruct6780(gomock.Any()).AnyTimes()
 	m.EXPECT().HasSelfDestructed(gomock.Any()).AnyTimes()
 	m.EXPECT().Exist(gomock.Any()).AnyTimes()
 	m.EXPECT().Empty(gomock.Any()).AnyTimes()
@@ -397,6 +414,7 @@ func prepareMockStateDb(m *state.MockStateDB) {
 // This functions tell MockStateDB to expect exactly one call to each of the possible functions
 func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().CreateAccount(gomock.Any())
+	m.EXPECT().CreateContract(gomock.Any())
 	m.EXPECT().SubBalance(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().AddBalance(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().GetBalance(gomock.Any())
@@ -411,10 +429,12 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().GetRefund()
 	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any())
 	m.EXPECT().GetState(gomock.Any(), gomock.Any())
+	m.EXPECT().GetStorageRoot(gomock.Any())
 	m.EXPECT().GetTransientState(gomock.Any(), gomock.Any())
 	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().SetTransientState(gomock.Any(), gomock.Any(), gomock.Any())
 	m.EXPECT().SelfDestruct(gomock.Any())
+	m.EXPECT().Selfdestruct6780(gomock.Any())
 	m.EXPECT().HasSelfDestructed(gomock.Any())
 	m.EXPECT().Exist(gomock.Any())
 	m.EXPECT().Empty(gomock.Any())

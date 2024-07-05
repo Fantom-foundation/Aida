@@ -28,43 +28,43 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-// CreateAccount data structure
-type CreateAccount struct {
+// GetStorageRoot data structure
+type GetStorageRoot struct {
 	Contract common.Address
 }
 
-// GetId returns the create-account operation identifier.
-func (op *CreateAccount) GetId() byte {
-	return CreateAccountID
+// GetId returns the get-code-hash operation identifier.
+func (op *GetStorageRoot) GetId() byte {
+	return GetStorageRootID
 }
 
-// NewCreateAccount creates a new create-account operation.
-func NewCreateAccount(contract common.Address) *CreateAccount {
-	return &CreateAccount{Contract: contract}
+// NewGetStorageRoot creates a new get-code-hash operation.
+func NewGetStorageRoot(contract common.Address) *GetStorageRoot {
+	return &GetStorageRoot{Contract: contract}
 }
 
-// ReadCreateAccount reads a create-account operation from a file.
-func ReadCreateAccount(f io.Reader) (Operation, error) {
-	data := new(CreateAccount)
+// ReadGetHash reads a get-code-hash operation from a file.
+func ReadGetStorageRoot(f io.Reader) (Operation, error) {
+	data := new(GetStorageRoot)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the create-account operation to file.
-func (op *CreateAccount) Write(f io.Writer) error {
+// Write the get-code-hash operation to a file.
+func (op *GetStorageRoot) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the create-account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+// Execute the get-code-hash operation.
+func (op *GetStorageRoot) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.CreateAccount(contract)
+	db.GetStorageRoot(contract)
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the create-account operation.
-func (op *CreateAccount) Debug(ctx *context.Context) {
+// Debug prints a debug message for the get-code-hash operation.
+func (op *GetStorageRoot) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

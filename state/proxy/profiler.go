@@ -191,11 +191,11 @@ func (p *ProfilerProxy) GetTransientState(addr common.Address, key common.Hash) 
 	return res
 }
 
-// SelfDestruct marks the given account as suicided. This clears the account balance.
+// SelfDestruct marks the given account as self destructed. This clears the account balance.
 // The account is still available until the state is committed;
 // return a non-nil account after SelfDestruct.
 func (p *ProfilerProxy) SelfDestruct(addr common.Address) {
-	p.do(operation.SuicideID, func() {
+	p.do(operation.SelfDestructID, func() {
 		p.db.SelfDestruct(addr)
 	})
 }
@@ -203,7 +203,7 @@ func (p *ProfilerProxy) SelfDestruct(addr common.Address) {
 // HasSelfDestructed checks whether a contract has been suicided.
 func (p *ProfilerProxy) HasSelfDestructed(addr common.Address) bool {
 	var res bool
-	p.do(operation.HasSuicidedID, func() {
+	p.do(operation.HasSelfDestructedID, func() {
 		res = p.db.HasSelfDestructed(addr)
 	})
 	return res
@@ -239,7 +239,7 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
 func (p *ProfilerProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	p.do(operation.PrepareAccessListID, func() {
+	p.do(operation.PrepareID, func() {
 		p.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 	})
 }
@@ -377,7 +377,7 @@ func (p *ProfilerProxy) AddPreimage(addr common.Hash, image []byte) {
 
 // Prepare sets the current transaction hash and index.
 func (p *ProfilerProxy) SetTxContext(thash common.Hash, ti int) {
-	p.do(operation.PrepareID, func() {
+	p.do(operation.SetTxContextID, func() {
 		p.db.SetTxContext(thash, ti)
 	})
 }
@@ -447,15 +447,22 @@ func (p *ProfilerProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
 }
 
-// TODO profile new operations
 func (p *ProfilerProxy) CreateContract(addr common.Address) {
-	p.db.CreateContract(addr)
+	p.do(operation.CreateContractID, func() {
+		p.db.CreateContract(addr)
+	})
 }
 
 func (p *ProfilerProxy) Selfdestruct6780(addr common.Address) {
-	p.db.Selfdestruct6780(addr)
+	p.do(operation.SelfDestruct6780ID, func() {
+		p.db.Selfdestruct6780(addr)
+	})
 }
 
 func (p *ProfilerProxy) GetStorageRoot(addr common.Address) common.Hash {
-	return p.db.GetStorageRoot(addr)
+	var res common.Hash
+	p.do(operation.GetStorageRootID, func() {
+		res = p.db.GetStorageRoot(addr)
+	})
+	return res
 }

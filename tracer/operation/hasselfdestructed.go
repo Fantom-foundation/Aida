@@ -27,43 +27,43 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// HasSuicided data structure
-type HasSuicided struct {
+// HasSelfDestructed data structure
+type HasSelfDestructed struct {
 	Contract common.Address
 }
 
-// GetId returns the HasSuicided operation identifier.
-func (op *HasSuicided) GetId() byte {
-	return HasSuicidedID
+// GetId returns the HasSelfDestructed operation identifier.
+func (op *HasSelfDestructed) GetId() byte {
+	return HasSelfDestructedID
 }
 
-// NewHasSuicided creates a new HasSuicided operation.
-func NewHasSuicided(contract common.Address) *HasSuicided {
-	return &HasSuicided{Contract: contract}
+// NewHasSelfDestructed creates a new HasSelfDestructed operation.
+func NewHasSelfDestructed(contract common.Address) *HasSelfDestructed {
+	return &HasSelfDestructed{Contract: contract}
 }
 
-// ReadHasSuicided reads a HasSuicided operation from a file.
-func ReadHasSuicided(f io.Reader) (Operation, error) {
-	data := new(HasSuicided)
+// ReadHasSelfDestructed reads a HasSelfDestructed operation from a file.
+func ReadHasSelfDestructed(f io.Reader) (Operation, error) {
+	data := new(HasSelfDestructed)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the HasSuicided operation to a file.
-func (op *HasSuicided) Write(f io.Writer) error {
+// Write the HasSelfDestructed operation to a file.
+func (op *HasSelfDestructed) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the HasSuicided operation.
-func (op *HasSuicided) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+// Execute the HasSelfDestructed operation.
+func (op *HasSelfDestructed) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.HasSelfDestructed(contract)
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the HasSuicided operation.
-func (op *HasSuicided) Debug(ctx *context.Context) {
+// Debug prints a debug message for the HasSelfDestructed operation.
+func (op *HasSelfDestructed) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

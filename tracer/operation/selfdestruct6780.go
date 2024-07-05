@@ -28,43 +28,43 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-// Suicide data structure
-type Suicide struct {
+// SelfDestruct6780 data structure
+type SelfDestruct6780 struct {
 	Contract common.Address
 }
 
 // GetId returns the suicide operation identifier.
-func (op *Suicide) GetId() byte {
-	return SuicideID
+func (op *SelfDestruct6780) GetId() byte {
+	return SelfDestruct6780ID
 }
 
-// NewSuicide creates a new suicide operation.
-func NewSuicide(contract common.Address) *Suicide {
-	return &Suicide{Contract: contract}
+// NewSelfDestruct6780 creates a new suicide operation.
+func NewSelfDestruct6780(contract common.Address) *SelfDestruct6780 {
+	return &SelfDestruct6780{Contract: contract}
 }
 
-// ReadSuicide reads a suicide operation from a file.
-func ReadSuicide(f io.Reader) (Operation, error) {
-	data := new(Suicide)
+// ReadSelfDestruct6780 reads a suicide operation from a file.
+func ReadSelfDestruct6780(f io.Reader) (Operation, error) {
+	data := new(SelfDestruct6780)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the suicide operation to a file.
-func (op *Suicide) Write(f io.Writer) error {
+func (op *SelfDestruct6780) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
 // Execute the suicide operation.
-func (op *Suicide) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+func (op *SelfDestruct6780) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.SelfDestruct(contract)
+	db.Selfdestruct6780(contract)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the suicide operation.
-func (op *Suicide) Debug(ctx *context.Context) {
+func (op *SelfDestruct6780) Debug(ctx *context.Context) {
 	fmt.Print(ctx.DecodeContract(op.Contract))
 }

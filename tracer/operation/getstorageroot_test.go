@@ -24,47 +24,47 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initHasSuicided(t *testing.T) (*context.Replay, *HasSuicided, common.Address) {
+func initGetStorageRoot(t *testing.T) (*context.Replay, *GetStorageRoot, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
 	ctx := context.NewReplay()
 	contract := ctx.EncodeContract(addr)
 
 	// create new operation
-	op := NewHasSuicided(contract)
+	op := NewGetStorageRoot(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
 	// check id
-	if op.GetId() != HasSuicidedID {
+	if op.GetId() != GetStorageRootID {
 		t.Fatalf("wrong ID returned")
 	}
 
 	return ctx, op, addr
 }
 
-// TestHasSuicidedReadWrite writes a new HasSuicided object into a buffer, reads from it,
+// TestGetStorageRootReadWrite writes a new GetStorageRoot object into a buffer, reads from it,
 // and checks equality.
-func TestHasSuicidedReadWrite(t *testing.T) {
-	_, op1, _ := initHasSuicided(t)
-	testOperationReadWrite(t, op1, ReadHasSuicided)
+func TestGetStorageRootReadWrite(t *testing.T) {
+	_, op1, _ := initGetStorageRoot(t)
+	testOperationReadWrite(t, op1, ReadGetStorageRoot)
 }
 
-// TestHasSuicidedDebug creates a new HasSuicided object and checks its Debug message.
-func TestHasSuicidedDebug(t *testing.T) {
-	ctx, op, addr := initHasSuicided(t)
+// TestGetStorageRootDebug creates a new GetStorageRoot object and checks its Debug message.
+func TestGetStorageRootDebug(t *testing.T) {
+	ctx, op, addr := initGetStorageRoot(t)
 	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
-// TestHasSuicidedExecute
-func TestHasSuicidedExecute(t *testing.T) {
-	ctx, op, addr := initHasSuicided(t)
+// TestGetStorageRootExecute
+func TestGetStorageRootExecute(t *testing.T) {
+	ctx, op, addr := initGetStorageRoot(t)
 
 	// check execution
 	mock := NewMockStateDB()
 	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
-	expected := []Record{{HasSuicidedID, []any{addr}}}
+	expected := []Record{{GetStorageRootID, []any{addr}}}
 	mock.compareRecordings(expected, t)
 }
