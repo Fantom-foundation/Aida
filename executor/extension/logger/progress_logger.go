@@ -28,7 +28,7 @@ import (
 
 const (
 	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
-	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s; disk usage %.2f GiB, free space %.2f GiB"
+	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
 	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
 )
 
@@ -78,7 +78,11 @@ func (l *progressLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 	l.wg.Add(1)
 
 	// pass the value for thread safety
-	go l.startReport(l.reportFrequency, ctx.StateDbPath)
+	path := ""
+	if ctx != nil && ctx.StateDbPath != "" {
+		path = ctx.StateDbPath
+	}
+	go l.startReport(l.reportFrequency, path)
 	return nil
 }
 
@@ -152,21 +156,27 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration, stateDbPa
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
 
-			used, err := utils.GetDirectorySize(stateDbPath)
-			if err != nil {
-				l.log.Errorf("failed to get size of state-db (%v); %v", stateDbPath, err)
-				continue
-			}
-			free, err := utils.GetFreeSpace(stateDbPath)
-			if err != nil {
-				l.log.Errorf("failed to get free space of state-db (%v); %v", stateDbPath, err)
-				continue
-			}
+			if stateDbPath != "" {
+				used, err := utils.GetDirectorySize(stateDbPath)
+				if err != nil {
+					l.log.Errorf("failed to get size of state-db (%v); %v", stateDbPath, err)
+					continue
+				}
+				free, err := utils.GetFreeSpace(stateDbPath)
+				if err != nil {
+					l.log.Errorf("failed to get free space of state-db (%v); %v", stateDbPath, err)
+					continue
+				}
 
-			l.log.Infof(progressLoggerReportFormat,
-				elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
-				float64(used)/float64(1<<30), float64(free)/1e9,
-			)
+				l.log.Infof(progressLoggerReportFormat+"; disk usage %.2f GiB, free space %.2f GiB",
+					elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
+					float64(used)/float64(1<<30), float64(free)/1e9,
+				)
+			} else {
+				l.log.Infof(progressLoggerReportFormat,
+					elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
+				)
+			}
 
 			lastReport = now
 

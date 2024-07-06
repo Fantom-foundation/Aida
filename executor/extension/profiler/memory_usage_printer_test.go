@@ -45,11 +45,11 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 	gomock.InOrder(
 		// Prerun
 		db.EXPECT().GetMemoryUsage().Return(usage),
-		log.EXPECT().Notice(gomock.Any()),
+		log.EXPECT().Noticef(gomock.Any(), gomock.Any(), gomock.Any()),
 
 		// Postrun
 		db.EXPECT().GetMemoryUsage().Return(usage),
-		log.EXPECT().Notice(gomock.Any()),
+		log.EXPECT().Noticef(gomock.Any(), gomock.Any(), gomock.Any()),
 	)
 
 	ext.PreRun(executor.State[any]{}, &executor.Context{State: db})
