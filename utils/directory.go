@@ -20,7 +20,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
+
+// GetFreeSpace returns the amount of free space in bytes on the filesystem containing the given path.
+func GetFreeSpace(path string) (int64, error) {
+	fs := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &fs)
+	if err != nil {
+		return 0, err
+	}
+	return int64(fs.Bavail) * fs.Bsize, nil
+}
 
 // GetDirectorySize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
 func GetDirectorySize(path string) (int64, error) {

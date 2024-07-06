@@ -28,7 +28,7 @@ import (
 
 const (
 	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
-	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
+	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s; disk usage %.2f GiB, free space %.2f GiB"
 	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
 )
 
@@ -100,8 +100,8 @@ func (l *progressLogger[T]) PostTransaction(state executor.State[T], ctx *execut
 }
 
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
-// It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
+// It reports current progress every time we hit the ticker with defaultReportFrequencyInSeconds.
+func (l *progressLogger[T]) startReport(reportFrequency time.Duration, stateDbPath string) {
 	defer l.wg.Done()
 
 	var (
@@ -152,7 +152,21 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
 
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
+			used, err := utils.GetDirectorySize(stateDbPath)
+			if err != nil {
+				l.log.Errorf("failed to get size of state-db (%v); %v", stateDbPath, err)
+				continue
+			}
+			free, err := utils.GetFreeSpace(stateDbPath)
+			if err != nil {
+				l.log.Errorf("failed to get free space of state-db (%v); %v", stateDbPath, err)
+				continue
+			}
+
+			l.log.Infof(progressLoggerReportFormat,
+				elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
+				float64(used)/float64(1<<30), float64(free)/1e9,
+			)
 
 			lastReport = now
 
