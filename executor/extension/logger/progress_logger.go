@@ -74,11 +74,11 @@ type progressLogger[T any] struct {
 }
 
 // PreRun starts the report goroutine
-func (l *progressLogger[T]) PreRun(executor.State[T], *executor.Context) error {
+func (l *progressLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	l.wg.Add(1)
 
 	// pass the value for thread safety
-	go l.startReport(l.reportFrequency)
+	go l.startReport(l.reportFrequency, ctx.StateDbPath)
 	return nil
 }
 
