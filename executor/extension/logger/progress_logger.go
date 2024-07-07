@@ -168,9 +168,10 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration, stateDbPa
 					continue
 				}
 
+				GiB := float64(1 << 30)
 				l.log.Infof(progressLoggerReportFormat+"; disk usage %.2f GiB, free space %.2f GiB",
 					elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
-					float64(used)/float64(1<<30), float64(free)/1e9,
+					float64(used)/GiB, float64(free)/GiB,
 				)
 			} else {
 				l.log.Infof(progressLoggerReportFormat,
