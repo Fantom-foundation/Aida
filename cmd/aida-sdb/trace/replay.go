@@ -88,10 +88,10 @@ func (p operationProcessor) runTransaction(block uint64, operations []operation.
 func replay(cfg *utils.Config, provider executor.Provider[[]operation.Operation], processor executor.Processor[[]operation.Operation], extra []executor.Extension[[]operation.Operation], aidaDb db.BaseDB) error {
 	var extensionList = []executor.Extension[[]operation.Operation]{
 		profiler.MakeCpuProfiler[[]operation.Operation](cfg),
-		logger.MakeProgressLogger[[]operation.Operation](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
 		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
 		statedb.MakeStateDbManager[[]operation.Operation](cfg, ""),
+		logger.MakeProgressLogger[[]operation.Operation](cfg, 0),
 		primer.MakeStateDbPrimer[[]operation.Operation](cfg),
 	}
 
