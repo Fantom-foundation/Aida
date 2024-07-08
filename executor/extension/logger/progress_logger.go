@@ -74,11 +74,15 @@ type progressLogger[T any] struct {
 }
 
 // PreRun starts the report goroutine
-func (l *progressLogger[T]) PreRun(executor.State[T], *executor.Context) error {
+func (l *progressLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	l.wg.Add(1)
 
 	// pass the value for thread safety
-	go l.startReport(l.reportFrequency)
+	path := ""
+	if ctx != nil && ctx.StateDbPath != "" {
+		path = ctx.StateDbPath
+	}
+	go l.startReport(l.reportFrequency, path)
 	return nil
 }
 
@@ -100,8 +104,8 @@ func (l *progressLogger[T]) PostTransaction(state executor.State[T], ctx *execut
 }
 
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
-// It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
+// It reports current progress every time we hit the ticker with defaultReportFrequencyInSeconds.
+func (l *progressLogger[T]) startReport(reportFrequency time.Duration, stateDbPath string) {
 	defer l.wg.Done()
 
 	var (
@@ -152,7 +156,28 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
 
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
+			if stateDbPath != "" {
+				used, err := utils.GetDirectorySize(stateDbPath)
+				if err != nil {
+					l.log.Errorf("failed to get size of state-db (%v); %v", stateDbPath, err)
+					continue
+				}
+				free, err := utils.GetFreeSpace(stateDbPath)
+				if err != nil {
+					l.log.Errorf("failed to get free space of state-db (%v); %v", stateDbPath, err)
+					continue
+				}
+
+				GiB := float64(1 << 30)
+				l.log.Infof(progressLoggerReportFormat+"; disk usage %.2f GiB, free space %.2f GiB",
+					elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
+					float64(used)/GiB, float64(free)/GiB,
+				)
+			} else {
+				l.log.Infof(progressLoggerReportFormat,
+					elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6,
+				)
+			}
 
 			lastReport = now
 
