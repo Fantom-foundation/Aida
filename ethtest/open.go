@@ -65,12 +65,6 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 
 	for _, p := range paths {
 		// todo these directories contain more complex tests, exclude them for now
-		if strings.Contains(p, "Shanghai") {
-			continue
-		}
-		if strings.Contains(p, "Cancun") {
-			continue
-		}
 		if strings.Contains(p, "VMTests") {
 			continue
 		}
