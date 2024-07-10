@@ -30,7 +30,7 @@ func GetFreeSpace(path string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int64(fs.Bavail) * fs.Bsize, nil
+	return int64(fs.Bavail * uint64(fs.Bsize)), nil
 }
 
 // GetDirectorySize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
