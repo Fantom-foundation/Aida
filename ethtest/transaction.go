@@ -30,6 +30,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// stTransaction indicates the executed transaction.
+// Only one value for Data, GasLimit and Value is valid for each transaction.
+// Any other value is shared among all transactions within one test file.
+// Correct index is marked in StJSON.stPost.Index...
 type stTransaction struct {
 	GasPrice             *BigInt             `json:"gasPrice"`
 	MaxFeePerGas         *BigInt             `json:"maxFeePerGas"`
@@ -45,7 +49,7 @@ type stTransaction struct {
 	BlobHashes           []common.Hash       `json:"blobVersionHashes"`
 }
 
-func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*core.Message, error) {
+func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
 	if len(tx.PrivateKey) > 0 {
@@ -77,7 +81,7 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*core.Messa
 	dataHex := tx.Data[ps.indexes.Data]
 	valueHex := tx.Value[ps.indexes.Value]
 	gasLimit := tx.GasLimit[ps.indexes.Gas]
-	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
+
 	value := new(big.Int)
 	if valueHex != "0x" {
 		v, ok := math.ParseBig256(valueHex)

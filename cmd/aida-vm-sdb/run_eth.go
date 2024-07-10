@@ -80,8 +80,6 @@ func RunEthereumTest(ctx *cli.Context) error {
 		return err
 	}
 
-	cfg.ChainID = utils.EthTestChainID
-
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
 
@@ -115,9 +113,9 @@ func runEth(
 	extensionList = append(
 		extensionList,
 		logger.MakeEthStateTestLogger(cfg),
+		statedb.MakeEthStateScopeTestEventEmitter(),
 		validator.MakeEthStateTestValidator(cfg),
 		validator.MakeShadowDbValidator(cfg),
-		statedb.MakeEthStateScopeTestEventEmitter(),
 	)
 
 	extensionList = append(extensionList, extra...)

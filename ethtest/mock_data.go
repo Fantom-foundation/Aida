@@ -60,7 +60,7 @@ func CreateTestData(t *testing.T) *StJSON {
 			Value:                []string{"0x01"},
 			PrivateKey:           hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"),
 		},
-		Post: map[string][]stPostState{
+		Post: map[string][]stPost{
 			"TestNetwork": {
 				{
 					RootHash: common.HexToHash("0x20"),

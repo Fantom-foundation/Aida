@@ -19,13 +19,11 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"math/rand"
 	"os"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -39,7 +37,7 @@ import (
 
 type ArgumentMode int
 type ChainID int
-type ChainIDs []ChainID
+type ChainIDs map[ChainID]string
 
 // An enums of argument modes used by trace subcommands
 const (
@@ -55,13 +53,13 @@ const (
 	EthereumChainID ChainID = 1
 	MainnetChainID  ChainID = 250
 	TestnetChainID  ChainID = 4002
-	// EthTestChainID is a mock ChainID which is necessary for setting
+	// EthTestsChainID is a mock ChainID which is necessary for setting
 	// the chain rules to allow any block number for any fork.
-	EthTestChainID ChainID = 1337
+	EthTestsChainID ChainID = 1337
 )
 
-var RealChainIDs = ChainIDs{MainnetChainID, TestnetChainID, EthereumChainID}
-var AllowedChainIDs = append(RealChainIDs, EthTestChainID)
+var RealChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum"}
+var AllowedChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum", EthTestsChainID: "eth-tests"}
 
 const (
 	AidaDbRepositoryMainnetUrl  = "https://aida.repository.fantom.network"
@@ -124,7 +122,7 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 
 	// EthTest must always set its fork blocks to 0 because each test has random block number
 	// and if that block number is not greater than the config, the test won't get executed
-	EthTestChainID: {},
+	EthTestsChainID: {},
 }
 
 // special transaction number for pseudo transactions
@@ -279,12 +277,15 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cc.cfg.ChainCfg = chainConfig
 
 	// set first Opera block according to chian id
-	cc.setFirstOperaBlock()
+	err = cc.setFirstOperaBlock()
+	if err != nil {
+		return nil, err
+	}
 
 	// set aida db repository url
 	err = cc.setAidaDbRepositoryUrl()
 	if err != nil {
-		return cfg, fmt.Errorf("unable to prepareUrl from chain id %v; %v", cfg.ChainID, err)
+		return cfg, fmt.Errorf("unable to prepare url from chain id %v; %v", cfg.ChainID, err)
 	}
 
 	// set numbers of first block, last block and path to profilingDB
@@ -303,24 +304,28 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	return cfg, nil
 }
 
-func (cc *configContext) setFirstOperaBlock() {
-	if !(cc.cfg.ChainID == MainnetChainID || cc.cfg.ChainID == TestnetChainID || cc.cfg.ChainID == EthereumChainID) {
-		log.Fatalf("unknown chain id %v", cc.cfg.ChainID)
+func (cc *configContext) setFirstOperaBlock() error {
+	if _, ok := AllowedChainIDs[cc.cfg.ChainID]; !ok {
+		return fmt.Errorf("unknown chain id %v", cc.cfg.ChainID)
 	}
 	FirstOperaBlock = KeywordBlocks[cc.cfg.ChainID]["opera"]
+	return nil
 }
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
 func (cc *configContext) setAidaDbRepositoryUrl() error {
-	if cc.cfg.ChainID == MainnetChainID {
+	switch cc.cfg.ChainID {
+	case MainnetChainID:
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
-	} else if cc.cfg.ChainID == TestnetChainID {
+	case TestnetChainID:
 		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
-	} else if cc.cfg.ChainID == EthereumChainID {
+	case EthereumChainID:
 		AidaDbRepositoryUrl = AidaDbRepositoryEthereumUrl
-	} else {
-		return fmt.Errorf("invalid chain id %d", cc.cfg.ChainID)
+	default:
+		cc.log.Warningf("%v chain-id does not have aida-db repository url set - setting to mainnet", cc.cfg)
+		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	}
+
 	return nil
 }
 
@@ -331,15 +336,15 @@ func (cfg *Config) SetStateDbSrcReadOnly() {
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
 func GetChainConfig(chainId ChainID) (*params.ChainConfig, error) {
-	if !slices.Contains(AllowedChainIDs, chainId) {
-		return nil, fmt.Errorf("unknown chain id %v\nallowed chain ids: %v", chainId, AllowedChainIDs)
+	if _, ok := AllowedChainIDs[chainId]; !ok {
+		return nil, fmt.Errorf("unknown chain id %v\nallowed chain-ids: %v", chainId, AllowedChainIDs)
 	}
 	switch chainId {
 	case EthereumChainID:
 		chainConfig := params.MainnetChainConfig
 		chainConfig.DAOForkSupport = false
 		return chainConfig, nil
-	case EthTestChainID:
+	case EthTestsChainID:
 		return params.AllDevChainProtocolChanges, nil
 	default:
 		// Make a copy of the basic config before modifying it to avoid
@@ -558,8 +563,7 @@ func (cc *configContext) setChainId() error {
 		}
 
 		if cc.cfg.ChainID == 0 {
-			cc.log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cc.cfg.AidaDb)
-			cc.cfg.ChainID = MainnetChainID
+			return fmt.Errorf("chain-id was neither specified with flag (--%v) nor was found in aida-db (%v) - please specify chain - id\nallowed chain-ids: %v", ChainIDFlag.Name, cc.cfg.AidaDb, AllowedChainIDs)
 		} else {
 			cc.log.Noticef("Found chainId (%v) in AidaDb", cc.cfg.ChainID)
 		}

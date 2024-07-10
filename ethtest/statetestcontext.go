@@ -29,15 +29,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// TODO: This should only work as a unmarshaller and should not be used as transaction, new struct should be created for this regard
 type StJSON struct {
 	txcontext.NilTxContext
-	TestLabel   string
-	UsedNetwork string
-	Env         stEnv                    `json:"env"`
-	Pre         types.GenesisAlloc       `json:"pre"`
-	Tx          stTransaction            `json:"transaction"`
-	Out         hexutil.Bytes            `json:"out"`
-	Post        map[string][]stPostState `json:"post"`
+	TestLabel    string
+	UsedNetwork  string
+	Env          stEnv               `json:"env"`
+	Pre          types.GenesisAlloc  `json:"pre"`
+	Tx           stTransaction       `json:"transaction"`
+	Out          hexutil.Bytes       `json:"out"`
+	Post         map[string][]stPost `json:"post"`
+	currentIndex int
 }
 
 func (s *StJSON) GetStateHash() common.Hash {
@@ -75,7 +77,7 @@ func (s *StJSON) GetMessage() *core.Message {
 		baseFee = &BigInt{*big.NewInt(0x0a)}
 	}
 
-	msg, err := s.Tx.toMessage(s.getPostState(), baseFee)
+	msg, err := s.Tx.toMessage(s.getTransactionData(), baseFee)
 
 	if err != nil {
 		panic(err)
@@ -84,21 +86,25 @@ func (s *StJSON) GetMessage() *core.Message {
 	return msg
 }
 
-func (s *StJSON) getPostState() stPostState {
+func (s *StJSON) getTransactionData() stPost {
 	if len(s.Post[s.UsedNetwork]) > 1 {
 		fmt.Printf("used network %v\n", len(s.Post[s.UsedNetwork]))
 	}
 	return s.Post[s.UsedNetwork][0]
 }
 
-type stPostState struct {
-	RootHash        common.Hash   `json:"hash"`
+// stPost indicates data for each transaction.
+type stPost struct {
+	// RootHash holds expected state hash after a transaction is executed.
+	RootHash common.Hash `json:"hash"`
+	// LogsHash holds expected logs hash (Bloom) after a transaction is executed.
 	LogsHash        common.Hash   `json:"logs"`
 	TxBytes         hexutil.Bytes `json:"txbytes"`
 	ExpectException string        `json:"expectException"`
 	indexes         Index
 }
 
+// Index indicates position of data, gas, value for executed transaction.
 type Index struct {
 	Data  int `json:"data"`
 	Gas   int `json:"gas"`
@@ -109,16 +115,20 @@ type Index struct {
 func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 	// each test contains multiple validation data for different forks.
 	// we create a test for each usable fork
-
 	for _, fork := range usableForks {
 		var test StJSON
-		if _, ok := s.Post[fork]; ok {
+		if posts, ok := s.Post[fork]; ok {
 			test = *s               // copy all the test data
 			test.UsedNetwork = fork // add correct fork name
-
 			// add block number to env (+1 just to make sure we are within wanted fork)
 			test.Env.blockNumber = utils.KeywordBlocks[chainId][strings.ToLower(fork)] + 1
-			dividedTests = append(dividedTests, &test)
+
+			// iterate over all posts (each transaction data) and execute tx for each one
+			for i, _ := range posts {
+				test.currentIndex = i
+				dividedTests = append(dividedTests, &test)
+			}
+
 		}
 	}
 

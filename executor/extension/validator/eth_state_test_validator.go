@@ -24,6 +24,8 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -57,27 +59,10 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 }
 
 func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	// TODO: uncomment
-	//want := s.Data.GetStateHash()
-	//got, err := ctx.State.GetHash()
-	//if err != nil {
-	//	return fmt.Errorf("cannot get state hash; %w", err)
-	//}
-	//
-	//// cast state.Data to stJSON
-	//c := s.Data.(*ethtest.StJSON)
-
-	//if got != want {
-	//	err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())
-	//	if e.cfg.ContinueOnFailure {
-	//		e.log.Error(err)
-	//	} else {
-	//		return err
-	//	}
-	//} else {
-	//	e.passed++
-	//	e.log.Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", c.TestLabel, c.UsedNetwork, s.Block, s.Transaction, got.Hex())
-	//}
+	// TODO: how to verify logs - no logs are created - look at eth_state_test_scope_event_emitter - block is +1
+	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", s.Block+1))
+	txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", s.Block+1, s.Transaction))
+	e.log.Debugf("%x", types.LogsBloom(ctx.State.GetLogs(txHash, uint64(s.Block+1), blockHash)))
 
 	e.overall++
 	return nil
