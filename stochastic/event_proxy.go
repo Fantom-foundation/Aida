@@ -178,6 +178,15 @@ func (p *EventProxy) SetState(address common.Address, key common.Hash, value com
 	// call real StateDB
 	p.db.SetState(address, key, value)
 }
+func (p *EventProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.registry.RegisterValueOp(SetTransientStateID, &addr, &key, &value)
+	p.db.SetTransientState(addr, key, value)
+}
+
+func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	p.registry.RegisterKeyOp(GetTransientStateID, &addr, &key)
+	return p.db.GetState(addr, key)
+}
 
 // SelfDestruct an account.
 func (p *EventProxy) SelfDestruct(address common.Address) {
@@ -436,12 +445,4 @@ func (p *EventProxy) Selfdestruct6780(addr common.Address) {
 
 func (p *EventProxy) GetStorageRoot(addr common.Address) common.Hash {
 	return p.db.GetStorageRoot(addr)
-}
-
-func (p *EventProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	p.db.SetTransientState(addr, key, value)
-}
-
-func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	return p.db.GetTransientState(addr, key)
 }
