@@ -85,7 +85,6 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 		var b map[string]T
 		err = json.Unmarshal(byteJSON, &b)
 		if err != nil {
-			//return nil, fmt.Errorf("cannot unmarshal file %v", p)
 			fmt.Printf("SKIPPED: cannot unmarshal file %v\n", p)
 			continue
 		}
