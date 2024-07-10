@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -54,9 +55,13 @@ const (
 	EthereumChainID ChainID = 1
 	MainnetChainID  ChainID = 250
 	TestnetChainID  ChainID = 4002
+	// EthTestChainID is a mock ChainID which is necessary for setting
+	// the chain rules to allow any block number for any fork.
+	EthTestChainID ChainID = 1337
 )
 
-var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID, EthereumChainID}
+var RealChainIDs = ChainIDs{MainnetChainID, TestnetChainID, EthereumChainID}
+var AllowedChainIDs = append(RealChainIDs, EthTestChainID)
 
 const (
 	AidaDbRepositoryMainnetUrl  = "https://aida.repository.fantom.network"
@@ -116,6 +121,10 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
+
+	// EthTest must always set its fork blocks to 0 because each test has random block number
+	// and if that block number is not greater than the config, the test won't get executed
+	EthTestChainID: {},
 }
 
 // special transaction number for pseudo transactions
@@ -132,22 +141,23 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	AidaDb                 string         // directory to profiling database containing substate, update, delete accounts data
-	ArchiveMaxQueryAge     int            // the maximum age for archive queries (in blocks)
-	ArchiveMode            bool           // enable archive mode
-	ArchiveQueryRate       int            // the queries per second send to the archive
-	ArchiveVariant         string         // selects the implementation variant of the archive
-	ArgPath                string         // path to file or directory given as argument
-	BalanceRange           int64          // balance range for stochastic simulation/replay
-	BasicBlockProfiling    bool           // enable profiling of basic block
-	BlockLength            uint64         // length of a block in number of transactions
-	CPUProfile             string         // pprof cpu profile output file name
-	CPUProfilePerInterval  bool           // a different CPU profile is taken per 100k block interval
-	Cache                  int            // Cache for StateDb or Priming
-	CarmenSchema           int            // the current DB schema ID to use in Carmen
-	CarmenStateCacheSize   int            // the number of values cached in the Carmen StateDB (0 for default value)
-	CarmenNodeCacheSize    int            // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
-	ChainID                ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
+	AidaDb                 string  // directory to profiling database containing substate, update, delete accounts data
+	ArchiveMaxQueryAge     int     // the maximum age for archive queries (in blocks)
+	ArchiveMode            bool    // enable archive mode
+	ArchiveQueryRate       int     // the queries per second send to the archive
+	ArchiveVariant         string  // selects the implementation variant of the archive
+	ArgPath                string  // path to file or directory given as argument
+	BalanceRange           int64   // balance range for stochastic simulation/replay
+	BasicBlockProfiling    bool    // enable profiling of basic block
+	BlockLength            uint64  // length of a block in number of transactions
+	CPUProfile             string  // pprof cpu profile output file name
+	CPUProfilePerInterval  bool    // a different CPU profile is taken per 100k block interval
+	Cache                  int     // Cache for StateDb or Priming
+	CarmenSchema           int     // the current DB schema ID to use in Carmen
+	CarmenStateCacheSize   int     // the number of values cached in the Carmen StateDB (0 for default value)
+	CarmenNodeCacheSize    int     // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
+	ChainID                ChainID // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChainCfg               *params.ChainConfig
 	ChannelBufferSize      int            // set a buffer size for profiling channel
 	CompactDb              bool           // compact database after merging
 	ContinueOnFailure      bool           // continue validation when an error detected
@@ -260,6 +270,14 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("cannot get chain id; %v", err)
 	}
 
+	// set chain config
+	chainConfig, err := GetChainConfig(cc.cfg.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create chain config; %w", err)
+	}
+
+	cc.cfg.ChainCfg = chainConfig
+
 	// set first Opera block according to chian id
 	cc.setFirstOperaBlock()
 
@@ -312,25 +330,27 @@ func (cfg *Config) SetStateDbSrcReadOnly() {
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainId ChainID) *params.ChainConfig {
-	if !(chainId == MainnetChainID || chainId == TestnetChainID || chainId == EthereumChainID) {
-		log.Fatalf("unknown chain id %v", chainId)
+func GetChainConfig(chainId ChainID) (*params.ChainConfig, error) {
+	if !slices.Contains(AllowedChainIDs, chainId) {
+		return nil, fmt.Errorf("unknown chain id %v\nallowed chain ids: %v", chainId, AllowedChainIDs)
 	}
-	// use prepared Ethereum ChainConfig instead
-	if chainId == EthereumChainID {
+	switch chainId {
+	case EthereumChainID:
 		chainConfig := params.MainnetChainConfig
 		chainConfig.DAOForkSupport = false
-		return chainConfig
+		return chainConfig, nil
+	case EthTestChainID:
+		return params.AllDevChainProtocolChanges, nil
+	default:
+		// Make a copy of the basic config before modifying it to avoid
+		// unexpected side-effects and synchronization issues in parallel runs.
+		chainConfig := *params.AllEthashProtocolChanges
+		chainConfig.ChainID = big.NewInt(int64(chainId))
+
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["berlin"])
+		chainConfig.LondonBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["london"])
+		return &chainConfig, nil
 	}
-
-	// Make a copy of of the basic config before modifying it to avoid
-	// unexpected side-effects and synchronization issues in parallel runs.
-	chainConfig := *params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainId))
-
-	chainConfig.BerlinBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["berlin"])
-	chainConfig.LondonBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["london"])
-	return &chainConfig
 }
 
 // directoryExists returns true if a directory exists

@@ -29,6 +29,7 @@ import (
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -57,11 +58,12 @@ func makeRpcProcessor(cfg *utils.Config) rpcProcessor {
 }
 
 type rpcProcessor struct {
-	cfg *utils.Config
+	cfg      *utils.Config
+	chainCfg *params.ChainConfig
 }
 
 func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	ctx.ExecutionResult = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	ctx.ExecutionResult = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg, p.chainCfg)
 	return nil
 }
 

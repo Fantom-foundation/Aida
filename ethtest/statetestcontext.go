@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type StJSON struct {
@@ -33,7 +34,7 @@ type StJSON struct {
 	TestLabel   string
 	UsedNetwork string
 	Env         stEnv                    `json:"env"`
-	Pre         core.GenesisAlloc        `json:"pre"`
+	Pre         types.GenesisAlloc       `json:"pre"`
 	Tx          stTransaction            `json:"transaction"`
 	Out         hexutil.Bytes            `json:"out"`
 	Post        map[string][]stPostState `json:"post"`

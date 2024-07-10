@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 // MakeLiveDbTxProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
@@ -91,7 +90,6 @@ type TxProcessor struct {
 	cfg       *utils.Config
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
 	vmCfg     vm.Config
-	chainCfg  *params.ChainConfig
 	log       logger.Logger
 }
 
@@ -115,7 +113,6 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 		cfg:       cfg,
 		numErrors: new(atomic.Int32),
 		vmCfg:     vmCfg,
-		chainCfg:  utils.GetChainConfig(cfg.ChainID),
 		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
 	}
 }
@@ -161,7 +158,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.chainCfg, s.vmCfg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
