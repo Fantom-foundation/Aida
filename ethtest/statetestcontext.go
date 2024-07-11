@@ -31,6 +31,7 @@ import (
 // TODO: This should only work as a unmarshaller and should not be used as transaction, new struct should be created for this regard
 type StJSON struct {
 	txcontext.NilTxContext
+	FilePath     string
 	TestLabel    string
 	UsedNetwork  string
 	Env          stEnv               `json:"env"`

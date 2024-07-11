@@ -29,10 +29,11 @@ import (
 
 type ethStateTestLogger struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg                                *utils.Config
-	log                                logger.Logger
-	previousTestLabel, previousNetwork string
-	overall, numTestsOfCurrentLabel    int
+	cfg                 *utils.Config
+	log                 logger.Logger
+	previousTestLabel   string
+	overall             int
+	currentLabelCounter map[string]int
 }
 
 func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -41,9 +42,10 @@ func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxCo
 
 func makeEthStateTestLogger(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
 	return &ethStateTestLogger{
-		cfg:     cfg,
-		log:     log,
-		overall: 0,
+		cfg:                 cfg,
+		log:                 log,
+		overall:             0,
+		currentLabelCounter: make(map[string]int),
 	}
 }
 
@@ -56,13 +58,10 @@ func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext
 	if strings.Compare(l.previousTestLabel, c.TestLabel) != 0 {
 		l.log.Noticef("Currently iterating %v", c.TestLabel)
 		l.previousTestLabel = c.TestLabel
+		l.currentLabelCounter = make(map[string]int)
 	}
-
-	if strings.Compare(l.previousNetwork, c.UsedNetwork) != 0 {
-		l.log.Infof(" Running test for fork: %v", c.UsedNetwork)
-		l.previousNetwork = c.UsedNetwork
-	}
-
+	l.currentLabelCounter[c.UsedNetwork]++
+	l.log.Infof(" Running test fork: %v number %v; ", c.UsedNetwork, l.currentLabelCounter[c.UsedNetwork])
 	l.overall++
 	return nil
 }

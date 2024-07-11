@@ -17,6 +17,8 @@
 package executor
 
 import (
+	"fmt"
+
 	statetest "github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -38,12 +40,16 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 		return err
 	}
 
+	// todo move file logging to eth_state_test_logger
 	var (
 		numTestFiles int
 		maxTestFiles = len(b)
 	)
 
 	e.log.Noticef("There is %v test files.", maxTestFiles)
+	defer func() {
+		e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
+	}()
 
 	// iterate all state json files
 	for _, t := range b {
@@ -55,14 +61,13 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 				Transaction: i,
 				Data:        dt,
 			})
+			if err != nil {
+				return fmt.Errorf("transaction failed, file: %v, err: %w", dt.FilePath, err)
+			}
 		}
 		if numTestFiles%100 == 0 {
 			e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
 		}
-	}
-
-	if err != nil {
-		e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
 	}
 
 	return nil

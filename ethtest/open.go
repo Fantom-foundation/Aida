@@ -81,10 +81,9 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 			continue
 		}
 
-		testLabel := getTestLabel(p)
-
-		for _, t := range b {
-			(*t).TestLabel = testLabel
+		for label, t := range b {
+			(*t).FilePath = path
+			(*t).TestLabel = label
 			tests = append(tests, t)
 		}
 	}
@@ -134,17 +133,16 @@ func readTestsFromFile(path string) ([]*StJSON, error) {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)
 	}
 
-	testLabel := getTestLabel(path)
-
-	for _, t := range b {
-		t.TestLabel = testLabel
+	for label, t := range b {
+		t.FilePath = path
+		t.TestLabel = label
 		tests = append(tests, t)
 	}
 	return tests, nil
 }
 
-// getTestLabel returns the last folder name and the filename of the given path
-func getTestLabel(path string) string {
+// getTestFileLabel returns the last folder name and the filename of the given path
+func getTestFileLabel(path string) string {
 	// Split the path into components
 	pathComponents := strings.Split(path, "/")
 
