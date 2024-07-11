@@ -714,13 +714,8 @@ func (s *shadowVmStateDb) Selfdestruct6780(addr common.Address) {
 }
 
 func (s *shadowVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
-	// todo call both return non-empty
 	primeRoot := s.prime.GetStorageRoot(addr)
 	shadowRoot := s.shadow.GetStorageRoot(addr)
-
-	if primeRoot == shadowRoot {
-		return primeRoot
-	}
 
 	if shadowRoot != (common.Hash{}) {
 		return shadowRoot
