@@ -17,7 +17,6 @@
 package ethtest
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -45,9 +44,6 @@ type StJSON struct {
 func (s *StJSON) GetStateHash() common.Hash {
 	for _, n := range usableForks {
 		if p, ok := s.Post[n]; ok {
-			if len(p) > 1 {
-				fmt.Printf("post %v\n", len(p))
-			}
 			return p[0].RootHash
 		}
 	}
@@ -87,9 +83,6 @@ func (s *StJSON) GetMessage() *core.Message {
 }
 
 func (s *StJSON) getTransactionData() stPost {
-	if len(s.Post[s.UsedNetwork]) > 1 {
-		fmt.Printf("used network %v\n", len(s.Post[s.UsedNetwork]))
-	}
 	return s.Post[s.UsedNetwork][0]
 }
 

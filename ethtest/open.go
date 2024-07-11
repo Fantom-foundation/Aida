@@ -64,14 +64,6 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 	var tests []T
 
 	for _, p := range paths {
-		// todo these directories contain more complex tests, exclude them for now
-		if strings.Contains(p, "VMTests") {
-			continue
-		}
-		if strings.Contains(p, "stArgsZeroOneBalance") {
-			continue
-		}
-
 		// TODO merge usability with readTestsFromFile
 		file, err := os.Open(p)
 		if err != nil {
