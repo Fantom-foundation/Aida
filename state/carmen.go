@@ -176,14 +176,12 @@ func (s *carmenStateDB) GetStorageRoot(addr common.Address) common.Hash {
 	return common.Hash{}
 }
 
-func (s *carmenStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	panic("GetTransientState not implemented")
-	return common.Hash{}
+func (s *carmenStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.txCtx.SetTransientState(carmen.Address(addr), carmen.Key(key), carmen.Value(value))
 }
 
-func (s *carmenStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	panic("SetTransientState not implemented")
-	return
+func (s *carmenStateDB) GetTransientState(address common.Address, key common.Hash) common.Hash {
+	return common.Hash(s.txCtx.GetTransientState(carmen.Address(address), carmen.Key(key)))
 }
 
 func (s *carmenStateDB) GetCode(addr common.Address) []byte {

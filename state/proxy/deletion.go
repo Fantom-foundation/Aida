@@ -138,6 +138,14 @@ func (r *DeletionProxy) SetState(addr common.Address, key common.Hash, value com
 	r.db.SetState(addr, key, value)
 }
 
+func (r *DeletionProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	r.db.SetTransientState(addr, key, value)
+}
+
+func (r *DeletionProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	return r.db.GetTransientState(addr, key)
+}
+
 // SelfDestruct marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
 // return a non-nil account after SelfDestruct.
@@ -323,13 +331,4 @@ func (r *DeletionProxy) Selfdestruct6780(addr common.Address) {
 
 func (r *DeletionProxy) GetStorageRoot(addr common.Address) common.Hash {
 	return r.db.GetStorageRoot(addr)
-}
-
-func (r *DeletionProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
-	r.db.SetTransientState(addr, key, value)
-}
-
-func (r *DeletionProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
-	value := r.db.GetTransientState(addr, key)
-	return value
 }

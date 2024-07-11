@@ -32,7 +32,7 @@ type ethStateTestLogger struct {
 	cfg                                *utils.Config
 	log                                logger.Logger
 	previousTestLabel, previousNetwork string
-	overall                            int
+	overall, numTestsOfCurrentLabel    int
 }
 
 func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -54,11 +54,12 @@ func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext
 
 	// Print only new version of test
 	if strings.Compare(l.previousTestLabel, c.TestLabel) != 0 {
-		l.log.Noticef("Currently running %v", c.TestLabel)
+		l.log.Noticef("Currently iterating %v", c.TestLabel)
 		l.previousTestLabel = c.TestLabel
 	}
+
 	if strings.Compare(l.previousNetwork, c.UsedNetwork) != 0 {
-		l.log.Infof(" Tested fork: %v", c.UsedNetwork)
+		l.log.Infof(" Running test for fork: %v", c.UsedNetwork)
 		l.previousNetwork = c.UsedNetwork
 	}
 
