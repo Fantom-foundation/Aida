@@ -24,8 +24,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -59,8 +57,8 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 
 func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	// TODO: how to verify logs - no logs are created - look at eth_state_test_scope_event_emitter - block is +1
-	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", s.Block+1))
-	txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", s.Block+1, s.Transaction))
-	e.log.Debugf("%x", types.LogsBloom(ctx.State.GetLogs(txHash, uint64(s.Block+1), blockHash)))
+	//blockHash := common.HexToHash(fmt.Sprintf("0x%016d", s.Block+1))
+	//txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", s.Block+1, s.Transaction))
+	//e.log.Debugf("%x", types.LogsBloom(ctx.State.GetLogs(txHash, uint64(s.Block+1), blockHash)))
 	return nil
 }
