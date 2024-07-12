@@ -57,7 +57,10 @@ func TestUtilsConfig_GetChainConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("ChainID: %d", tc), func(t *testing.T) {
-			chainConfig := GetChainConfig(tc)
+			chainConfig, err := GetChainConfig(tc)
+			if err != nil {
+				t.Fatalf("cannot get chain config: %v", err)
+			}
 
 			if tc == MainnetChainID && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(37455223)) != 0 {
 				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", MainnetChainID, chainConfig.BerlinBlock, 37455223)
@@ -345,7 +348,10 @@ func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
 			t.Errorf("Unable to close stateDB: %v", err)
 		}
 	}(statedb)
-	chainConfig := GetChainConfig(0xFA)
+	chainConfig, err := GetChainConfig(0xFA)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
 
 	for _, interpreterImpl := range checkedImpls {
 		evm := vm.NewEVM(vm.BlockContext{}, vm.TxContext{}, statedb, chainConfig, vm.Config{

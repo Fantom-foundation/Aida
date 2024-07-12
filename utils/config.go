@@ -542,8 +542,6 @@ func (cc *configContext) adjustBlockRange(firstArg, lastArg uint64) (uint64, uin
 	}
 }
 
-//test
-
 // setChainId set config chainID to the default (mainnet) or user specified chainID
 // if the chainID is unknown type, it'll be loaded from aidaDB
 func (cc *configContext) setChainId() error {

@@ -37,6 +37,11 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
+
+	chainConfig, err := utils.GetChainConfig(utils.EthTestsChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
 	cfg := &utils.Config{
 		First:             2,
 		Last:              4,
@@ -44,6 +49,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		SkipPriming:       true,
 		ContinueOnFailure: true,
 		LogLevel:          "Critical",
+		ChainCfg:          chainConfig,
 	}
 
 	data := ethtest.CreateTestData(t)
@@ -85,7 +91,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err = runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err != nil {
 		errors.Unwrap(err)
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
@@ -179,6 +185,10 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
+	chainConfig, err := utils.GetChainConfig(utils.EthTestsChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
 	cfg := &utils.Config{
 		First:       2,
 		Last:        4,
@@ -186,6 +196,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		SkipPriming: true,
 		Validate:    true,
 		LogLevel:    "Critical",
+		ChainCfg:    chainConfig,
 	}
 
 	data := ethtest.CreateTestData(t)
@@ -225,7 +236,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		// EndTransaction is not called because execution fails
 	)
 
-	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err = runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err != nil {
 		errors.Unwrap(err)
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
