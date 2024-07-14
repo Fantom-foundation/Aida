@@ -40,7 +40,7 @@ func MakeEthStateTestLogger(cfg *utils.Config, testReportFrequency int) executor
 	return makeEthStateTestLogger(logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"), testReportFrequency)
 }
 
-func makeEthStateTestLogger(log logger.Logger, frequency int) executor.Extension[txcontext.TxContext] {
+func makeEthStateTestLogger(log logger.Logger, frequency int) *ethStateTestLogger {
 	return &ethStateTestLogger{
 		reportFrequency: frequency,
 		log:             log,
