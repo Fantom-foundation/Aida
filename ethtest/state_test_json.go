@@ -59,7 +59,7 @@ type Index struct {
 // DivideStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
 // 2) tests cases. Each file contains 1..N forks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
-func (d *GethTestDecoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
+func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 	var overall uint32
 	// Iterate all JSONs
 	for _, stJson := range d.jsons {

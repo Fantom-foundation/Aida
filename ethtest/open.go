@@ -27,26 +27,26 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type gethTest interface {
+type ethTest interface {
 	*stJSON
 	setPath(path string)
 }
 
-// NewGethTestDecoder opens all JSON tests within path
-func NewGethTestDecoder(cfg *utils.Config) (*GethTestDecoder, error) {
+// NewDecoder opens all JSON tests within path
+func NewDecoder(cfg *utils.Config) (*Decoder, error) {
 	tests, err := getTestsWithinPath(cfg, utils.StateTests)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GethTestDecoder{
+	return &Decoder{
 		cfg:   cfg,
-		log:   logger.NewLogger(cfg.LogLevel, "state-test-decoder"),
+		log:   logger.NewLogger(cfg.LogLevel, "eth-test-decoder"),
 		jsons: tests,
 	}, nil
 }
 
-type GethTestDecoder struct {
+type Decoder struct {
 	cfg   *utils.Config
 	log   logger.Logger
 	jsons []*stJSON
@@ -54,7 +54,7 @@ type GethTestDecoder struct {
 
 // getTestsWithinPath returns all tests in given directory (and subdirectories)
 // T is the type into which we want to unmarshal the tests.
-func getTestsWithinPath[T gethTest](cfg *utils.Config, testType utils.GethTestType) ([]T, error) {
+func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.GethTestType) ([]T, error) {
 	path := cfg.ArgPath
 	info, err := os.Stat(path)
 	if err != nil {
@@ -77,7 +77,7 @@ func getTestsWithinPath[T gethTest](cfg *utils.Config, testType utils.GethTestTy
 			path = gst
 		}
 	case utils.BlockTests:
-		return nil, errors.New("block testType not yet implemented")
+		return nil, errors.New("block test-ype not yet implemented")
 	default:
 		return nil, errors.New("please chose which testType do you want to read")
 	}
@@ -100,7 +100,7 @@ func getTestsWithinPath[T gethTest](cfg *utils.Config, testType utils.GethTestTy
 	return tests, err
 }
 
-func readTestsFromFile[T gethTest](path string) ([]T, error) {
+func readTestsFromFile[T ethTest](path string) ([]T, error) {
 	var tests []T
 	file, err := os.Open(path)
 	if err != nil {

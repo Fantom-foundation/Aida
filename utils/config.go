@@ -89,6 +89,8 @@ const (
 	EqualityCheck                       // confirms whether a substate and StateDB are identical.
 )
 
+const ethTestCmdName = "ethereum-test"
+
 // A map of key blocks on Fantom chain
 var KeywordBlocks = map[ChainID]map[string]uint64{
 	MainnetChainID: {
@@ -250,13 +252,15 @@ type configContext struct {
 	cfg         *Config       // run configuration
 	log         logger.Logger // logger for printing logs in config functions
 	hasMetadata bool          // if true, Aida-db has a valid metadata table
+	ctx         *cli.Context
 }
 
-func NewConfigContext(cfg *Config) *configContext {
+func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
 	return &configContext{
 		log:         logger.NewLogger(cfg.LogLevel, "Config"),
 		cfg:         cfg,
 		hasMetadata: false,
+		ctx:         ctx,
 	}
 }
 
@@ -268,7 +272,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cfg := createConfigFromFlags(ctx)
 
 	// create config context for sharing common arguments
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, ctx)
 
 	// check if chainID is set correctly
 	err = cc.setChainId()
@@ -569,7 +573,12 @@ func (cc *configContext) setChainId() error {
 		}
 
 		if cc.cfg.ChainID == 0 {
-			return fmt.Errorf("chain-id was neither specified with flag (--%v) nor was found in aida-db (%v) - please specify chain - id\nallowed chain-ids: %v", ChainIDFlag.Name, cc.cfg.AidaDb, AllowedChainIDs)
+			if strings.EqualFold(cc.ctx.Command.Name, ethTestCmdName) {
+				cc.cfg.ChainID = EthTestsChainID
+				return nil
+			}
+			cc.log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cc.cfg.AidaDb)
+			cc.cfg.ChainID = MainnetChainID
 		} else {
 			cc.log.Noticef("Found chainId (%v) in AidaDb", cc.cfg.ChainID)
 		}

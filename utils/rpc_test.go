@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"golang.org/x/exp/maps"
 )
 
 const invalidChainID ChainID = -1
@@ -35,7 +37,7 @@ func TestSendRPCRequest_Positive(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range RealChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 
 			res, err := SendRpcRequest(req, id)
@@ -112,7 +114,7 @@ func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range RealChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			res, err := SendRpcRequest(req, id)
 			if errors.Is(err, RPCUnsupported) {
@@ -148,7 +150,7 @@ func TestSendRPCRequest_InvalidBlockNumber(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range RealChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			res, err := SendRpcRequest(req, id)
 			if errors.Is(err, RPCUnsupported) {
@@ -186,7 +188,7 @@ func TestRPCFindEpochNumber_Positive(t *testing.T) {
 		testingTestnetBlock  uint64 = 479_326
 	)
 
-	for _, id := range RealChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			var testingBlock, expectedEpoch uint64
 
