@@ -26,16 +26,16 @@ var usableForks = map[string]struct{}{
 
 // stJSON serves as a 'middleman' into which are data unmarshalled from geth test files.
 type stJSON struct {
-	label string
-	Env   stBlockEnvironment  `json:"env"`
-	Pre   types.GenesisAlloc  `json:"pre"`
-	Tx    stTransaction       `json:"transaction"`
-	Out   hexutil.Bytes       `json:"out"`
-	Post  map[string][]stPost `json:"post"`
+	path string
+	Env  stBlockEnvironment  `json:"env"`
+	Pre  types.GenesisAlloc  `json:"pre"`
+	Tx   stTransaction       `json:"transaction"`
+	Out  hexutil.Bytes       `json:"out"`
+	Post map[string][]stPost `json:"post"`
 }
 
-func (s *stJSON) setLabel(label string) {
-	s.label = label
+func (s *stJSON) setPath(path string) {
+	s.path = path
 }
 
 // stPost indicates data for each transaction.
@@ -80,8 +80,8 @@ func (d *GethTestDecoder) DivideStateTests() (dividedTests []txcontext.TxContext
 			for i, post := range posts {
 				msg, err := stJson.Tx.toMessage(post, baseFee)
 				if err != nil {
-					d.log.Warningf("label: %v, fork: %v, test number: %v\n"+
-						"cannot decode tx to message: %v", stJson.label, fork, i, err)
+					d.log.Warningf("Path: %v, fork: %v, test number: %v\n"+
+						"cannot decode tx to message: %v", stJson.path, fork, i, err)
 					continue
 				}
 

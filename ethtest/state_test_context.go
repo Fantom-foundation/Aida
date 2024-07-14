@@ -27,8 +27,8 @@ import (
 
 func newStateTestTxContest(stJson *stJSON, env *stBlockEnvironment, msg *core.Message, rootHash common.Hash, fork string, number int) txcontext.TxContext {
 	return &stateTestContext{
-		Fork:       fork,
-		Label:      stJson.label,
+		fork:       fork,
+		path:       stJson.path,
 		number:     number,
 		env:        env,
 		inputState: stJson.Pre,
@@ -39,12 +39,12 @@ func newStateTestTxContest(stJson *stJSON, env *stBlockEnvironment, msg *core.Me
 
 type stateTestContext struct {
 	txcontext.NilTxContext
-	Fork, Label string
-	number      int
-	env         *stBlockEnvironment
-	inputState  types.GenesisAlloc
-	msg         *core.Message
-	rootHash    common.Hash
+	fork, path string
+	number     int
+	env        *stBlockEnvironment
+	inputState types.GenesisAlloc
+	msg        *core.Message
+	rootHash   common.Hash
 }
 
 func (s *stateTestContext) GetStateHash() common.Hash {
@@ -69,5 +69,5 @@ func (s *stateTestContext) GetMessage() *core.Message {
 }
 
 func (s *stateTestContext) String() string {
-	return fmt.Sprintf("Test label: %v\nFork: %v\nTest Number: %v", s.Label, s.Fork, s.number)
+	return fmt.Sprintf("Test path: %v\nFork: %v\nTest Number: %v", s.path, s.fork, s.number)
 }

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -30,7 +29,7 @@ import (
 
 type gethTest interface {
 	*stJSON
-	setLabel(label string)
+	setPath(path string)
 }
 
 // NewGethTestDecoder opens all JSON tests within path
@@ -118,31 +117,9 @@ func readTestsFromFile[T gethTest](path string) ([]T, error) {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)
 	}
 
-	label := getTestFileLabel(path)
-
 	for _, t := range b {
-		t.setLabel(label)
+		t.setPath(path)
 		tests = append(tests, t)
 	}
 	return tests, nil
-}
-
-// getTestFileLabel returns the last folder name and the filename of the given path
-func getTestFileLabel(path string) string {
-	// Split the path into components
-	pathComponents := strings.Split(path, "/")
-
-	var lastFolderName = ""
-	var filename = ""
-
-	if len(pathComponents) > 1 {
-		// Extract the last folder name
-		lastFolderName = pathComponents[len(pathComponents)-2]
-	}
-
-	if len(pathComponents) > 0 {
-		// Extract the filename
-		filename = pathComponents[len(pathComponents)-1]
-	}
-	return lastFolderName + "/" + filename
 }
