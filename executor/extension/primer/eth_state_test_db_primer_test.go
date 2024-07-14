@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with Aida. If not, see <http://www.gnu.org/licenses/>.
 
-package statedb
+package primer
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/holiman/uint256"
+	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
 
@@ -46,13 +46,13 @@ func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	mockState.EXPECT().EndTransaction()
 	mockState.EXPECT().EndBlock()
 	mockState.EXPECT().StartBulkLoad(uint64(1)).Return(mockLoad, nil)
-	for address, account := range testData.Pre {
-		mockState.EXPECT().Exist(address).Return(false)
-		mockLoad.EXPECT().CreateAccount(address)
-		mockLoad.EXPECT().SetBalance(address, uint256.MustFromBig(account.Balance))
-		mockLoad.EXPECT().SetNonce(address, account.Nonce)
-		mockLoad.EXPECT().SetCode(address, account.Code)
-	}
+	testData.GetInputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		mockState.EXPECT().Exist(addr).Return(false)
+		mockLoad.EXPECT().CreateAccount(addr)
+		mockLoad.EXPECT().SetBalance(addr, acc.GetBalance().ToBig())
+		mockLoad.EXPECT().SetNonce(addr, acc.GetNonce())
+		mockLoad.EXPECT().SetCode(addr, acc.GetCode())
+	})
 	mockLoad.EXPECT().Close()
 
 	ctx.State = mockState
@@ -80,12 +80,14 @@ func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t
 	mockState.EXPECT().EndTransaction()
 	mockState.EXPECT().EndBlock()
 	mockState.EXPECT().StartBulkLoad(uint64(1)).Return(mockLoad, nil)
-	for address, account := range testData.Pre {
-		mockState.EXPECT().Exist(address).Return(true)
-		mockLoad.EXPECT().SetBalance(address, uint256.MustFromBig(account.Balance))
-		mockLoad.EXPECT().SetNonce(address, account.Nonce)
-		mockLoad.EXPECT().SetCode(address, account.Code)
-	}
+
+	testData.GetInputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		mockState.EXPECT().Exist(addr).Return(true)
+		mockLoad.EXPECT().SetBalance(addr, acc.GetBalance())
+		mockLoad.EXPECT().SetNonce(addr, acc.GetNonce())
+		mockLoad.EXPECT().SetCode(addr, acc.GetCode())
+	})
+
 	mockLoad.EXPECT().Close()
 
 	ctx.State = mockState

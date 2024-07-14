@@ -31,7 +31,7 @@ type ethStateScopeEventEmitter struct {
 }
 
 func (e ethStateScopeEventEmitter) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	if err := ctx.State.BeginBlock(uint64(s.Block + 1)); err != nil {
+	if err := ctx.State.BeginBlock(uint64(s.Block)); err != nil {
 		return err
 	}
 	return ctx.State.BeginTransaction(uint32(s.Transaction))

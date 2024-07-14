@@ -38,6 +38,13 @@ import (
 type ArgumentMode int
 type ChainID int
 type ChainIDs map[ChainID]string
+type GethTestType int
+
+const (
+	Unknown GethTestType = iota
+	StateTests
+	BlockTests
+)
 
 // An enums of argument modes used by trace subcommands
 const (
@@ -173,6 +180,7 @@ type Config struct {
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	ErrorLogging           string         // if defined, error logging to file is enabled
 	Genesis                string         // genesis file
+	GethTestType           GethTestType   // which geth test are we running
 	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
 	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
 	KeepDb                 bool           // set to true if db is kept after run

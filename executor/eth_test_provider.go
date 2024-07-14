@@ -35,38 +35,20 @@ type ethTestProvider struct {
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	b, err := statetest.OpenStateTests(e.cfg.ArgPath)
+	b, err := statetest.NewGethTestDecoder(e.cfg)
 	if err != nil {
 		return err
 	}
 
-	// todo move file logging to eth_state_test_logger
-	var (
-		numTestFiles int
-		maxTestFiles = len(b)
-	)
-
-	e.log.Noticef("There is %v test files.", maxTestFiles)
-	defer func() {
-		e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
-	}()
-
-	// iterate all state json files
-	for _, t := range b {
-		numTestFiles++
-		// divide them by fork
-		for i, dt := range t.Divide(e.cfg.ChainID) {
-			err = consumer(TransactionInfo[txcontext.TxContext]{
-				Block:       int(dt.Env.GetNumber()),
-				Transaction: i,
-				Data:        dt,
-			})
-			if err != nil {
-				return fmt.Errorf("transaction failed, file: %v, err: %w", dt.FilePath, err)
-			}
-		}
-		if numTestFiles%100 == 0 {
-			e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
+	for i, testCase := range b.DivideStateTests() {
+		err = consumer(TransactionInfo[txcontext.TxContext]{
+			// Blocks 0 and 1 are used by priming
+			Block:       2,
+			Transaction: i,
+			Data:        testCase,
+		})
+		if err != nil {
+			return fmt.Errorf("transaction failed\n%s\nerr: %w", testCase, err)
 		}
 	}
 

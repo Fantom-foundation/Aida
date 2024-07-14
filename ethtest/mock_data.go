@@ -20,17 +20,17 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func CreateTestData(t *testing.T) *StJSON {
+func CreateTestData(*testing.T) txcontext.TxContext {
 	bInt := new(big.Int).SetUint64(1)
-	return &StJSON{
-		TestLabel:   "TestLabel",
-		UsedNetwork: "TestNetwork",
-		Env: stEnv{
+	to := common.HexToAddress("0x10")
+	return &stateTestContext{
+		env: &stBlockEnvironment{
 			blockNumber: 1,
 			Coinbase:    common.Address{},
 			Difficulty:  &BigInt{*bInt},
@@ -39,7 +39,7 @@ func CreateTestData(t *testing.T) *StJSON {
 			Timestamp:   &BigInt{*bInt},
 			BaseFee:     &BigInt{*bInt},
 		},
-		Pre: core.GenesisAlloc{
+		inputState: types.GenesisAlloc{
 			common.HexToAddress("0x1"): core.GenesisAccount{
 				Balance: big.NewInt(1000),
 				Nonce:   1,
@@ -49,26 +49,19 @@ func CreateTestData(t *testing.T) *StJSON {
 				Nonce:   2,
 			},
 		},
-		Tx: stTransaction{
-			GasPrice:             &BigInt{*bInt},
-			MaxFeePerGas:         &BigInt{*bInt},
-			MaxPriorityFeePerGas: &BigInt{*bInt},
-			Nonce:                &BigInt{*bInt},
-			To:                   common.HexToAddress("0x10").Hex(),
-			Data:                 []string{"0x"},
-			GasLimit:             []*BigInt{{*bInt}},
-			Value:                []string{"0x01"},
-			PrivateKey:           hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"),
+		msg: &core.Message{
+			To:            &to,
+			From:          common.HexToAddress("0x2"),
+			Nonce:         1,
+			Value:         big.NewInt(1),
+			GasLimit:      1,
+			GasPrice:      big.NewInt(1),
+			GasFeeCap:     big.NewInt(1),
+			GasTipCap:     big.NewInt(1),
+			Data:          []byte{0x1},
+			AccessList:    make(types.AccessList, 0),
+			BlobGasFeeCap: big.NewInt(1),
+			BlobHashes:    make([]common.Hash, 0),
 		},
-		Post: map[string][]stPost{
-			"TestNetwork": {
-				{
-					RootHash: common.HexToHash("0x20"),
-					LogsHash: common.HexToHash("0x30"),
-					indexes:  Index{},
-				},
-			},
-		},
-		//Out: hexutil.Bytes("0x0"),
 	}
 }

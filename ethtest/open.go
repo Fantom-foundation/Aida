@@ -24,33 +24,60 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-const (
-	BlockTests jsonTestType = iota
-	StateTests
-)
-
-var usableForks = []string{"Cancun", "Shanghai", "Paris", "Bellatrix", "Gray Glacier", "Arrow Glacier", "Altair", "London", "Berlin", "Istanbul", "MuirGlacier", "TestNetwork"}
-
-type jsonTestType byte
-
-type stateTest interface {
-	*StJSON
+type gethTest interface {
+	*stJSON
+	setLabel(label string)
 }
 
-// GetTestsWithinPath returns all tests in given directory (and subdirectories)
+// NewGethTestDecoder opens all JSON tests within path
+func NewGethTestDecoder(cfg *utils.Config) (*GethTestDecoder, error) {
+	tests, err := getTestsWithinPath(cfg, utils.StateTests)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GethTestDecoder{
+		cfg:   cfg,
+		log:   logger.NewLogger(cfg.LogLevel, "state-test-decoder"),
+		jsons: tests,
+	}, nil
+}
+
+type GethTestDecoder struct {
+	cfg   *utils.Config
+	log   logger.Logger
+	jsons []*stJSON
+}
+
+// getTestsWithinPath returns all tests in given directory (and subdirectories)
 // T is the type into which we want to unmarshal the tests.
-func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, error) {
+func getTestsWithinPath[T gethTest](cfg *utils.Config, testType utils.GethTestType) ([]T, error) {
+	path := cfg.ArgPath
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !info.IsDir() {
+		tests, err := readTestsFromFile[T](path)
+		if err != nil {
+			return nil, err
+		}
+		return tests, nil
+	}
+
 	switch testType {
-	case StateTests:
+	case utils.StateTests:
 		gst := path + "/GeneralStateTests"
 		_, err := os.Stat(gst)
 		if !os.IsNotExist(err) {
 			path = gst
 		}
-	case BlockTests:
+	case utils.BlockTests:
 		return nil, errors.New("block testType not yet implemented")
 	default:
 		return nil, errors.New("please chose which testType do you want to read")
@@ -64,60 +91,18 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 	var tests []T
 
 	for _, p := range paths {
-		// TODO merge usability with readTestsFromFile
-		file, err := os.Open(p)
+		toAppend, err := readTestsFromFile[T](p)
 		if err != nil {
 			return nil, err
 		}
-		byteJSON, err := io.ReadAll(file)
-		if err != nil {
-			return nil, err
-		}
-
-		var b map[string]T
-		err = json.Unmarshal(byteJSON, &b)
-		if err != nil {
-			fmt.Printf("SKIPPED: cannot unmarshal file %v\n", p)
-			continue
-		}
-
-		for label, t := range b {
-			(*t).FilePath = path
-			(*t).TestLabel = label
-			tests = append(tests, t)
-		}
+		tests = append(tests, toAppend...)
 	}
 
 	return tests, err
 }
 
-// OpenStateTests opens
-func OpenStateTests(path string) ([]*StJSON, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var tests []*StJSON
-
-	if info.IsDir() {
-		tests, err = GetTestsWithinPath[*StJSON](path, StateTests)
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		tests, err = readTestsFromFile(path)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return tests, nil
-}
-
-func readTestsFromFile(path string) ([]*StJSON, error) {
-	var tests []*StJSON
+func readTestsFromFile[T gethTest](path string) ([]T, error) {
+	var tests []T
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -127,15 +112,16 @@ func readTestsFromFile(path string) ([]*StJSON, error) {
 		return nil, err
 	}
 
-	var b map[string]*StJSON
+	var b map[string]T
 	err = json.Unmarshal(byteJSON, &b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)
 	}
 
-	for label, t := range b {
-		t.FilePath = path
-		t.TestLabel = label
+	label := getTestFileLabel(path)
+
+	for _, t := range b {
+		t.setLabel(label)
 		tests = append(tests, t)
 	}
 	return tests, nil

@@ -19,6 +19,7 @@ package main
 import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
+	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
@@ -68,6 +69,8 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ValidateStateHashesFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
+
+		&utils.GethTestTypeFlag,
 	},
 	Description: `
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,
@@ -106,7 +109,7 @@ func runEth(
 			statedb.MakeEthStateTestDbPrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
-			statedb.MakeEthStateTestDbPrimer(cfg), // < to be placed after the DbLogger to log priming operations
+			primer.MakeEthStateTestDbPrimer(cfg), // < to be placed after the DbLogger to log priming operations
 		)
 	}
 

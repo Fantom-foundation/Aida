@@ -33,7 +33,7 @@ import (
 // stTransaction indicates the executed transaction.
 // Only one value for Data, GasLimit and Value is valid for each transaction.
 // Any other value is shared among all transactions within one test file.
-// Correct index is marked in StJSON.stPost.Index...
+// Correct index is marked in stJSON.stPost.Index...
 type stTransaction struct {
 	GasPrice             *BigInt             `json:"gasPrice"`
 	MaxFeePerGas         *BigInt             `json:"maxFeePerGas"`

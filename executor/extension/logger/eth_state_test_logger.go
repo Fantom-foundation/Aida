@@ -17,9 +17,6 @@
 package logger
 
 import (
-	"strings"
-
-	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -29,39 +26,24 @@ import (
 
 type ethStateTestLogger struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg                 *utils.Config
-	log                 logger.Logger
-	previousTestLabel   string
-	overall             int
-	currentLabelCounter map[string]int
+	log     logger.Logger
+	overall int
 }
 
 func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	return makeEthStateTestLogger(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"))
+	return makeEthStateTestLogger(logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"))
 }
 
-func makeEthStateTestLogger(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+func makeEthStateTestLogger(log logger.Logger) executor.Extension[txcontext.TxContext] {
 	return &ethStateTestLogger{
-		cfg:                 cfg,
-		log:                 log,
-		overall:             0,
-		currentLabelCounter: make(map[string]int),
+		log:     log,
+		overall: 0,
 	}
 }
 
 // PreTransaction reports test name and fork.
 func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext], _ *executor.Context) error {
-	// cast state.Data to stJSON
-	c := s.Data.(*ethtest.StJSON)
-
-	// Print only new version of test
-	if strings.Compare(l.previousTestLabel, c.TestLabel) != 0 {
-		l.log.Noticef("Currently iterating %v", c.TestLabel)
-		l.previousTestLabel = c.TestLabel
-		l.currentLabelCounter = make(map[string]int)
-	}
-	l.currentLabelCounter[c.UsedNetwork]++
-	l.log.Infof(" Running test fork: %v number %v; ", c.UsedNetwork, l.currentLabelCounter[c.UsedNetwork])
+	l.log.Infof("Currently running:\n%s", s.Data)
 	l.overall++
 	return nil
 }
