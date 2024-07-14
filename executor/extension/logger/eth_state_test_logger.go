@@ -24,20 +24,27 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
+const defaultReportFrequency = 1000
+
 type ethStateTestLogger struct {
 	extension.NilExtension[txcontext.TxContext]
-	log     logger.Logger
-	overall int
+	log             logger.Logger
+	overall         int
+	reportFrequency int
 }
 
-func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	return makeEthStateTestLogger(logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"))
+func MakeEthStateTestLogger(cfg *utils.Config, testReportFrequency int) executor.Extension[txcontext.TxContext] {
+	if testReportFrequency < 0 {
+		testReportFrequency = defaultReportFrequency
+	}
+	return makeEthStateTestLogger(logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"), testReportFrequency)
 }
 
-func makeEthStateTestLogger(log logger.Logger) executor.Extension[txcontext.TxContext] {
+func makeEthStateTestLogger(log logger.Logger, frequency int) executor.Extension[txcontext.TxContext] {
 	return &ethStateTestLogger{
-		log:     log,
-		overall: 0,
+		reportFrequency: frequency,
+		log:             log,
+		overall:         0,
 	}
 }
 
@@ -45,6 +52,9 @@ func makeEthStateTestLogger(log logger.Logger) executor.Extension[txcontext.TxCo
 func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext], _ *executor.Context) error {
 	l.log.Infof("Currently running:\n%s", s.Data)
 	l.overall++
+	if l.overall%l.reportFrequency == 0 {
+		l.log.Noticef("%v tests has been processed so far...", l.overall)
+	}
 	return nil
 }
 
