@@ -60,7 +60,7 @@ pipeline {
         stage('aida-fuzzing') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-stochastic-sdb replay ${STORAGE} ${TMPDB}  --chainid 250 --db-shadow-impl geth 50 data/simulation_uniform.json"
+                    sh "build/aida-stochastic-sdb replay ${STORAGE} ${TMPDB} --db-shadow-impl geth 50 data/simulation_uniform.json"
                 }
             }
         }

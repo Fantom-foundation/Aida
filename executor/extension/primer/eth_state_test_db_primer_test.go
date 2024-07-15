@@ -29,7 +29,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
+func Test_EthStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 
@@ -49,7 +49,7 @@ func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	testData.GetInputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		mockState.EXPECT().Exist(addr).Return(false)
 		mockLoad.EXPECT().CreateAccount(addr)
-		mockLoad.EXPECT().SetBalance(addr, acc.GetBalance().ToBig())
+		mockLoad.EXPECT().SetBalance(addr, acc.GetBalance())
 		mockLoad.EXPECT().SetNonce(addr, acc.GetNonce())
 		mockLoad.EXPECT().SetCode(addr, acc.GetCode())
 	})
