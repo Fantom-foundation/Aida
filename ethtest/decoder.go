@@ -30,7 +30,8 @@ func sortForks(log logger.Logger, cfgForks []string) (forks []string) {
 		forks = maps.Keys(usableForks)
 	} else {
 		for _, fork := range cfgForks {
-			fork = strings.ToLower(fork)
+			fork = strings.Replace(strings.ToLower(fork), "glacier", "Glacier", -1)
+			fork = strings.Title(fork)
 			if _, ok := usableForks[fork]; !ok {
 				log.Warningf("Unknown name fork name %v, removing", fork)
 				continue

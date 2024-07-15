@@ -52,10 +52,10 @@ func TestDecoder_NewDecoder_SortsForks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	log.EXPECT().Warningf("Unknown name fork name %v, removing", strings.ToLower("toBeRemoved"))
+	log.EXPECT().Warningf("Unknown name fork name %v, removing", "Toberemoved")
 
 	got := sortForks(log, []string{"CaNcuN", "london", "toBeRemoved"})
-	want := []string{"cancun", "london"}
+	want := []string{"Cancun", "London"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("unexpected forks, got: %v\nwant: %v", got, want)
 	}
@@ -67,6 +67,22 @@ func TestDecoder_NewDecoder_AllAddsAllForks(t *testing.T) {
 
 	got := sortForks(log, []string{"all"})
 	want := maps.Keys(usableForks)
+	// Maps are unordered...
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("unexpected forks, got: %v\nwant: %v", got, want)
+	}
+}
+
+func TestDecoder_NewDecoder_GlaciersAreCapitalized(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	log.EXPECT().Warningf("Unknown name fork name %v, removing", "SomeGlacier")
+
+	got := sortForks(log, []string{"muirGlacier", "arrowglacier", "someglaCier"})
+	want := []string{"MuirGlacier", "ArrowGlacier"}
 	// Maps are unordered...
 	slices.Sort(got)
 	slices.Sort(want)
