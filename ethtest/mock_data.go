@@ -17,6 +17,7 @@
 package ethtest
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -26,18 +27,24 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func CreateTestData(*testing.T) txcontext.TxContext {
-	bInt := new(big.Int).SetUint64(1)
+var (
+	data1 = hex.EncodeToString([]byte{0x1})
+	data2 = hex.EncodeToString([]byte{0x2})
+	data3 = hex.EncodeToString([]byte{0x3})
+	data4 = hex.EncodeToString([]byte{0x4})
+)
+
+func CreateTestTransaction(*testing.T) txcontext.TxContext {
 	to := common.HexToAddress("0x10")
 	return &stateTestContext{
 		env: &stBlockEnvironment{
 			blockNumber: 1,
 			Coinbase:    common.Address{},
-			Difficulty:  &BigInt{*bInt},
-			GasLimit:    &BigInt{*bInt},
-			Number:      &BigInt{*bInt},
-			Timestamp:   &BigInt{*bInt},
-			BaseFee:     &BigInt{*bInt},
+			Difficulty:  newBigInt(1),
+			GasLimit:    newBigInt(1),
+			Number:      newBigInt(1),
+			Timestamp:   newBigInt(1),
+			BaseFee:     newBigInt(1),
 		},
 		inputState: types.GenesisAlloc{
 			common.HexToAddress("0x1"): core.GenesisAccount{
@@ -62,6 +69,71 @@ func CreateTestData(*testing.T) txcontext.TxContext {
 			AccessList:    make(types.AccessList, 0),
 			BlobGasFeeCap: big.NewInt(1),
 			BlobHashes:    make([]common.Hash, 0),
+		},
+	}
+}
+
+func createTestStJson(*testing.T) *stJSON {
+	return &stJSON{
+		path: "test/path",
+		Env: stBlockEnvironment{
+			blockNumber: 1,
+			Coinbase:    common.Address{0x1},
+			Difficulty:  newBigInt(1),
+			GasLimit:    newBigInt(1),
+			Number:      newBigInt(1),
+			Timestamp:   newBigInt(1),
+			BaseFee:     newBigInt(1),
+		},
+		Pre: types.GenesisAlloc{common.Address{0x2}: types.Account{
+			Code:       []byte{1},
+			Storage:    make(map[common.Hash]common.Hash),
+			Balance:    big.NewInt(1),
+			Nonce:      1,
+			PrivateKey: []byte{2},
+		}},
+		Tx: stTransaction{
+			Data:          []string{data1, data2, data3, data4},
+			GasLimit:      []*BigInt{newBigInt(1), newBigInt(2), newBigInt(3), newBigInt(4)},
+			Value:         []string{data1, data2, data3, data4},
+			Nonce:         newBigInt(1),
+			GasPrice:      newBigInt(1),
+			BlobGasFeeCap: newBigInt(1),
+		},
+		Out: nil,
+		Post: map[string][]stPost{
+			"Cancun": {
+				{
+					Indexes: Index{
+						Data:  0,
+						Gas:   0,
+						Value: 0,
+					},
+				},
+				{
+					Indexes: Index{
+						Data:  1,
+						Gas:   1,
+						Value: 1,
+					},
+				},
+			},
+			"London": {
+				{
+					Indexes: Index{
+						Data:  2,
+						Gas:   2,
+						Value: 2,
+					},
+				},
+				{
+					Indexes: Index{
+						Data:  3,
+						Gas:   3,
+						Value: 3,
+					},
+				},
+			},
 		},
 	}
 }

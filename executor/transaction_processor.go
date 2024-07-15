@@ -152,6 +152,8 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		hashError error
 	)
 
+	fmt.Println(msg.Data)
+
 	// prepare tx
 	gasPool.AddGas(inputEnv.GetGasLimit())
 

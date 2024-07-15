@@ -69,18 +69,18 @@ func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, e
 	}
 
 	// Get values specific to this post state.
-	if ps.indexes.Data > len(tx.Data) {
-		return nil, fmt.Errorf("tx data index %d out of bounds", ps.indexes.Data)
+	if ps.Indexes.Data > len(tx.Data) {
+		return nil, fmt.Errorf("tx data index %d out of bounds", ps.Indexes.Data)
 	}
-	if ps.indexes.Value > len(tx.Value) {
-		return nil, fmt.Errorf("tx value index %d out of bounds", ps.indexes.Value)
+	if ps.Indexes.Value > len(tx.Value) {
+		return nil, fmt.Errorf("tx value index %d out of bounds", ps.Indexes.Value)
 	}
-	if ps.indexes.Gas > len(tx.GasLimit) {
-		return nil, fmt.Errorf("tx gas limit index %d out of bounds", ps.indexes.Gas)
+	if ps.Indexes.Gas > len(tx.GasLimit) {
+		return nil, fmt.Errorf("tx gas limit index %d out of bounds", ps.Indexes.Gas)
 	}
-	dataHex := tx.Data[ps.indexes.Data]
-	valueHex := tx.Value[ps.indexes.Value]
-	gasLimit := tx.GasLimit[ps.indexes.Gas]
+	dataHex := tx.Data[ps.Indexes.Data]
+	valueHex := tx.Value[ps.Indexes.Value]
+	gasLimit := tx.GasLimit[ps.Indexes.Gas]
 
 	value := new(big.Int)
 	if valueHex != "0x" {
@@ -95,8 +95,8 @@ func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, e
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 	var accessList types.AccessList
-	if tx.AccessLists != nil && tx.AccessLists[ps.indexes.Data] != nil {
-		accessList = *tx.AccessLists[ps.indexes.Data]
+	if tx.AccessLists != nil && tx.AccessLists[ps.Indexes.Data] != nil {
+		accessList = *tx.AccessLists[ps.Indexes.Data]
 	}
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	gasPrice := tx.GasPrice

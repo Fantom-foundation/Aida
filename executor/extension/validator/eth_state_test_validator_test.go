@@ -38,7 +38,7 @@ func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := ethtest.CreateTestTransaction(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}

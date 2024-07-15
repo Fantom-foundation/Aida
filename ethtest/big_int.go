@@ -22,6 +22,10 @@ import (
 	"strings"
 )
 
+func newBigInt(i int64) *BigInt {
+	return &BigInt{*big.NewInt(i)}
+}
+
 type BigInt struct {
 	big.Int
 }

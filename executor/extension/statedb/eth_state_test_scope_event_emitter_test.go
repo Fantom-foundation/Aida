@@ -35,7 +35,7 @@ func TestEthStateScopeEventEmitter_PreTransactionCallsBeginBlockAndBeginTransact
 	db.EXPECT().BeginBlock(uint64(2))
 	db.EXPECT().BeginTransaction(uint32(1))
 
-	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestData(t)}
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
 	ctx := &executor.Context{State: db}
 	err := ext.PreTransaction(st, ctx)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestEthStateScopeEventEmitter_PostTransactionCallsEndBlockAndEndTransaction
 	db.EXPECT().EndTransaction()
 	db.EXPECT().EndBlock()
 
-	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestData(t)}
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
 	ctx := &executor.Context{State: db}
 	err := ext.PostTransaction(st, ctx)
 	if err != nil {

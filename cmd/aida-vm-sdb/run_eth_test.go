@@ -52,7 +52,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		ChainCfg:          chainConfig,
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := ethtest.CreateTestTransaction(t)
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -115,7 +115,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		SkipPriming: true,
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := ethtest.CreateTestTransaction(t)
 
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
@@ -199,7 +199,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		ChainCfg:    chainConfig,
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := ethtest.CreateTestTransaction(t)
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -259,7 +259,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		LogLevel:    "Critical",
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := ethtest.CreateTestTransaction(t)
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).

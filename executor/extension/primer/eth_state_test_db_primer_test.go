@@ -33,7 +33,7 @@ func Test_EthStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 
-	testData := ethtest.CreateTestData(t)
+	testData := ethtest.CreateTestTransaction(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 
@@ -67,7 +67,7 @@ func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 
-	testData := ethtest.CreateTestData(t)
+	testData := ethtest.CreateTestTransaction(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 

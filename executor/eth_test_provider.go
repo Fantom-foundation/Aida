@@ -20,18 +20,16 @@ import (
 	"fmt"
 
 	statetest "github.com/Fantom-foundation/Aida/ethtest"
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
-	return ethTestProvider{cfg, logger.NewLogger(cfg.LogLevel, "eth-state-test-provider")}
+	return ethTestProvider{cfg}
 }
 
 type ethTestProvider struct {
 	cfg *utils.Config
-	log logger.Logger
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {

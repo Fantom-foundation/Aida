@@ -35,7 +35,7 @@ func Test_ethStateTestDbPrepper_PreTransactionPreparesAStateDB(t *testing.T) {
 	}
 	ext := ethStateTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
 
-	testData := ethtest.CreateTestData(t)
+	testData := ethtest.CreateTestTransaction(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 	err := ext.PreTransaction(st, ctx)
@@ -56,7 +56,7 @@ func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
 	}
 	ext := ethStateTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
 
-	testData := ethtest.CreateTestData(t)
+	testData := ethtest.CreateTestTransaction(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 	err := ext.PreTransaction(st, ctx)

@@ -23,33 +23,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 type ethTest interface {
 	*stJSON
 	setPath(path string)
-}
-
-// NewDecoder opens all JSON tests within path
-func NewDecoder(cfg *utils.Config) (*Decoder, error) {
-	tests, err := getTestsWithinPath(cfg, utils.StateTests)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Decoder{
-		cfg:   cfg,
-		log:   logger.NewLogger(cfg.LogLevel, "eth-test-decoder"),
-		jsons: tests,
-	}, nil
-}
-
-type Decoder struct {
-	cfg   *utils.Config
-	log   logger.Logger
-	jsons []*stJSON
 }
 
 // getTestsWithinPath returns all tests in given directory (and subdirectories)

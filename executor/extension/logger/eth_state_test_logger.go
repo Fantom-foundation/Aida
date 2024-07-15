@@ -34,7 +34,7 @@ type ethStateTestLogger struct {
 }
 
 func MakeEthStateTestLogger(cfg *utils.Config, testReportFrequency int) executor.Extension[txcontext.TxContext] {
-	if testReportFrequency < 0 {
+	if testReportFrequency <= 0 {
 		testReportFrequency = defaultReportFrequency
 	}
 	return makeEthStateTestLogger(logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"), testReportFrequency)
