@@ -57,6 +57,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		DeletionDb:             getFlagValue(ctx, DeletionDbFlag).(string),
 		DiagnosticServer:       getFlagValue(ctx, DiagnosticServerFlag).(int64),
 		ErrorLogging:           getFlagValue(ctx, ErrorLoggingFlag).(string),
+		Forks:                  getFlagValue(ctx, ForksFlag).([]string),
 		Genesis:                getFlagValue(ctx, GenesisFlag).(string),
 		GethTestType:           GethTestType(getFlagValue(ctx, GethTestTypeFlag).(int)),
 		IncludeStorage:         getFlagValue(ctx, IncludeStorageFlag).(bool),

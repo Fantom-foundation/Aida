@@ -246,6 +246,7 @@ type Config struct {
 	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
 	TxGeneratorType        []string       // type of the application used for transaction generation
+	Forks                  []string       // Which forks are going to get executed byz
 }
 
 type configContext struct {

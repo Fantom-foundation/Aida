@@ -7,18 +7,18 @@ import (
 )
 
 var usableForks = map[string]struct{}{
-	"Cancun":        {},
-	"Shanghai":      {},
-	"Paris":         {},
-	"Bellatrix":     {},
-	"Gray Glacier":  {},
-	"Arrow Glacier": {},
-	"Altair":        {},
-	"London":        {},
-	"Berlin":        {},
-	"Istanbul":      {},
-	"MuirGlacier":   {},
-	"TestNetwork":   {},
+	"cancun":       {},
+	"shanghai":     {},
+	"paris":        {},
+	"bellatrix":    {},
+	"grayglacier":  {},
+	"arrowglacier": {},
+	"altair":       {},
+	"london":       {},
+	"berlin":       {},
+	"istanbul":     {},
+	"muirglacier":  {},
+	"testnetwork":  {},
 }
 
 // stJSON serves as a 'middleman' into which are data unmarshalled from geth test files.

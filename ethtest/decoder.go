@@ -2,10 +2,12 @@ package ethtest
 
 import (
 	"math/big"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"golang.org/x/exp/maps"
 )
 
 // NewDecoder opens all JSON tests within path
@@ -14,16 +16,33 @@ func NewDecoder(cfg *utils.Config) (*Decoder, error) {
 	if err != nil {
 		return nil, err
 	}
+	log := logger.NewLogger(cfg.LogLevel, "eth-test-decoder")
 
 	return &Decoder{
-		cfg:   cfg,
-		log:   logger.NewLogger(cfg.LogLevel, "eth-test-decoder"),
+		forks: sortForks(log, cfg.Forks),
+		log:   log,
 		jsons: tests,
 	}, nil
 }
 
+func sortForks(log logger.Logger, cfgForks []string) (forks []string) {
+	if len(cfgForks) == 1 && strings.ToLower(cfgForks[0]) == "all" {
+		forks = maps.Keys(usableForks)
+	} else {
+		for _, fork := range cfgForks {
+			fork = strings.ToLower(fork)
+			if _, ok := usableForks[fork]; !ok {
+				log.Warningf("Unknown name fork name %v, removing", fork)
+				continue
+			}
+			forks = append(forks, fork)
+		}
+	}
+	return forks
+}
+
 type Decoder struct {
-	cfg   *utils.Config
+	forks []string
 	log   logger.Logger
 	jsons []*stJSON
 }
@@ -44,10 +63,8 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 		}
 
 		// Iterate all usable forks within one JSON file
-		for fork, posts := range stJson.Post {
-			if _, ok := usableForks[fork]; !ok {
-				continue
-			}
+		for _, fork := range d.forks {
+			posts := stJson.Post[fork]
 			// Iterate all tests within one fork
 			for i, post := range posts {
 				msg, err := stJson.Tx.toMessage(post, baseFee)
@@ -60,7 +77,6 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 				dividedTests = append(dividedTests, newStateTestTxContest(stJson, env, msg, post.RootHash, fork, i))
 				overall++
 			}
-
 		}
 	}
 

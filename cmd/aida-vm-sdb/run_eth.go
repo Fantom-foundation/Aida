@@ -71,6 +71,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ErrorLoggingFlag,
 
 		&utils.GethTestTypeFlag,
+		&utils.ForksFlag,
 	},
 	Description: `
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,

@@ -4,10 +4,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"go.uber.org/mock/gomock"
+	"golang.org/x/exp/maps"
 )
 
 func TestDecoder_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
@@ -43,5 +46,31 @@ func TestDecoder_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestDecoder_NewDecoder_SortsForks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	log.EXPECT().Warningf("Unknown name fork name %v, removing", strings.ToLower("toBeRemoved"))
+
+	got := sortForks(log, []string{"CaNcuN", "london", "toBeRemoved"})
+	want := []string{"cancun", "london"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("unexpected forks, got: %v\nwant: %v", got, want)
+	}
+}
+
+func TestDecoder_NewDecoder_AllAddsAllForks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	got := sortForks(log, []string{"all"})
+	want := maps.Keys(usableForks)
+	// Maps are unordered...
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("unexpected forks, got: %v\nwant: %v", got, want)
+	}
 }
