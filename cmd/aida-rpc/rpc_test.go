@@ -93,7 +93,12 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveFour.EXPECT().Release(),
 	)
 
-	if err := run(cfg, provider, db, rpcProcessor{cfg}, nil); err != nil {
+	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
+
+	if err := run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -154,7 +159,12 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		archiveThree.EXPECT().Release(),
 	)
 
-	if err := run(cfg, provider, db, rpcProcessor{cfg}, nil); err != nil {
+	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
+
+	if err := run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -359,8 +369,13 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
+	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
+
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
 	if err != nil {
 		t.Errorf("run must not fail")
 	}
@@ -401,8 +416,13 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
+	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
+
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
 	if err != nil {
 		t.Errorf("run must not fail")
 	}
@@ -443,8 +463,13 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
+	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
+
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -489,8 +514,13 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
+	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
+
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
