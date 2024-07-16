@@ -53,8 +53,10 @@ type Decoder struct {
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
 func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 	var overall uint32
+
 	// Iterate all JSONs
-	for number, stJson := range d.jsons {
+	for _, stJson := range d.jsons {
+		number := 0
 		env := &stJson.Env
 		baseFee := stJson.Env.BaseFee
 		if baseFee == nil {
@@ -68,6 +70,7 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 			posts := stJson.Post[fork]
 			// Iterate all tests within one fork
 			for _, post := range posts {
+				number++
 				msg, err := stJson.Tx.toMessage(post, baseFee)
 				if err != nil {
 					d.log.Warningf("Path: %v, fork: %v, test number: %v\n"+
