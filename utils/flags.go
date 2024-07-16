@@ -316,9 +316,9 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
-	GethTestTypeFlag = cli.IntFlag{
-		Name:  "geth-test-type",
-		Usage: "1 - state tests, 2 - block tests",
+	EthTestTypeFlag = cli.IntFlag{
+		Name:  "eth-test-type",
+		Usage: "1 - state tests, 2 - block-chain tests",
 		Value: 1,
 	}
 	TargetDbFlag = cli.PathFlag{

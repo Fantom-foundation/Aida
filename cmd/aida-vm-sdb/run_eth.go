@@ -70,7 +70,7 @@ var RunEthTestsCmd = cli.Command{
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
 
-		&utils.GethTestTypeFlag,
+		&utils.EthTestTypeFlag,
 		&utils.ForksFlag,
 	},
 	Description: `

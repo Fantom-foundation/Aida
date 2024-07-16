@@ -33,7 +33,7 @@ type ethTest interface {
 
 // getTestsWithinPath returns all tests in given directory (and subdirectories)
 // T is the type into which we want to unmarshal the tests.
-func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.GethTestType) ([]T, error) {
+func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType) ([]T, error) {
 	path := cfg.ArgPath
 	info, err := os.Stat(path)
 	if err != nil {

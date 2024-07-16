@@ -39,10 +39,10 @@ import (
 type ArgumentMode int
 type ChainID int
 type ChainIDs map[ChainID]string
-type GethTestType int
+type EthTestType int
 
 const (
-	Unknown GethTestType = iota
+	Unknown EthTestType = iota
 	StateTests
 	BlockTests
 )
@@ -183,7 +183,7 @@ type Config struct {
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	ErrorLogging           string         // if defined, error logging to file is enabled
 	Genesis                string         // genesis file
-	GethTestType           GethTestType   // which geth test are we running
+	EthTestType            EthTestType    // which geth test are we running
 	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
 	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
 	KeepDb                 bool           // set to true if db is kept after run
@@ -254,7 +254,7 @@ type configContext struct {
 	cfg         *Config       // run configuration
 	log         logger.Logger // logger for printing logs in config functions
 	hasMetadata bool          // if true, Aida-db has a valid metadata table
-	ctx         *cli.Context
+	ctx         *cli.Context  // command line context for accessing flags and command line arguments
 }
 
 func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
