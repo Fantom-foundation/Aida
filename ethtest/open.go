@@ -56,7 +56,7 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 			path = gst
 		}
 	case utils.BlockTests:
-		return nil, errors.New("block test-ype not yet implemented")
+		return nil, errors.New("blockchain test-type not yet implemented")
 	default:
 		return nil, errors.New("please chose which testType do you want to read")
 	}
