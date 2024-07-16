@@ -19,9 +19,9 @@ func NewDecoder(cfg *utils.Config) (*Decoder, error) {
 	log := logger.NewLogger(cfg.LogLevel, "eth-test-decoder")
 
 	return &Decoder{
-		forks: sortForks(log, cfg.Forks),
-		log:   log,
-		jsons: tests,
+		enabledForks: sortForks(log, cfg.Forks),
+		log:          log,
+		jsons:        tests,
 	}, nil
 }
 
@@ -43,13 +43,13 @@ func sortForks(log logger.Logger, cfgForks []string) (forks []string) {
 }
 
 type Decoder struct {
-	forks []string
-	log   logger.Logger
-	jsons []*stJSON
+	enabledForks []string  // Which forks are enabled by user (default is all)
+	jsons        []*stJSON // Decoded json files
+	log          logger.Logger
 }
 
 // DivideStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
-// 2) tests cases. Each file contains 1..N forks, one block environment (marked as 'env') and one
+// 2) tests cases. Each file contains 1..N enabledForks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
 func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 	var overall uint32
@@ -65,8 +65,9 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 			baseFee = &BigInt{*big.NewInt(0x0a)}
 		}
 
+		// TODO: each test requires its own block context and chain config
 		// Iterate all usable forks within one JSON file
-		for _, fork := range d.forks {
+		for _, fork := range d.enabledForks {
 			posts := stJson.Post[fork]
 			// Iterate all tests within one fork
 			for _, post := range posts {
