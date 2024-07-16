@@ -54,7 +54,7 @@ type Decoder struct {
 func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 	var overall uint32
 	// Iterate all JSONs
-	for _, stJson := range d.jsons {
+	for number, stJson := range d.jsons {
 		env := &stJson.Env
 		baseFee := stJson.Env.BaseFee
 		if baseFee == nil {
@@ -67,15 +67,15 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 		for _, fork := range d.forks {
 			posts := stJson.Post[fork]
 			// Iterate all tests within one fork
-			for i, post := range posts {
+			for _, post := range posts {
 				msg, err := stJson.Tx.toMessage(post, baseFee)
 				if err != nil {
 					d.log.Warningf("Path: %v, fork: %v, test number: %v\n"+
-						"cannot decode tx to message: %v", stJson.path, fork, i, err)
+						"cannot decode tx to message: %v", stJson.path, fork, number, err)
 					continue
 				}
 
-				dividedTests = append(dividedTests, newStateTestTxContest(stJson, env, msg, post.RootHash, fork, i))
+				dividedTests = append(dividedTests, newStateTestTxContest(stJson, env, msg, post.RootHash, fork, number))
 				overall++
 			}
 		}

@@ -69,5 +69,5 @@ func (s *stateTestContext) GetMessage() *core.Message {
 }
 
 func (s *stateTestContext) String() string {
-	return fmt.Sprintf("Test path: %v\nFork: %v\nTest Number: %v", s.path, s.fork, s.number)
+	return fmt.Sprintf("Test path: %v\nFork: %v\nTest Number within file: %v", s.path, s.fork, s.number)
 }
