@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Substate/db"
@@ -265,6 +266,23 @@ func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
 	}
 }
 
+// NewTestConfig creates a new config for test purpose
+func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool) *Config {
+	chainCfg, err := GetChainConfig(chainId)
+	if err != nil {
+		t.Fatalf("cannot get chain cfg: %v", err)
+	}
+	return &Config{
+		First:           first,
+		Last:            last,
+		ChainCfg:        chainCfg,
+		LogLevel:        "Critical",
+		SkipPriming:     true,
+		Validate:        validate,
+		ValidateTxState: validate,
+	}
+}
+
 // NewConfig creates and initializes Config with commandline arguments.
 func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	var err error
@@ -281,13 +299,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("cannot get chain id; %v", err)
 	}
 
-	// set chain config
-	chainConfig, err := GetChainConfig(cc.cfg.ChainID)
+	err = cc.setChainConfig()
 	if err != nil {
-		return nil, fmt.Errorf("cannot create chain config; %w", err)
+		return nil, fmt.Errorf("cannot set chain id: %w", err)
 	}
-
-	cc.cfg.ChainCfg = chainConfig
 
 	// set first Opera block according to chian id
 	err = cc.setFirstOperaBlock()
@@ -751,4 +766,9 @@ func (cc *configContext) reportNewConfig() {
 	if cfg.DbLogging != "" {
 		log.Warning("Db logging enabled, reducing Tx throughput")
 	}
+}
+
+func (cc *configContext) setChainConfig() (err error) {
+	cc.cfg.ChainCfg, err = GetChainConfig(cc.cfg.ChainID)
+	return err
 }

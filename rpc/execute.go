@@ -26,13 +26,12 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/lachesis-base/common/littleendian"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 // TODO FIX!
 const falsyContract = "0xe0c38b2a8d09aad53f1c67734b9a95e43d5981c0"
 
-func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config, chainCfg *params.ChainConfig) txcontext.Result {
+func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) txcontext.Result {
 	switch rec.Query.MethodBase {
 	case "getBalance":
 		return executeGetBalance(rec.Query.Params[0], archive)
@@ -42,7 +41,7 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		if rec.Timestamp == 0 {
 			return nil
 		}
-		evm := newEvmExecutor(block, archive, cfg, chainCfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
+		evm := newEvmExecutor(block, archive, cfg, cfg.ChainCfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
 		// calls to this contract are excluded for now,
 		// this contract causes issues in validation
 		if strings.Compare(falsyContract, strings.ToLower(evm.args.To.String())) == 0 {

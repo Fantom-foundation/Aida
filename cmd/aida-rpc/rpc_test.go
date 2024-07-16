@@ -42,14 +42,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
 	archiveFour := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		SkipPriming: true,
-		Workers:     1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -93,12 +86,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveFour.EXPECT().Release(),
 	)
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
-	if err := run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil); err != nil {
+	if err := run(cfg, provider, db, rpcProcessor{cfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -111,14 +99,8 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	archiveTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		SkipPriming: true,
-		Workers:     4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.Workers = 2
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -159,12 +141,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		archiveThree.EXPECT().Release(),
 	)
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
-	if err := run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil); err != nil {
+	if err := run(cfg, provider, db, rpcProcessor{cfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -177,14 +154,7 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 
-	config := &utils.Config{
-		First:    2,
-		Last:     4,
-		ChainID:  utils.MainnetChainID,
-		LogLevel: "Critical",
-		Workers:  1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -246,7 +216,7 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[*rpc.RequestAndResults](5), gomock.Any(), nil),
 	)
 
-	if err := run(config, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
+	if err := run(cfg, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -261,14 +231,8 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 
-	config := &utils.Config{
-		First:    2,
-		Last:     4,
-		ChainID:  utils.MainnetChainID,
-		LogLevel: "Critical",
-		Workers:  2,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.Workers = 2
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -329,7 +293,7 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 		post,
 	)
 
-	if err := run(config, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
+	if err := run(cfg, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -340,15 +304,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -369,13 +325,8 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
 	if err != nil {
 		t.Errorf("run must not fail")
 	}
@@ -387,15 +338,8 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -416,13 +360,8 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
 	if err != nil {
 		t.Errorf("run must not fail")
 	}
@@ -434,15 +373,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -463,13 +394,8 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -485,15 +411,8 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -514,13 +433,8 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
 	// run fails but not on validation
-	err = run(cfg, provider, db, rpcProcessor{cfg, chainCfg}, nil)
+	err = run(cfg, provider, db, rpcProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}

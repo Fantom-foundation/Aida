@@ -43,20 +43,8 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	chainConfig, err := utils.GetChainConfig(utils.MainnetChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		ContinueOnFailure: true,
-		LogLevel:          "Critical",
-		ChainCfg:          chainConfig,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.ContinueOnFailure = true
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -119,7 +107,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err = runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
 	if err != nil {
 		errors.Unwrap(err)
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
@@ -135,14 +123,8 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		LogLevel:    "Critical",
-		SkipPriming: true,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -221,19 +203,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	chainConfig, err := utils.GetChainConfig(utils.EthTestsChainID)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		ChainCfg:        chainConfig,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -260,7 +230,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err = runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -277,14 +247,8 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
