@@ -14,7 +14,7 @@ import (
 )
 
 func TestTestCaseSplitter_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
-	stJson := createTestStJson(t)
+	stJson := CreateTestStJson(t)
 	d := TestCaseSplitter{jsons: []*stJSON{stJson}, log: logger.NewLogger("info", "test-case-splitter-test")}
 	for _, testCase := range d.SplitStateTests() {
 		msg := testCase.GetMessage()

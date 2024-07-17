@@ -73,7 +73,7 @@ func CreateTestTransaction(*testing.T) txcontext.TxContext {
 	}
 }
 
-func createTestStJson(*testing.T) *stJSON {
+func CreateTestStJson(*testing.T) *stJSON {
 	return &stJSON{
 		path: "test/path",
 		Env: stBlockEnvironment{
