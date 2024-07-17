@@ -10,15 +10,30 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+var usableForks = map[string]struct{}{
+	"Cancun":       {},
+	"Shanghai":     {},
+	"Paris":        {},
+	"Bellatrix":    {},
+	"GrayGlacier":  {},
+	"ArrowGlacier": {},
+	"Altair":       {},
+	"London":       {},
+	"Berlin":       {},
+	"Istanbul":     {},
+	"MuirGlacier":  {},
+	"TestNetwork":  {},
+}
+
 // NewDecoder opens all JSON tests within path
-func NewDecoder(cfg *utils.Config) (*Decoder, error) {
+func NewDecoder(cfg *utils.Config) (*TestCaseSplitter, error) {
 	tests, err := getTestsWithinPath(cfg, utils.StateTests)
 	if err != nil {
 		return nil, err
 	}
 	log := logger.NewLogger(cfg.LogLevel, "eth-test-decoder")
 
-	return &Decoder{
+	return &TestCaseSplitter{
 		enabledForks: sortForks(log, cfg.Forks),
 		log:          log,
 		jsons:        tests,
@@ -42,20 +57,20 @@ func sortForks(log logger.Logger, cfgForks []string) (forks []string) {
 	return forks
 }
 
-type Decoder struct {
+type TestCaseSplitter struct {
 	enabledForks []string  // Which forks are enabled by user (default is all)
 	jsons        []*stJSON // Decoded json files
 	log          logger.Logger
 }
 
-// DivideStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
+// SplitStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
 // 2) tests cases. Each file contains 1..N enabledForks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
-func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
+func (s *TestCaseSplitter) SplitStateTests() (dividedTests []txcontext.TxContext) {
 	var overall uint32
 
 	// Iterate all JSONs
-	for _, stJson := range d.jsons {
+	for _, stJson := range s.jsons {
 		number := 0
 		env := &stJson.Env
 		baseFee := stJson.Env.BaseFee
@@ -67,14 +82,14 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 
 		// TODO: each test requires its own block context and chain config
 		// Iterate all usable forks within one JSON file
-		for _, fork := range d.enabledForks {
+		for _, fork := range s.enabledForks {
 			posts := stJson.Post[fork]
 			// Iterate all tests within one fork
 			for _, post := range posts {
 				number++
 				msg, err := stJson.Tx.toMessage(post, baseFee)
 				if err != nil {
-					d.log.Warningf("Path: %v, fork: %v, test number: %v\n"+
+					s.log.Warningf("Path: %v, fork: %v, test number: %v\n"+
 						"cannot decode tx to message: %v", stJson.path, fork, number, err)
 					continue
 				}
@@ -85,7 +100,7 @@ func (d *Decoder) DivideStateTests() (dividedTests []txcontext.TxContext) {
 		}
 	}
 
-	d.log.Noticef("Found %v runnable state tests...", overall)
+	s.log.Noticef("Found %v runnable state tests...", overall)
 
 	return dividedTests
 }

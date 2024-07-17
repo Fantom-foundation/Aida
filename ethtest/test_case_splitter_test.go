@@ -13,10 +13,10 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func TestDecoder_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
+func TestTestCaseSplitter_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
 	stJson := createTestStJson(t)
-	d := Decoder{jsons: []*stJSON{stJson}, log: logger.NewLogger("info", "decoder-test")}
-	for _, testCase := range d.DivideStateTests() {
+	d := TestCaseSplitter{jsons: []*stJSON{stJson}, log: logger.NewLogger("info", "test-case-splitter-test")}
+	for _, testCase := range d.SplitStateTests() {
 		msg := testCase.GetMessage()
 		if strings.Contains(fmt.Sprintf("%s", testCase), "Cancun") {
 			// Cancun fork contains data 1 and data 2 but since map is not ordered we cannot guarantee
@@ -48,7 +48,7 @@ func TestDecoder_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
 	}
 }
 
-func TestDecoder_NewDecoder_SortsForks(t *testing.T) {
+func TestTestCaseSplitter_NewTestCaseSplitter_SortsForks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
@@ -61,7 +61,7 @@ func TestDecoder_NewDecoder_SortsForks(t *testing.T) {
 	}
 }
 
-func TestDecoder_NewDecoder_AllAddsAllForks(t *testing.T) {
+func TestTestCaseSplitter_NewTestCaseSplitter_AllAddsAllForks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
@@ -75,7 +75,7 @@ func TestDecoder_NewDecoder_AllAddsAllForks(t *testing.T) {
 	}
 }
 
-func TestDecoder_NewDecoder_GlaciersAreCapitalized(t *testing.T) {
+func TestTestCaseSplitter_NewTestCaseSplitter_GlaciersAreCapitalized(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 

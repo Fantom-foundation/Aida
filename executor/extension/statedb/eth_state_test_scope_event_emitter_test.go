@@ -32,7 +32,7 @@ func TestEthStateScopeEventEmitter_PreTransactionCallsBeginBlockAndBeginTransact
 
 	ext := ethStateScopeEventEmitter{}
 
-	db.EXPECT().BeginBlock(uint64(2))
+	db.EXPECT().BeginBlock(uint64(1))
 	db.EXPECT().BeginTransaction(uint32(1))
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}

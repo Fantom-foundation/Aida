@@ -41,7 +41,7 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		if rec.Timestamp == 0 {
 			return nil
 		}
-		evm := newEvmExecutor(block, archive, cfg, cfg.ChainCfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
+		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
 		// calls to this contract are excluded for now,
 		// this contract causes issues in validation
 		if strings.Compare(falsyContract, strings.ToLower(evm.args.To.String())) == 0 {

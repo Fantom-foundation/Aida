@@ -6,21 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-var usableForks = map[string]struct{}{
-	"Cancun":       {},
-	"Shanghai":     {},
-	"Paris":        {},
-	"Bellatrix":    {},
-	"GrayGlacier":  {},
-	"ArrowGlacier": {},
-	"Altair":       {},
-	"London":       {},
-	"Berlin":       {},
-	"Istanbul":     {},
-	"MuirGlacier":  {},
-	"TestNetwork":  {},
-}
-
 // stJSON serves as a 'middleman' into which are data unmarshalled from geth test files.
 type stJSON struct {
 	path string

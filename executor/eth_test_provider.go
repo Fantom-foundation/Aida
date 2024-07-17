@@ -33,12 +33,12 @@ type ethTestProvider struct {
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	b, err := statetest.NewDecoder(e.cfg)
+	splitter, err := statetest.NewDecoder(e.cfg)
 	if err != nil {
 		return err
 	}
 
-	for i, testCase := range b.DivideStateTests() {
+	for i, testCase := range splitter.SplitStateTests() {
 		err = consumer(TransactionInfo[txcontext.TxContext]{
 			// Blocks 0 and 1 are used by priming
 			Block:       2,
