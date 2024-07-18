@@ -25,8 +25,8 @@ var usableForks = map[string]struct{}{
 	"TestNetwork":  {},
 }
 
-// NewDecoder opens all JSON tests within path
-func NewDecoder(cfg *utils.Config) (*TestCaseSplitter, error) {
+// NewTestCaseSplitter opens all JSON tests within path
+func NewTestCaseSplitter(cfg *utils.Config) (*TestCaseSplitter, error) {
 	tests, err := getTestsWithinPath(cfg, utils.StateTests)
 	if err != nil {
 		return nil, err

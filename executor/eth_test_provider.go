@@ -33,7 +33,7 @@ type ethTestProvider struct {
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	splitter, err := statetest.NewDecoder(e.cfg)
+	splitter, err := statetest.NewTestCaseSplitter(e.cfg)
 	if err != nil {
 		return err
 	}
