@@ -87,7 +87,7 @@ func genDeletedAccountsTask(
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
-	ss := substatecontext.NewTxContext(tx)
+	ss := substatecontext.NewTxContext(tx, cfg.ChainCfg)
 
 	conduit := state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, cfg.ChainCfg)
 	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputState(), tx.Block, conduit)
