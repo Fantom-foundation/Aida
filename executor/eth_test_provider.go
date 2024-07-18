@@ -17,52 +17,37 @@
 package executor
 
 import (
+	"fmt"
+
 	statetest "github.com/Fantom-foundation/Aida/ethtest"
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
-	return ethTestProvider{cfg, logger.NewLogger(cfg.LogLevel, "eth-state-test-provider")}
+	return ethTestProvider{cfg}
 }
 
 type ethTestProvider struct {
 	cfg *utils.Config
-	log logger.Logger
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	b, err := statetest.OpenStateTests(e.cfg.ArgPath)
+	splitter, err := statetest.NewTestCaseSplitter(e.cfg)
 	if err != nil {
 		return err
 	}
 
-	var (
-		numTestFiles int
-		maxTestFiles = len(b)
-	)
-
-	e.log.Noticef("There is %v test files.", maxTestFiles)
-
-	// iterate all state json files
-	for _, t := range b {
-		numTestFiles++
-		// divide them by fork
-		for i, dt := range t.Divide(e.cfg.ChainID) {
-			err = consumer(TransactionInfo[txcontext.TxContext]{
-				Block:       int(dt.Env.GetNumber()),
-				Transaction: i,
-				Data:        dt,
-			})
+	for i, testCase := range splitter.SplitStateTests() {
+		err = consumer(TransactionInfo[txcontext.TxContext]{
+			// Blocks 0 and 1 are used by priming
+			Block:       2,
+			Transaction: i,
+			Data:        testCase,
+		})
+		if err != nil {
+			return fmt.Errorf("transaction failed\n%s\nerr: %w", testCase, err)
 		}
-		if numTestFiles%100 == 0 {
-			e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
-		}
-	}
-
-	if err != nil {
-		e.log.Noticef("Progress: %v / %v files iterated.", numTestFiles, maxTestFiles)
 	}
 
 	return nil

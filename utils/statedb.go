@@ -206,7 +206,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode, state.NewChainConduit(cfg.ChainID == EthereumChainID, GetChainConfig(cfg.ChainID)))
+		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode, state.NewChainConduit(cfg.ChainID == EthereumChainID, cfg.ChainCfg))
 	case "carmen":
 		// Disable archive if not enabled.
 		if !cfg.ArchiveMode {

@@ -56,7 +56,7 @@ func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *ut
 		args:      newTxArgs(params),
 		archive:   archive,
 		timestamp: timestamp,
-		chainCfg:  utils.GetChainConfig(cfg.ChainID),
+		chainCfg:  cfg.ChainCfg,
 		vmImpl:    cfg.VmImpl,
 		blockId:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),

@@ -32,6 +32,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 
 	cfg := &utils.Config{
 		ArgPath: pathFile,
+		Forks:   []string{"all"},
 	}
 
 	provider := NewEthStateTestProvider(cfg)
@@ -41,7 +42,10 @@ func Test_ethTestProvider_Run(t *testing.T) {
 	var consumer = NewMockTxConsumer(ctrl)
 
 	gomock.InOrder(
-		consumer.EXPECT().Consume(1, 0, gomock.Any()),
+		consumer.EXPECT().Consume(2, 0, gomock.Any()),
+		consumer.EXPECT().Consume(2, 1, gomock.Any()),
+		consumer.EXPECT().Consume(2, 2, gomock.Any()),
+		consumer.EXPECT().Consume(2, 3, gomock.Any()),
 	)
 
 	err := provider.Run(0, 0, toSubstateConsumer(consumer))
@@ -53,7 +57,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 func createTestDataFile(t *testing.T) string {
 	path := t.TempDir()
 	pathFile := path + "/test.json"
-	stData := ethtest.CreateTestData(t)
+	stData := ethtest.CreateTestStJson(t)
 
 	jsonData, err := json.Marshal(stData)
 	if err != nil {

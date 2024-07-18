@@ -57,7 +57,10 @@ func TestUtilsConfig_GetChainConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("ChainID: %d", tc), func(t *testing.T) {
-			chainConfig := GetChainConfig(tc)
+			chainConfig, err := GetChainConfig(tc)
+			if err != nil {
+				t.Fatalf("cannot get chain config: %v", err)
+			}
 
 			if tc == MainnetChainID && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(37455223)) != 0 {
 				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", MainnetChainID, chainConfig.BerlinBlock, 37455223)
@@ -235,7 +238,7 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 	KeywordBlocks[chainId]["last"] = 2000
 
 	cfg := &Config{ChainID: chainId, LogLevel: "NOTICE"}
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	firstArg = 1100
 	lastArg = 1900
@@ -283,7 +286,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: chainId}
 
 	// prepare config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -345,7 +348,10 @@ func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
 			t.Errorf("Unable to close stateDB: %v", err)
 		}
 	}(statedb)
-	chainConfig := GetChainConfig(0xFA)
+	chainConfig, err := GetChainConfig(0xFA)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
 
 	for _, interpreterImpl := range checkedImpls {
 		evm := vm.NewEVM(vm.BlockContext{}, vm.TxContext{}, statedb, chainConfig, vm.Config{
@@ -370,7 +376,7 @@ func TestUtilsConfig_setChainIdFromDB(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, &cli.Context{Command: &cli.Command{Name: "fake-name"}})
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -409,7 +415,7 @@ func TestUtilsConfig_setChainIdFromFlag(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: chainId}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// test getChainId function
 	err = cc.setChainId()
@@ -435,7 +441,7 @@ func TestUtilsConfig_setDefaultChainId(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, &cli.Context{Command: &cli.Command{Name: "fake-name"}})
 
 	// test getChainId function
 	err = cc.setChainId()
@@ -462,7 +468,7 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: MainnetChainID}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -505,7 +511,7 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRangeInvalid(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// parse cli arguments slice of insufficient length
 	err := cc.updateConfigBlockRange([]string{"test"}, mode)
@@ -527,7 +533,7 @@ func TestUtilsConfig_updateConfigBlockRangeLastBlock(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// parse cli arguments slice
 	err := cc.updateConfigBlockRange([]string{lastArg}, mode)
@@ -553,7 +559,7 @@ func TestUtilsConfig_updateConfigBlockRangeLastBlockInvalid(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// parse cli arguments slice of insufficient length
 	err := cc.updateConfigBlockRange([]string{"test"}, mode)
@@ -574,7 +580,7 @@ func TestUtilsConfig_updateConfigBlockRangeOneToNInvalid(t *testing.T) {
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// parse cli arguments slice of insufficient length
 	err := cc.updateConfigBlockRange([]string{}, mode)
@@ -607,7 +613,7 @@ func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
 	}
 
 	// create config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -679,7 +685,7 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOn(t *testing.T) {
 	} {
 		t.Run("validation adjustment", func(t *testing.T) {
 			// set missing values
-			cc := NewConfigContext(&cfg)
+			cc := NewConfigContext(&cfg, nil)
 			cc.adjustMissingConfigValues()
 
 			// checks
@@ -702,7 +708,7 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
 	}
 
 	// prepare config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	cc.adjustMissingConfigValues()
 
@@ -723,7 +729,7 @@ func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
 	}
 
 	// prepare config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	cc.adjustMissingConfigValues()
 
@@ -742,13 +748,25 @@ func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
 	}
 
 	// prepare config context
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, nil)
 
 	cc.adjustMissingConfigValues()
 
 	// checks
 	if cfg.DbTmp != os.TempDir() {
 		t.Fatalf("failed to adjust temporary database location; got: %v; expected: %v", cfg.DbTmp, os.TempDir())
+	}
+}
+
+func TestConfigContext_setChainId_AutomaticallyAssingsForEthTests(t *testing.T) {
+	cfg := &Config{}
+	cc := NewConfigContext(cfg, &cli.Context{Command: &cli.Command{Name: ethTestCmdName}})
+	if err := cc.setChainId(); err != nil {
+		t.Fatalf("failed to set chain-id: %v", err)
+	}
+
+	if cc.cfg.ChainID != EthTestsChainID {
+		t.Errorf("unexpected chain-id\n got: %v want: %v", cc.cfg.ChainID, EthTestsChainID)
 	}
 }
 

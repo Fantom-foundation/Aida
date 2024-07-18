@@ -44,16 +44,8 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	archiveBlockTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveBlockThree := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		Workers:           1,
-		ContinueOnFailure: true, // in this test we only check if blocks are being processed, any error can be ignored
-		LogLevel:          "Critical",
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.ContinueOnFailure = true
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -131,16 +123,9 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	archiveBlockTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveBlockThree := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		Workers:           4,
-		ContinueOnFailure: true, // in this test we only check if blocks are being processed, any error can be ignored
-		LogLevel:          "Critical",
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.ContinueOnFailure = true
+	cfg.Workers = 2
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -226,14 +211,7 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 
-	config := &utils.Config{
-		First:    2,
-		Last:     4,
-		ChainID:  utils.MainnetChainID,
-		LogLevel: "Critical",
-		Workers:  1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -299,7 +277,7 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil),
 	)
 
-	if err := run(config, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
+	if err := run(cfg, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -314,14 +292,8 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 
-	config := &utils.Config{
-		First:    2,
-		Last:     4,
-		ChainID:  utils.MainnetChainID,
-		LogLevel: "Critical",
-		Workers:  4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.Workers = 2
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -390,7 +362,7 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 
 	ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil)
 
-	if err := run(config, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
+	if err := run(cfg, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -401,15 +373,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -453,15 +417,9 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         4,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -504,14 +462,8 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -546,15 +498,9 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         4,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {

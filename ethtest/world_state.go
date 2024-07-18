@@ -19,15 +19,15 @@ package ethtest
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func NewWorldState(alloc core.GenesisAlloc) txcontext.WorldState {
+func NewWorldState(alloc types.GenesisAlloc) txcontext.WorldState {
 	return worldStateAlloc{alloc}
 }
 
 type worldStateAlloc struct {
-	alloc core.GenesisAlloc
+	alloc types.GenesisAlloc
 }
 
 func (w worldStateAlloc) Get(addr common.Address) txcontext.Account {

@@ -43,6 +43,9 @@ type shadowDbValidator struct {
 
 func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	// Retrieve hash from the state, if this there is mismatch between prime and shadow db error is returned
-	ctx.State.GetHash()
+	_, err := ctx.State.GetHash()
+	if err != nil {
+		return err
+	}
 	return ctx.State.Error()
 }

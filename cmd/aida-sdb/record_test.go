@@ -37,15 +37,10 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	path := t.TempDir() + "test_trace"
-	cfg := &utils.Config{
-		First:            10,
-		Last:             11,
-		ChainID:          utils.MainnetChainID,
-		SkipPriming:      true,
-		TraceFile:        path,
-		SyncPeriodLength: 1,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 10, 11, false)
+	cfg.TraceFile = path
+	cfg.SyncPeriodLength = 1
 	provider.EXPECT().
 		Run(10, 12, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.TxContext]) error {

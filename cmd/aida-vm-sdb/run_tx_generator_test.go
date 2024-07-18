@@ -38,14 +38,8 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		LogLevel:    "Critical",
-		SkipPriming: true,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	// Simulate the execution of four transactions in three blocks.
 	provider.EXPECT().
 		Run(2, 4, gomock.Any()).

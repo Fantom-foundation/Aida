@@ -17,9 +17,6 @@
 package logger
 
 import (
-	"strings"
-
-	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -27,43 +24,37 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
+const defaultReportFrequency = 1000
+
 type ethStateTestLogger struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg                                *utils.Config
-	log                                logger.Logger
-	previousTestLabel, previousNetwork string
-	overall, numTestsOfCurrentLabel    int
+	log             logger.Logger
+	overall         int
+	reportFrequency int
 }
 
-func MakeEthStateTestLogger(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	return makeEthStateTestLogger(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"))
+func MakeEthStateTestLogger(cfg *utils.Config, testReportFrequency int) executor.Extension[txcontext.TxContext] {
+	if testReportFrequency <= 0 {
+		testReportFrequency = defaultReportFrequency
+	}
+	return makeEthStateTestLogger(logger.NewLogger(cfg.LogLevel, "EthStateTestLogger"), testReportFrequency)
 }
 
-func makeEthStateTestLogger(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+func makeEthStateTestLogger(log logger.Logger, frequency int) *ethStateTestLogger {
 	return &ethStateTestLogger{
-		cfg:     cfg,
-		log:     log,
-		overall: 0,
+		reportFrequency: frequency,
+		log:             log,
+		overall:         0,
 	}
 }
 
 // PreTransaction reports test name and fork.
 func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext], _ *executor.Context) error {
-	// cast state.Data to stJSON
-	c := s.Data.(*ethtest.StJSON)
-
-	// Print only new version of test
-	if strings.Compare(l.previousTestLabel, c.TestLabel) != 0 {
-		l.log.Noticef("Currently iterating %v", c.TestLabel)
-		l.previousTestLabel = c.TestLabel
-	}
-
-	if strings.Compare(l.previousNetwork, c.UsedNetwork) != 0 {
-		l.log.Infof(" Running test for fork: %v", c.UsedNetwork)
-		l.previousNetwork = c.UsedNetwork
-	}
-
+	l.log.Infof("Currently running:\n%s", s.Data)
 	l.overall++
+	if l.overall%l.reportFrequency == 0 {
+		l.log.Noticef("%v tests has been processed so far...", l.overall)
+	}
 	return nil
 }
 

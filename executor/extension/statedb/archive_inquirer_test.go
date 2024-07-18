@@ -88,11 +88,10 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.Config{}
+	cfg := utils.NewTestConfig(t, utils.TestnetChainID, 0, 0, false)
 	cfg.ArchiveMode = true
 	cfg.ArchiveQueryRate = 100
 	cfg.ArchiveMaxQueryAge = 100
-	cfg.ChainID = utils.TestnetChainID
 
 	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
@@ -124,7 +123,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	archive.EXPECT().Exist(gomock.Any()).AnyTimes()
 	archive.EXPECT().CreateContract(gomock.Any()).AnyTimes()
 
-	ext := makeArchiveInquirer(&cfg, log)
+	ext := makeArchiveInquirer(cfg, log)
 	if err := ext.PreRun(state, &context); err != nil {
 		t.Errorf("failed PreRun, got %v", err)
 	}

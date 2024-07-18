@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -44,6 +43,7 @@ func NewShadowProxy(prime, shadow state.StateDB, compareStateHash bool) state.St
 			snapshots:        []snapshotPair{},
 			err:              nil,
 			compareStateHash: compareStateHash,
+			log:              logger.NewLogger("shadow-db", "info"),
 		},
 		prime:  prime,
 		shadow: shadow,
@@ -592,7 +592,7 @@ func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) (common.
 		return common.Hash{}, err
 	}
 	if resP != resS {
-		s.logIssue(opName, resP, resS, args)
+		s.logIssue(opName, fmt.Sprintf("%x", resP), fmt.Sprintf("%x", resS), args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 		return common.Hash{}, s.err
 	}
@@ -693,7 +693,7 @@ func getOpcodeString(opName string, args ...any) string {
 }
 
 func (s *shadowVmStateDb) logIssue(opName string, prime, shadow any, args ...any) {
-	log.Printf("Diff for %v\n"+
+	s.log.Errorf("Diff for %v\n"+
 		"\tPrimary: %v \n"+
 		"\tShadow: %v", getOpcodeString(opName, args), prime, shadow)
 

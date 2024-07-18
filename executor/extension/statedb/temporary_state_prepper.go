@@ -36,7 +36,7 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.T
 	default:
 		// offTheChainStateDb is default value
 		return &temporaryOffTheChainStatePrepper{
-			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(utils.EthereumChainID)),
+			chainConduit: statedb.NewChainConduit(cfg.ChainID == utils.EthereumChainID, cfg.ChainCfg),
 		}
 	}
 }

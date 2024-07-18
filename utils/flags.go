@@ -316,6 +316,11 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
+	EthTestTypeFlag = cli.IntFlag{
+		Name:  "eth-test-type",
+		Usage: "1 - state tests, 2 - block-chain tests",
+		Value: 1,
+	}
 	TargetDbFlag = cli.PathFlag{
 		Name:  "target-db",
 		Usage: "target database path",
@@ -400,6 +405,11 @@ var (
 	ErrorLoggingFlag = cli.PathFlag{
 		Name:  "err-logging",
 		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
+	}
+	ForksFlag = cli.StringSliceFlag{
+		Name:  "forks",
+		Usage: "defines which forks are going to get executed by the eth-tests (\"all\" | <\"cancun\", \"shanghai\", \"paris\", \"bellatrix\", \"grayglacier\", \"arrowglacier\", \"altair\", \"london\", \"berlin\", \"istanbul\", \"muirglacier\">)",
+		Value: cli.NewStringSlice("all"),
 	}
 	DbComponentFlag = cli.StringFlag{
 		Name:     "db-component",

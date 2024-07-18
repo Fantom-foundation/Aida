@@ -47,7 +47,7 @@ type ethStateTestDbPrepper struct {
 	log logger.Logger
 }
 
-func (e ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateTestDbPrepper) PreTransaction(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	cfg := e.cfg
 	// We reduce the node cache size to be used by Carmen to 1 MB
