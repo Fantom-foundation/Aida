@@ -22,6 +22,7 @@ import (
 	statetest "github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/tests"
 )
 
 func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
@@ -38,15 +39,16 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 		return err
 	}
 
-	for i, testCase := range splitter.SplitStateTests() {
+	for i, tx := range splitter.SplitStateTests() {
+		e.cfg.ChainCfg = tests.Forks[tx.Fork]
 		err = consumer(TransactionInfo[txcontext.TxContext]{
 			// Blocks 0 and 1 are used by priming
 			Block:       2,
 			Transaction: i,
-			Data:        testCase,
+			Data:        tx.Ctx,
 		})
 		if err != nil {
-			return fmt.Errorf("transaction failed\n%s\nerr: %w", testCase, err)
+			return fmt.Errorf("transaction failed\n%s\nerr: %w", tx.Ctx, err)
 		}
 	}
 

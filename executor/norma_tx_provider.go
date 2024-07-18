@@ -74,7 +74,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 	// define norma consumer that will be used to consume transactions
 	// this is the only place that is responsible for incrementing block and tx numbers
 	nc := func(tx *types.Transaction, sender *common.Address) error {
-		data, err := txgenerator.NewNormaTxContext(tx, uint64(currentBlock), sender)
+		data, err := txgenerator.NewNormaTxContext(tx, uint64(currentBlock), sender, p.cfg.ChainCfg)
 		if err != nil {
 			return err
 		}

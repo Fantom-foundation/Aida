@@ -126,7 +126,7 @@ func (s *carmenStateDB) SelfDestruct(addr common.Address) {
 }
 
 func (s *carmenStateDB) Selfdestruct6780(addr common.Address) {
-	panic("Selfdestruct6780 not implemented")
+	s.txCtx.SelfDestruct6780(carmen.Address(addr))
 	return
 }
 

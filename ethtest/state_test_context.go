@@ -25,12 +25,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func newStateTestTxContest(stJson *stJSON, env *stBlockEnvironment, msg *core.Message, rootHash common.Hash, fork string, number int) txcontext.TxContext {
+func newStateTestTxContest(stJson *stJSON, msg *core.Message, rootHash common.Hash, fork string, number int) txcontext.TxContext {
 	return &stateTestContext{
 		fork:       fork,
 		path:       stJson.path,
 		number:     number,
-		env:        env,
+		env:        stJson.CreateEnv(fork),
 		inputState: stJson.Pre,
 		msg:        msg,
 		rootHash:   rootHash,
