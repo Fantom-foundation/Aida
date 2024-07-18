@@ -67,3 +67,9 @@ func (e *blockEnvironment) GetTimestamp() uint64 {
 func (e *blockEnvironment) GetBaseFee() *big.Int {
 	return e.BaseFee
 }
+
+func (e *blockEnvironment) GetBlobBaseFee() *big.Int {
+	// TODO: implement after substate 79 has been merged + go.mod has been updated
+	// return e.BlobBaseFee
+	return nil
+}

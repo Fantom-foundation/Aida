@@ -29,6 +29,7 @@ import (
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -157,7 +158,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
+	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
@@ -222,6 +223,10 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	baseFee := inputEnv.GetBaseFee()
 	if baseFee != nil {
 		blockCtx.BaseFee = new(big.Int).Set(baseFee)
+	}
+	blobBaseFee := inputEnv.GetBlobBaseFee()
+	if blobBaseFee != nil {
+		blockCtx.BlobBaseFee = eip4844.CalcBlobFee(blobBaseFee.Uint64())
 	}
 	return blockCtx
 }
