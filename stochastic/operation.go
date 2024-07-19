@@ -88,7 +88,7 @@ var opText = map[int]string{
 	HasSelfDestructedID: "HasSelfDestructed",
 	RevertToSnapshotID:  "RevertToSnapshot",
 	SelfDestructID:      "SelfDestruct",
-	SelfDestruct6780ID:  "SelfDestruct6890",
+	SelfDestruct6780ID:  "SelfDestruct6780",
 	SetCodeID:           "SetCode",
 	SetNonceID:          "SetNonce",
 	SetStateID:          "SetState",

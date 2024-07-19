@@ -56,7 +56,7 @@ type stochasticState struct {
 	blockNum       uint64                    // current block number
 	syncPeriodNum  uint64                    // current sync-period number
 	snapshot       []int                     // stack of active snapshots
-	selfdestructed []int64                   // list of self destructed accounts
+	selfDestructed []int64                   // list of self destructed accounts
 	traceDebug     bool                      // trace-debug flag
 	rg             *rand.Rand                // random generator for sampling
 	log            logger.Logger
@@ -246,7 +246,7 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 		values:         values,
 		snapshotLambda: snapshotLambda,
 		traceDebug:     false,
-		selfdestructed: []int64{},
+		selfDestructed: []int64{},
 		blockNum:       1,
 		syncPeriodNum:  1,
 		rg:             rg,
@@ -341,7 +341,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		db.BeginBlock(ss.blockNum)
 		ss.txNum = 0
-		ss.selfdestructed = []int64{}
+		ss.selfDestructed = []int64{}
 
 	case BeginSyncPeriodID:
 		if ss.traceDebug {
@@ -355,7 +355,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		db.BeginTransaction(ss.txNum)
 		ss.snapshot = []int{}
-		ss.selfdestructed = []int64{}
+		ss.selfDestructed = []int64{}
 
 	case CreateAccountID:
 		db.CreateAccount(addr)
@@ -472,14 +472,14 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SelfDestructID:
 		db.SelfDestruct(addr)
-		if idx := find(ss.selfdestructed, addrIdx); idx == -1 {
-			ss.selfdestructed = append(ss.selfdestructed, addrIdx)
+		if idx := find(ss.selfDestructed, addrIdx); idx == -1 {
+			ss.selfDestructed = append(ss.selfDestructed, addrIdx)
 		}
 
 	case SelfDestruct6780ID:
 		db.Selfdestruct6780(addr)
-		if idx := find(ss.selfdestructed, addrIdx); idx == -1 {
-			ss.selfdestructed = append(ss.selfdestructed, addrIdx)
+		if idx := find(ss.selfDestructed, addrIdx); idx == -1 {
+			ss.selfDestructed = append(ss.selfDestructed, addrIdx)
 		}
 
 	default:
@@ -549,10 +549,10 @@ func toHash(idx int64) common.Hash {
 // delete account information when suicide was invoked
 func (ss *stochasticState) deleteAccounts() {
 	// remove account information when suicide was invoked in the block.
-	for _, addrIdx := range ss.selfdestructed {
+	for _, addrIdx := range ss.selfDestructed {
 		if err := ss.contracts.DeleteIndex(addrIdx); err != nil {
 			ss.log.Fatal("failed deleting index")
 		}
 	}
-	ss.selfdestructed = []int64{}
+	ss.selfDestructed = []int64{}
 }
