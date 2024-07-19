@@ -42,16 +42,20 @@ const (
 	GetCommittedStateID
 	GetNonceID
 	GetStateID
-	HasSuicidedID
+	HasSelfDestructedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
 	SetStateID
 	SnapshotID
 	SubBalanceID
-	SuicideID
+	SelfDestructID
+	CreateContractID
+	GetStorageRootID
 	GetTransientStateID
 	SetTransientStateID
+	SelfDestruct6780ID
+	// Add new operations below this line
 
 	NumOps
 )
@@ -66,6 +70,7 @@ var opText = map[int]string{
 	BeginSyncPeriodID:   "BeginSyncPeriod",
 	BeginTransactionID:  "BeginTransaction",
 	CreateAccountID:     "CreateAccount",
+	CreateContractID:    "CreateContract",
 	EmptyID:             "Empty",
 	EndBlockID:          "EndBlock",
 	EndSyncPeriodID:     "EndSyncPeriod",
@@ -78,15 +83,17 @@ var opText = map[int]string{
 	GetCommittedStateID: "GetCommittedState",
 	GetNonceID:          "GetNonce",
 	GetStateID:          "GetState",
-	HasSuicidedID:       "HasSuicided",
+	GetStorageRootID:    "GetStorageRoot",
+	GetTransientStateID: "GetTransientState",
+	HasSelfDestructedID: "HasSelfDestructed",
 	RevertToSnapshotID:  "RevertToSnapshot",
+	SelfDestructID:      "SelfDestruct",
+	SelfDestruct6780ID:  "SelfDestruct6780",
 	SetCodeID:           "SetCode",
 	SetNonceID:          "SetNonce",
 	SetStateID:          "SetState",
 	SnapshotID:          "Snapshot",
 	SubBalanceID:        "SubBalance",
-	SuicideID:           "Suicide",
-	GetTransientStateID: "GetTransientState",
 	SetTransientStateID: "SetTransientState",
 }
 
@@ -97,6 +104,7 @@ var opMnemo = map[int]string{
 	BeginSyncPeriodID:   "BS",
 	BeginTransactionID:  "BT",
 	CreateAccountID:     "CA",
+	CreateContractID:    "CC",
 	EmptyID:             "EM",
 	EndBlockID:          "EB",
 	EndSyncPeriodID:     "ES",
@@ -109,15 +117,17 @@ var opMnemo = map[int]string{
 	GetCommittedStateID: "GM",
 	GetNonceID:          "GN",
 	GetStateID:          "GS",
-	HasSuicidedID:       "HS",
+	GetStorageRootID:    "GR",
+	GetTransientStateID: "GT",
+	HasSelfDestructedID: "HS",
 	RevertToSnapshotID:  "RS",
+	SelfDestructID:      "SU",
+	SelfDestruct6780ID:  "S6",
 	SetCodeID:           "SC",
 	SetNonceID:          "SO",
 	SetStateID:          "SS",
 	SnapshotID:          "SN",
 	SubBalanceID:        "SB",
-	SuicideID:           "SU",
-	GetTransientStateID: "GT",
 	SetTransientStateID: "ST",
 }
 
@@ -128,6 +138,7 @@ var opNumArgs = map[int]int{
 	BeginSyncPeriodID:   0,
 	BeginTransactionID:  0,
 	CreateAccountID:     1,
+	CreateContractID:    1,
 	EmptyID:             1,
 	EndBlockID:          0,
 	EndSyncPeriodID:     0,
@@ -140,15 +151,17 @@ var opNumArgs = map[int]int{
 	GetCommittedStateID: 2,
 	GetNonceID:          1,
 	GetStateID:          2,
-	HasSuicidedID:       1,
+	GetStorageRootID:    1,
+	GetTransientStateID: 2,
+	HasSelfDestructedID: 1,
 	RevertToSnapshotID:  0,
+	SelfDestructID:      1,
+	SelfDestruct6780ID:  1,
 	SetCodeID:           1,
 	SetNonceID:          1,
 	SetStateID:          3,
 	SnapshotID:          0,
 	SubBalanceID:        1,
-	SuicideID:           1,
-	GetTransientStateID: 2,
 	SetTransientStateID: 3,
 }
 
@@ -159,6 +172,7 @@ var opId = map[string]int{
 	"BS": BeginSyncPeriodID,
 	"BT": BeginTransactionID,
 	"CA": CreateAccountID,
+	"CC": CreateContractID,
 	"EM": EmptyID,
 	"EB": EndBlockID,
 	"ES": EndSyncPeriodID,
@@ -171,16 +185,18 @@ var opId = map[string]int{
 	"GM": GetCommittedStateID,
 	"GN": GetNonceID,
 	"GS": GetStateID,
-	"HS": HasSuicidedID,
+	"GR": GetStorageRootID,
+	"GT": GetTransientStateID,
+	"HS": HasSelfDestructedID,
 	"RS": RevertToSnapshotID,
+	"SU": SelfDestructID,
+	"S6": SelfDestruct6780ID,
 	"SC": SetCodeID,
 	"SO": SetNonceID,
 	"SN": SnapshotID,
 	"SB": SubBalanceID,
 	"SS": SetStateID,
-	"SU": SuicideID,
 	"ST": SetTransientStateID,
-	"GT": GetTransientStateID,
 }
 
 // argMnemo is the argument-class mnemonics table.

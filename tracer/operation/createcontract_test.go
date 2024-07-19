@@ -18,59 +18,54 @@ package operation
 
 import (
 	"fmt"
-	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/tracing"
-	"github.com/holiman/uint256"
 )
 
-func initSubBalance(t *testing.T) (*context.Replay, *SubBalance, common.Address, *uint256.Int, tracing.BalanceChangeReason) {
-	rand.Seed(time.Now().UnixNano())
+func initCreateContract(t *testing.T) (*context.Replay, *CreateContract, common.Address) {
 	addr := getRandomAddress(t)
-	value := uint256.NewInt(uint64(rand.Int63n(100000)))
-	reason := tracing.BalanceChangeUnspecified
 	// create context context
 	ctx := context.NewReplay()
 	contract := ctx.EncodeContract(addr)
 
 	// create new operation
-	op := NewSubBalance(contract, value, reason)
+	op := NewCreateContract(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
 	// check id
-	if op.GetId() != SubBalanceID {
+	if op.GetId() != CreateContractID {
 		t.Fatalf("wrong ID returned")
 	}
-	return ctx, op, addr, value, reason
+
+	return ctx, op, addr
 }
 
-// TestSubBalanceReadWrite writes a new SubBalance object into a buffer, reads from it,
+// TestCreateContractReadWrite writes a new CreateContract object into a buffer, reads from it,
 // and checks equality.
-func TestSubBalanceReadWrite(t *testing.T) {
-	_, op1, _, _, _ := initSubBalance(t)
-	testOperationReadWrite(t, op1, ReadSubBalance)
+func TestCreateContractReadWrite(t *testing.T) {
+	_, op1, _ := initCreateContract(t)
+	testOperationReadWrite(t, op1, ReadCreateContract)
 }
 
-// TestSubBalanceDebug creates a new SubBalance object and checks its Debug message.
-func TestSubBalanceDebug(t *testing.T) {
-	ctx, op, addr, value, reason := initSubBalance(t)
-	testOperationDebug(t, ctx, op, fmt.Sprint(addr, value, reason))
+// TestCreateContractDebug creates a new CreateContract object and checks its Debug message.
+func TestCreateContractDebug(t *testing.T) {
+	ctx, op, addr := initCreateContract(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
+
 }
 
-// TestSubBalanceExecute
-func TestSubBalanceExecute(t *testing.T) {
-	ctx, op, addr, value, reason := initSubBalance(t)
+// TestCreateContractExecute
+func TestCreateContractExecute(t *testing.T) {
+	ctx, op, addr := initCreateContract(t)
 
 	// check execution
 	mock := NewMockStateDB()
 	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
-	expected := []Record{{SubBalanceID, []any{addr, value, reason}}}
+	expected := []Record{{CreateContractID, []any{addr}}}
 	mock.compareRecordings(expected, t)
 }
