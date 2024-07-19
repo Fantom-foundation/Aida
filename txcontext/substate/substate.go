@@ -69,8 +69,8 @@ func (t *substateData) GetMessage() *core.Message {
 		t.Message.GasTipCap,
 		t.Message.Data,
 		list,
-		nil,             //TODO support BlobGasFeeCap
-		[]common.Hash{}, //TODO support BlobHashes
+		nil,             //TODO support BlobGasFeeCap - wait for Substate to be merged
+		[]common.Hash{}, //TODO support BlobHashes - wait for Substate to be merged
 		!t.Message.CheckNonce,
 	}
 }
