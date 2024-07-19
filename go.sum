@@ -12,8 +12,8 @@ github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240529085303-2400937cc3b
 github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240529085303-2400937cc3b1/go.mod h1:6LG3apXyp0InsMXGq9YmzUiV7H0BOuUHrcu3oQY9boE=
 github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240320160249-81827a18147c h1:g35kQNkq/VGiFak0joC4hcL/TZIi1KQZkatIlLZnOy0=
 github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240320160249-81827a18147c/go.mod h1:Z3oZXqOteUH9KZkuw9zXXtcVnflkjOofhXYjBH8Exh0=
-github.com/Fantom-foundation/sonic v1.2.1-b.0.20240628130111-8dc0221d67b1 h1:kaYnFs6ajyG/nNSNAsneh2Yzirqsewh5KQqsEgBxAFA=
-github.com/Fantom-foundation/sonic v1.2.1-b.0.20240628130111-8dc0221d67b1/go.mod h1:PZmcvtCUfkblwxsatLSl6oz9IaJ2OGFr97ds7o1ZUKo=
+github.com/Fantom-foundation/sonic v1.2.1-b.0.20240719081130-def5726f1340 h1:YsqOYgDGewl33DWFlj9NTN1aYRA+7KHzRS+CbdfV8J0=
+github.com/Fantom-foundation/sonic v1.2.1-b.0.20240719081130-def5726f1340/go.mod h1:5/EqG6ivQTXq/xApyBVpbGrnVgb/IllExXcVXN71TFM=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjCM7NQbSmF7WI=
