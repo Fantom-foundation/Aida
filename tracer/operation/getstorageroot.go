@@ -33,30 +33,30 @@ type GetStorageRoot struct {
 	Contract common.Address
 }
 
-// GetId returns the get-code-hash operation identifier.
+// GetId returns the get-storage-root operation identifier.
 func (op *GetStorageRoot) GetId() byte {
 	return GetStorageRootID
 }
 
-// NewGetStorageRoot creates a new get-code-hash operation.
+// NewGetStorageRoot creates a new get-storage-root operation.
 func NewGetStorageRoot(contract common.Address) *GetStorageRoot {
 	return &GetStorageRoot{Contract: contract}
 }
 
-// ReadGetHash reads a get-code-hash operation from a file.
+// ReadGetHash reads a get-storage-root operation from a file.
 func ReadGetStorageRoot(f io.Reader) (Operation, error) {
 	data := new(GetStorageRoot)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the get-code-hash operation to a file.
+// Write the get-storage-root operation to a file.
 func (op *GetStorageRoot) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the get-code-hash operation.
+// Execute the get-storage-root operation.
 func (op *GetStorageRoot) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
@@ -64,7 +64,7 @@ func (op *GetStorageRoot) Execute(db state.StateDB, ctx *context.Replay) time.Du
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the get-code-hash operation.
+// Debug prints a debug message for the get-storage-root operation.
 func (op *GetStorageRoot) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

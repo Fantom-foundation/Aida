@@ -33,30 +33,30 @@ type SelfDestruct struct {
 	Contract common.Address
 }
 
-// GetId returns the suicide operation identifier.
+// GetId returns the self-destruct operation identifier.
 func (op *SelfDestruct) GetId() byte {
 	return SelfDestructID
 }
 
-// NewSelfDestruct creates a new suicide operation.
+// NewSelfDestruct creates a new self-destruct operation.
 func NewSelfDestruct(contract common.Address) *SelfDestruct {
 	return &SelfDestruct{Contract: contract}
 }
 
-// ReadSelfDestruct reads a suicide operation from a file.
+// ReadSelfDestruct reads a self-destruct operation from a file.
 func ReadSelfDestruct(f io.Reader) (Operation, error) {
 	data := new(SelfDestruct)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the suicide operation to a file.
+// Write the self-destruct operation to a file.
 func (op *SelfDestruct) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the suicide operation.
+// Execute the self-destruct operation.
 func (op *SelfDestruct) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
@@ -64,7 +64,7 @@ func (op *SelfDestruct) Execute(db state.StateDB, ctx *context.Replay) time.Dura
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the suicide operation.
+// Debug prints a debug message for the self-destruct operation.
 func (op *SelfDestruct) Debug(ctx *context.Context) {
 	fmt.Print(ctx.DecodeContract(op.Contract))
 }

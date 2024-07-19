@@ -33,30 +33,30 @@ type CreateContract struct {
 	Contract common.Address
 }
 
-// GetId returns the create-account operation identifier.
+// GetId returns the create-contract operation identifier.
 func (op *CreateContract) GetId() byte {
 	return CreateContractID
 }
 
-// NewCreateContract creates a new create-account operation.
+// NewCreateContract creates a new create-contract operation.
 func NewCreateContract(contract common.Address) *CreateContract {
 	return &CreateContract{Contract: contract}
 }
 
-// ReadCreateContract reads a create-account operation from a file.
+// ReadCreateContract reads a create-contract operation from a file.
 func ReadCreateContract(f io.Reader) (Operation, error) {
 	data := new(CreateContract)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the create-account operation to file.
+// Write the create-contract operation to file.
 func (op *CreateContract) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the create-account operation.
+// Execute the create-contract operation.
 func (op *CreateContract) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
@@ -64,7 +64,7 @@ func (op *CreateContract) Execute(db state.StateDB, ctx *context.Replay) time.Du
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the create-account operation.
+// Debug prints a debug message for the create-contract operation.
 func (op *CreateContract) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }
