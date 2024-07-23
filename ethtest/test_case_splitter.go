@@ -85,6 +85,9 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 		}
 
 		// TODO: each test requires its own block context and chain config
+		// todo maybe create own chain config and pass correct block numbers
+		// todo: check 1337 chain id block numbers
+		// todo first finish passing the config and context from env
 		// Iterate all usable forks within one JSON file
 		for _, fork := range s.enabledForks {
 			posts := stJson.Post[fork]
