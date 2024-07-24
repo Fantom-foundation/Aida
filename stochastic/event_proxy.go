@@ -191,7 +191,7 @@ func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) com
 // SelfDestruct an account.
 func (p *EventProxy) SelfDestruct(address common.Address) {
 	// register event
-	p.registry.RegisterAddressOp(SuicideID, &address)
+	p.registry.RegisterAddressOp(SelfDestructID, &address)
 
 	// call real StateDB
 	p.db.SelfDestruct(address)
@@ -200,7 +200,7 @@ func (p *EventProxy) SelfDestruct(address common.Address) {
 // HasSelfDestructed checks whether a contract has been suicided.
 func (p *EventProxy) HasSelfDestructed(address common.Address) bool {
 	// register event
-	p.registry.RegisterAddressOp(HasSuicidedID, &address)
+	p.registry.RegisterAddressOp(HasSelfDestructedID, &address)
 
 	// call real StateDB
 	return p.db.HasSelfDestructed(address)
@@ -434,15 +434,17 @@ func (p *EventProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
 }
 
-// TODO support new operations
 func (p *EventProxy) CreateContract(addr common.Address) {
+	p.registry.RegisterOp(CreateContractID)
 	p.db.CreateContract(addr)
 }
 
 func (p *EventProxy) Selfdestruct6780(addr common.Address) {
+	p.registry.RegisterOp(SelfDestruct6780ID)
 	p.db.Selfdestruct6780(addr)
 }
 
 func (p *EventProxy) GetStorageRoot(addr common.Address) common.Hash {
+	p.registry.RegisterOp(CreateContractID)
 	return p.db.GetStorageRoot(addr)
 }

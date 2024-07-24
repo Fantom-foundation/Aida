@@ -69,20 +69,20 @@ pipeline {
             steps {
                 sh "mkdir -p ${TRACEDIR}"
                 sh "rm -rf ${TRACEDIR}/*"
-//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-//                    sh "build/aida-sdb record --cpu-profile cpu-profile-0.dat --trace-file ${TRACEDIR}/trace-0.dat ${AIDADB} ${FROMBLOCK} ${FROMBLOCK}+1000"
-//                    sh "build/aida-sdb record --cpu-profile cpu-profile-1.dat --trace-file ${TRACEDIR}/trace-1.dat ${AIDADB} ${FROMBLOCK}+1001 ${FROMBLOCK}+2000"
-//                    sh "build/aida-sdb record --cpu-profile cpu-profile-2.dat --trace-file ${TRACEDIR}/trace-2.dat ${AIDADB} ${FROMBLOCK}+2001 ${TOBLOCK}"
-//                }
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh "build/aida-sdb record --cpu-profile cpu-profile-0.dat --trace-file ${TRACEDIR}/trace-0.dat ${AIDADB} ${FROMBLOCK} ${FROMBLOCK}+1000"
+                    sh "build/aida-sdb record --cpu-profile cpu-profile-1.dat --trace-file ${TRACEDIR}/trace-1.dat ${AIDADB} ${FROMBLOCK}+1001 ${FROMBLOCK}+2000"
+                    sh "build/aida-sdb record --cpu-profile cpu-profile-2.dat --trace-file ${TRACEDIR}/trace-2.dat ${AIDADB} ${FROMBLOCK}+2001 ${TOBLOCK}"
+                }
             }
         }
 
         stage('aida-sdb replay') {
             steps {
-//                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-//                    sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --shadow-db --db-shadow-impl geth --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
-//                    sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
-//                }
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --shadow-db --db-shadow-impl geth --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
+                    sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
+                }
                 sh "rm -rf ${TRACEDIR}"
             }
         }

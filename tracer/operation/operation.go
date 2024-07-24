@@ -53,7 +53,7 @@ const (
 	GetStateLccsID
 	GetStateLcID
 	GetStateLclsID
-	HasSuicidedID
+	HasSelfDestructedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
@@ -61,31 +61,34 @@ const (
 	SetStateLclsID
 	SnapshotID
 	SubBalanceID
-	SuicideID
+	SelfDestructID
 
 	AddAddressToAccessListID
 	AddressInAccessListID
 	AddSlotToAccessListID
-	PrepareAccessListID
+	PrepareID
 	SlotInAccessListID
 
 	AddLogID
 	AddPreimageID
 	AddRefundID
 	CloseID
-	ForEachStorageID
 	GetLogsID
 	GetRefundID
 	IntermediateRootID
-	PrepareID
+	SetTxContextID
 	SubRefundID
 
+	// statedb operatioans from Altair to Cancun
+	CreateContractID
+	GetStorageRootID
 	GetTransientStateID
 	GetTransientStateLccsID
 	GetTransientStateLcID
 	GetTransientStateLclsID
 	SetTransientStateID
 	SetTransientStateLclsID
+	SelfDestruct6780ID
 
 	// WARNING: New IDs should be added here. Any change in the order of the
 	// IDs above invalidates persisted data -- in particular storage traces.
@@ -126,7 +129,7 @@ var opDict = map[byte]OperationDictionary{
 	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
 	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
 	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
-	HasSuicidedID:           {label: "HasSuicided", readfunc: ReadHasSuicided},
+	HasSelfDestructedID:     {label: "HasSelfDestructed", readfunc: ReadHasSelfDestructed},
 	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
 	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
 	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
@@ -134,7 +137,10 @@ var opDict = map[byte]OperationDictionary{
 	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
 	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
 	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
-	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
+	SelfDestructID:          {label: "SelfDestruct", readfunc: ReadSelfDestruct},
+	SelfDestruct6780ID:      {label: "SelfDestruct", readfunc: ReadSelfDestruct6780},
+	CreateContractID:        {label: "CreateContract", readfunc: ReadCreateContract},
+	GetStorageRootID:        {label: "GetStorageRoot", readfunc: ReadGetStorageRoot},
 
 	// for testing
 	AddAddressToAccessListID: {label: "AddAddressToAccessList", readfunc: ReadPanic},
@@ -144,12 +150,11 @@ var opDict = map[byte]OperationDictionary{
 	AddressInAccessListID:    {label: "AddressInAccessList", readfunc: ReadPanic},
 	AddSlotToAccessListID:    {label: "AddSlotToAccessList", readfunc: ReadPanic},
 	CloseID:                  {label: "Close", readfunc: ReadPanic},
-	ForEachStorageID:         {label: "ForEachStorage", readfunc: ReadPanic},
 	GetLogsID:                {label: "GetLogs", readfunc: ReadPanic},
 	GetRefundID:              {label: "GetRefund", readfunc: ReadPanic},
 	IntermediateRootID:       {label: "IntermediateRoot", readfunc: ReadPanic},
-	PrepareAccessListID:      {label: "PrepareAccessList", readfunc: ReadPanic},
 	PrepareID:                {label: "Prepare", readfunc: ReadPanic},
+	SetTxContextID:           {label: "SetTxContext", readfunc: ReadPanic},
 	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
 	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
 
