@@ -23,10 +23,15 @@ func (s *stJSON) setPath(path string) {
 }
 
 func (s *stJSON) CreateEnv(fork string) *stBlockEnvironment {
+	config, _, err := tests.GetChainConfig(fork)
+	if err != nil {
+		panic(err)
+	}
+
 	// Create copy as each tx needs its own env
 	env := s.Env
 	env.genesis = core.Genesis{
-		Config:     tests.Forks[fork],
+		Config:     config,
 		Coinbase:   env.Coinbase,
 		Difficulty: env.Difficulty.Convert(),
 		GasLimit:   env.GasLimit.Uint64(),

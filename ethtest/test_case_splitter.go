@@ -28,6 +28,7 @@ var usableForks = map[string]struct{}{
 	"Istanbul":     {},
 	"MuirGlacier":  {},
 	"TestNetwork":  {},
+	//"Prague":       {}, TODO: Do we enable?
 }
 
 // NewTestCaseSplitter opens all JSON tests within path
@@ -84,10 +85,6 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 			baseFee = &BigInt{*big.NewInt(0x0a)}
 		}
 
-		// TODO: each test requires its own block context and chain config
-		// todo maybe create own chain config and pass correct block numbers
-		// todo: check 1337 chain id block numbers
-		// todo first finish passing the config and context from env
 		// Iterate all usable forks within one JSON file
 		for _, fork := range s.enabledForks {
 			posts := stJson.Post[fork]
