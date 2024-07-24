@@ -1,9 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package operation
 
 import (
 	"bytes"
 	"io"
-	"math/big"
 	"os"
 	"reflect"
 	"testing"
@@ -12,8 +27,11 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // MockStateDB data structure
@@ -51,27 +69,30 @@ func (s *MockStateDB) Empty(addr common.Address) bool {
 	return false
 }
 
-func (s *MockStateDB) Suicide(addr common.Address) bool {
-	s.recording = append(s.recording, Record{SuicideID, []any{addr}})
+func (s *MockStateDB) SelfDestruct(addr common.Address) {
+	s.recording = append(s.recording, Record{SelfDestructID, []any{addr}})
+}
+
+func (s *MockStateDB) HasSelfDestructed(addr common.Address) bool {
+	s.recording = append(s.recording, Record{HasSelfDestructedID, []any{addr}})
 	return false
 }
 
-func (s *MockStateDB) HasSuicided(addr common.Address) bool {
-	s.recording = append(s.recording, Record{HasSuicidedID, []any{addr}})
-	return false
+func (s *MockStateDB) Selfdestruct6780(addr common.Address) {
+	s.recording = append(s.recording, Record{SelfDestruct6780ID, []any{addr}})
 }
 
-func (s *MockStateDB) GetBalance(addr common.Address) *big.Int {
+func (s *MockStateDB) GetBalance(addr common.Address) *uint256.Int {
 	s.recording = append(s.recording, Record{GetBalanceID, []any{addr}})
-	return &big.Int{}
+	return &uint256.Int{}
 }
 
-func (s *MockStateDB) AddBalance(addr common.Address, value *big.Int) {
-	s.recording = append(s.recording, Record{AddBalanceID, []any{addr, value}})
+func (s *MockStateDB) AddBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.recording = append(s.recording, Record{AddBalanceID, []any{addr, value, reason}})
 }
 
-func (s *MockStateDB) SubBalance(addr common.Address, value *big.Int) {
-	s.recording = append(s.recording, Record{SubBalanceID, []any{addr, value}})
+func (s *MockStateDB) SubBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.recording = append(s.recording, Record{SubBalanceID, []any{addr, value, reason}})
 }
 
 func (s *MockStateDB) GetNonce(addr common.Address) uint64 {
@@ -95,6 +116,15 @@ func (s *MockStateDB) GetState(addr common.Address, key common.Hash) common.Hash
 
 func (s *MockStateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	s.recording = append(s.recording, Record{SetStateID, []any{addr, key, value}})
+}
+
+func (s *MockStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.recording = append(s.recording, Record{SetTransientStateID, []any{addr, key, value}})
+}
+
+func (s *MockStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	s.recording = append(s.recording, Record{GetTransientStateID, []any{addr, key}})
+	return common.Hash{}
 }
 
 func (s *MockStateDB) GetCode(addr common.Address) []byte {
@@ -125,20 +155,24 @@ func (s *MockStateDB) RevertToSnapshot(id int) {
 	s.recording = append(s.recording, Record{RevertToSnapshotID, []any{id}})
 }
 
-func (s *MockStateDB) BeginTransaction(tx uint32) {
+func (s *MockStateDB) BeginTransaction(tx uint32) error {
 	s.recording = append(s.recording, Record{BeginTransactionID, []any{tx}})
+	return nil
 }
 
-func (s *MockStateDB) EndTransaction() {
+func (s *MockStateDB) EndTransaction() error {
 	s.recording = append(s.recording, Record{EndTransactionID, []any{}})
+	return nil
 }
 
-func (s *MockStateDB) BeginBlock(blk uint64) {
+func (s *MockStateDB) BeginBlock(blk uint64) error {
 	s.recording = append(s.recording, Record{BeginBlockID, []any{blk}})
+	return nil
 }
 
-func (s *MockStateDB) EndBlock() {
+func (s *MockStateDB) EndBlock() error {
 	s.recording = append(s.recording, Record{EndBlockID, []any{}})
+	return nil
 }
 
 func (s *MockStateDB) BeginSyncPeriod(id uint64) {
@@ -149,7 +183,7 @@ func (s *MockStateDB) EndSyncPeriod() {
 	s.recording = append(s.recording, Record{EndSyncPeriodID, []any{}})
 }
 
-func (s *MockStateDB) StartBulkLoad(uint64) state.BulkLoad {
+func (s *MockStateDB) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("Bulk load not supported in mock")
 }
 
@@ -178,17 +212,17 @@ func (s *MockStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return common.Hash{}
 }
 
-func (s *MockStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	s.recording = append(s.recording, Record{CommitID, []any{deleteEmptyObjects}})
+func (s *MockStateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
+	s.recording = append(s.recording, Record{CommitID, []any{block, deleteEmptyObjects}})
 	return common.Hash{}, nil
 }
 
-func (s *MockStateDB) GetHash() common.Hash {
+func (s *MockStateDB) GetHash() (common.Hash, error) {
 	panic("GetHash not supported in mock")
 }
 
-func (s *MockStateDB) Prepare(thash common.Hash, ti int) {
-	s.recording = append(s.recording, Record{PrepareID, []any{thash, ti}})
+func (s *MockStateDB) SetTxContext(thash common.Hash, ti int) {
+	s.recording = append(s.recording, Record{SetTxContextID, []any{thash, ti}})
 }
 
 func (s *MockStateDB) AddRefund(gas uint64) {
@@ -204,8 +238,8 @@ func (s *MockStateDB) GetRefund() uint64 {
 	return uint64(0)
 }
 
-func (s *MockStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.recording = append(s.recording, Record{PrepareAccessListID, []any{sender, dest, precompiles, txAccesses}})
+func (s *MockStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	s.recording = append(s.recording, Record{PrepareID, []any{rules, sender, coinbase, dest, precompiles, txAccesses}})
 }
 
 func (s *MockStateDB) AddressInAccessList(addr common.Address) bool {
@@ -235,12 +269,11 @@ func (s *MockStateDB) AddPreimage(hash common.Hash, preimage []byte) {
 }
 
 func (s *MockStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, common.Hash) bool) error {
-	s.recording = append(s.recording, Record{ForEachStorageID, []any{addr, cb}})
 	return nil
 }
 
-func (s *MockStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	s.recording = append(s.recording, Record{GetLogsID, []any{hash, blockHash}})
+func (s *MockStateDB) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	s.recording = append(s.recording, Record{GetLogsID, []any{hash, block, blockHash}})
 	return nil
 }
 
@@ -251,6 +284,15 @@ func (s *MockStateDB) PrepareSubstate(substate txcontext.WorldState, block uint6
 func (s *MockStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// ignored
 	return nil
+}
+
+func (s *MockStateDB) CreateContract(addr common.Address) {
+	s.recording = append(s.recording, Record{CreateContractID, []any{addr}})
+}
+
+func (s *MockStateDB) GetStorageRoot(addr common.Address) common.Hash {
+	s.recording = append(s.recording, Record{GetStorageRootID, []any{addr}})
+	return common.Hash{}
 }
 
 func (s *MockStateDB) Close() error {
@@ -295,8 +337,8 @@ func areEqual(v1 any, v2 any) bool {
 	case []byte:
 		c2 := v2.([]byte)
 		return bytes.Compare(c1, c2) == 0
-	case *big.Int:
-		c2 := v2.(*big.Int)
+	case *uint256.Int:
+		c2 := v2.(*uint256.Int)
 		return c2.Cmp(c1) == 0
 	default:
 		return v1 == v2
@@ -311,6 +353,16 @@ func getRandomAddress(t *testing.T) common.Address {
 	}
 	// generate account address
 	return crypto.PubkeyToAddress(pk.PublicKey)
+}
+
+func getRandomHash(t *testing.T) common.Hash {
+	// generate hash from public key
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("failed test data build; could not create random keys; %s", err.Error())
+	}
+	pubBytes := crypto.FromECDSAPub(&pk.PublicKey)
+	return crypto.Keccak256Hash(pubBytes[:])
 }
 
 func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(f io.Reader) (Operation, error)) {

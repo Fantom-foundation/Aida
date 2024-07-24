@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package db
 
 import (
@@ -6,7 +22,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,8 +32,8 @@ var GenDeletedAccountsCommand = cli.Command{
 	Usage:     "executes full state transitions and record suicided accounts",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
+		&utils.WorkersFlag,
+		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&utils.CpuProfileFlag,
@@ -45,15 +61,17 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
 	}
 
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
-	ddb, err := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
+	ddb, err := db.NewDefaultDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
 	defer ddb.Close()
 
-	return utildb.GenDeletedAccountsAction(cfg, ddb, cfg.First, cfg.Last)
+	return utildb.GenDeletedAccountsAction(cfg, sdb, ddb, cfg.First, cfg.Last)
 }

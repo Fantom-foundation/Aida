@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utildb
 
 import (
@@ -7,22 +23,22 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
-	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type Merger struct {
 	cfg           *utils.Config
 	log           logger.Logger
-	targetDb      ethdb.Database
-	sourceDbs     []ethdb.Database
+	targetDb      db.BaseDB
+	sourceDbs     []db.BaseDB
 	sourceDbPaths []string
 	md            *utils.AidaDbMetadata
 	start         time.Time
 }
 
 // NewMerger returns new instance of Merger
-func NewMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *utils.AidaDbMetadata) *Merger {
+func NewMerger(cfg *utils.Config, targetDb db.BaseDB, sourceDbs []db.BaseDB, sourceDbPaths []string, md *utils.AidaDbMetadata) *Merger {
 	return &Merger{
 		cfg:           cfg,
 		log:           logger.NewLogger(cfg.LogLevel, "aida-db-Merger"),
@@ -113,7 +129,7 @@ func (m *Merger) Merge() error {
 }
 
 // copyData copies data from iterator into target database
-func (m *Merger) copyData(sourceDb ethdb.Database) (uint64, error) {
+func (m *Merger) copyData(sourceDb db.BaseDB) (uint64, error) {
 	dbBatchWriter := m.targetDb.NewBatch()
 
 	var written uint64

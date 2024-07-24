@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package operation
 
 import (
@@ -37,7 +53,7 @@ const (
 	GetStateLccsID
 	GetStateLcID
 	GetStateLclsID
-	HasSuicidedID
+	HasSelfDestructedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
@@ -45,24 +61,34 @@ const (
 	SetStateLclsID
 	SnapshotID
 	SubBalanceID
-	SuicideID
+	SelfDestructID
 
 	AddAddressToAccessListID
 	AddressInAccessListID
 	AddSlotToAccessListID
-	PrepareAccessListID
+	PrepareID
 	SlotInAccessListID
 
 	AddLogID
 	AddPreimageID
 	AddRefundID
 	CloseID
-	ForEachStorageID
 	GetLogsID
 	GetRefundID
 	IntermediateRootID
-	PrepareID
+	SetTxContextID
 	SubRefundID
+
+	// statedb operatioans from Altair to Cancun
+	CreateContractID
+	GetStorageRootID
+	GetTransientStateID
+	GetTransientStateLccsID
+	GetTransientStateLcID
+	GetTransientStateLclsID
+	SetTransientStateID
+	SetTransientStateLclsID
+	SelfDestruct6780ID
 
 	// WARNING: New IDs should be added here. Any change in the order of the
 	// IDs above invalidates persisted data -- in particular storage traces.
@@ -103,7 +129,7 @@ var opDict = map[byte]OperationDictionary{
 	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
 	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
 	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
-	HasSuicidedID:           {label: "HasSuicided", readfunc: ReadHasSuicided},
+	HasSelfDestructedID:     {label: "HasSelfDestructed", readfunc: ReadHasSelfDestructed},
 	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
 	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
 	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
@@ -111,7 +137,10 @@ var opDict = map[byte]OperationDictionary{
 	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
 	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
 	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
-	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
+	SelfDestructID:          {label: "SelfDestruct", readfunc: ReadSelfDestruct},
+	SelfDestruct6780ID:      {label: "SelfDestruct", readfunc: ReadSelfDestruct6780},
+	CreateContractID:        {label: "CreateContract", readfunc: ReadCreateContract},
+	GetStorageRootID:        {label: "GetStorageRoot", readfunc: ReadGetStorageRoot},
 
 	// for testing
 	AddAddressToAccessListID: {label: "AddAddressToAccessList", readfunc: ReadPanic},
@@ -121,14 +150,21 @@ var opDict = map[byte]OperationDictionary{
 	AddressInAccessListID:    {label: "AddressInAccessList", readfunc: ReadPanic},
 	AddSlotToAccessListID:    {label: "AddSlotToAccessList", readfunc: ReadPanic},
 	CloseID:                  {label: "Close", readfunc: ReadPanic},
-	ForEachStorageID:         {label: "ForEachStorage", readfunc: ReadPanic},
 	GetLogsID:                {label: "GetLogs", readfunc: ReadPanic},
 	GetRefundID:              {label: "GetRefund", readfunc: ReadPanic},
 	IntermediateRootID:       {label: "IntermediateRoot", readfunc: ReadPanic},
-	PrepareAccessListID:      {label: "PrepareAccessList", readfunc: ReadPanic},
 	PrepareID:                {label: "Prepare", readfunc: ReadPanic},
+	SetTxContextID:           {label: "SetTxContext", readfunc: ReadPanic},
 	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
 	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
+
+	// Transient Storage
+	GetTransientStateID:     {label: "GetTransientState", readfunc: ReadGetTransientState},
+	GetTransientStateLcID:   {label: "GetTransientStateLc", readfunc: ReadGetTransientStateLc},
+	GetTransientStateLccsID: {label: "GetTransientStateLccs", readfunc: ReadGetTransientStateLccs},
+	GetTransientStateLclsID: {label: "GetTransientStateLcls", readfunc: ReadGetTransientStateLcls},
+	SetTransientStateID:     {label: "SetTransientState", readfunc: ReadSetTransientState},
+	SetTransientStateLclsID: {label: "SetTransientStateLcls", readfunc: ReadSetTransientStateLcls},
 }
 
 // GetLabel retrieves a label of a state operation.

@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package logger
 
 import (
@@ -9,7 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"go.uber.org/mock/gomock"
 )
 
@@ -78,7 +94,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		Transaction: 1,
 		Data:        nil,
 	}, &executor.Context{
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100_000_000}),
+		ExecutionResult: substatecontext.NewReceipt(&substate.Result{GasUsed: 100_000_000}),
 	})
 
 	// we must wait for the ticker to tick
@@ -110,7 +126,7 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 		Transaction: 1,
 		Data:        nil,
 	}, &executor.Context{
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100_000_000}),
+		ExecutionResult: substatecontext.NewReceipt(&substate.Result{GasUsed: 100_000_000}),
 	})
 
 	// wait for data to get into logger

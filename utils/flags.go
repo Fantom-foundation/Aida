@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utils
 
 import (
@@ -166,6 +182,10 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
+	StateDbSrcOverwriteFlag = cli.BoolFlag{
+		Name:  "db-src-overwrite",
+		Usage: "Modify source db directly",
+	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
@@ -232,10 +252,6 @@ var (
 		Usage: "select VM implementation",
 		Value: "geth",
 	}
-	WorldStateFlag = cli.PathFlag{
-		Name:  "world-state",
-		Usage: "world state snapshot database path",
-	}
 	MaxNumTransactionsFlag = cli.IntFlag{
 		Name:  "max-tx",
 		Usage: "limit the maximum number of processed transactions, default: unlimited",
@@ -300,18 +316,14 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
-	SourceTableNameFlag = cli.StringFlag{
-		Name:  "source-table",
-		Usage: "name of the database table to be used",
-		Value: "main",
+	EthTestTypeFlag = cli.IntFlag{
+		Name:  "eth-test-type",
+		Usage: "1 - state tests, 2 - block-chain tests",
+		Value: 1,
 	}
 	TargetDbFlag = cli.PathFlag{
 		Name:  "target-db",
 		Usage: "target database path",
-	}
-	TrieRootHashFlag = cli.StringFlag{
-		Name:  "root",
-		Usage: "state trie root hash to be analysed",
 	}
 	IncludeStorageFlag = cli.BoolFlag{
 		Name:  "include-storage",
@@ -347,12 +359,6 @@ var (
 		Name:  "update-buffer-size",
 		Usage: "buffer size for holding update set in MB",
 		Value: 1_000_000,
-	}
-	TargetBlockFlag = cli.Uint64Flag{
-		Name:    "target-block",
-		Aliases: []string{"block", "blk"},
-		Usage:   "target block ID",
-		Value:   0,
 	}
 	TargetEpochFlag = cli.Uint64Flag{
 		Name:    "target-epoch",
@@ -400,6 +406,11 @@ var (
 		Name:  "err-logging",
 		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
 	}
+	ForksFlag = cli.StringSliceFlag{
+		Name:  "forks",
+		Usage: "defines which forks are going to get executed by the eth-tests (\"all\" | <\"cancun\", \"shanghai\", \"paris\", \"bellatrix\", \"grayglacier\", \"arrowglacier\", \"altair\", \"london\", \"berlin\", \"istanbul\", \"muirglacier\">)",
+		Value: cli.NewStringSlice("all"),
+	}
 	DbComponentFlag = cli.StringFlag{
 		Name:     "db-component",
 		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
@@ -409,5 +420,11 @@ var (
 		Name:  "tx-type",
 		Usage: "list of tx generator application type (\"all\" | <\"erc20\", \"counter\", \"store\", \"uniswap\">)",
 		Value: cli.NewStringSlice("all"),
+	}
+	WorkersFlag = cli.IntFlag{
+		Name:    "workers",
+		Aliases: []string{"w"},
+		Usage:   "determines number of workers",
+		Value:   4,
 	}
 )

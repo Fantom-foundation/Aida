@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package tracker
 
 import (
@@ -47,13 +63,13 @@ type rpcProcessInfo struct {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.overallInfo.numRequests++
-	if state.Data.StateDB != nil {
-		t.overallInfo.gas += state.Data.StateDB.GasUsed
+	if ctx.ExecutionResult != nil {
+		t.overallInfo.gas += ctx.ExecutionResult.GetGasUsed()
 	}
 	overallInfo := t.overallInfo
 

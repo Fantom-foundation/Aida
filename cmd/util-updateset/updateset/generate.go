@@ -1,15 +1,32 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package updateset
 
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
+	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/urfave/cli/v2"
 )
@@ -22,12 +39,11 @@ var GenUpdateSetCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
-		&substate.SubstateDbFlag,
-		&substate.WorkersFlag,
+		&utils.AidaDbFlag,
+		&utils.WorkersFlag,
 		&utils.UpdateDbFlag,
 		&utils.UpdateBufferSizeFlag,
 		&utils.ValidateFlag,
-		&utils.WorldStateFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -67,11 +83,11 @@ func generateUpdateSet(ctx *cli.Context) error {
 	}
 
 	// retrieve last update set
-	db, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
-	lastUpdateSetBlk, err := db.GetLastKey()
+	lastUpdateSetBlk, err := udb.GetLastKey()
 	if err != nil {
 		return fmt.Errorf("cannot get last update-set; %v", err)
 	}
@@ -80,37 +96,40 @@ func generateUpdateSet(ctx *cli.Context) error {
 	if lastUpdateSetBlk > 0 {
 		cfg.First = lastUpdateSetBlk + 1
 	}
-	err = db.Close()
+	err = udb.Close()
 	if err != nil {
 		return err
 	}
+	udb = nil
 
 	// initialize updateDB
-	udb, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	udb, err = db.NewDefaultUpdateDB(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
 	defer udb.Close()
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
+	defer sdb.Close()
 
-	ddb, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	ddb, err := db.NewReadOnlyDestroyedAccountDB(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
 	defer ddb.Close()
 
-	return GenUpdateSet(cfg, udb, ddb, cfg.First, cfg.Last, interval)
+	return GenUpdateSet(cfg, sdb, udb, ddb, cfg.First, cfg.Last, interval)
 }
 
 // GenUpdateSet generates a series of update sets from substate db
-func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.DestroyedAccountDB, first, last uint64, interval uint64) error {
+func GenUpdateSet(cfg *utils.Config, sdb db.SubstateDB, udb db.UpdateDB, ddb *db.DestroyedAccountDB, first, last uint64, interval uint64) error {
 	var (
 		err               error
-		destroyedAccounts []common.Address
+		destroyedAccounts []substatetypes.Address
 		log               = logger.NewLogger(cfg.LogLevel, "Generate Update Set")
 	)
 
@@ -121,29 +140,9 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 		return err
 	}
 
-	skipOperaWorldState := true
-	// legacy support if a user wants to generate update set from the first opera world state
-	// store world state if a path is provided
-	worldState := cfg.WorldStateDb
-	if _, err := os.Stat(worldState); err == nil {
-		skipOperaWorldState = false
-	}
+	update := make(substate.WorldState)
 
-	update := make(substate.SubstateAlloc)
-	if !skipOperaWorldState {
-		first = utils.FirstOperaBlock
-		log.Notice("Load initial worldstate and store its substateAlloc")
-		ws, err := utils.GenerateFirstOperaWorldState(worldState, cfg)
-		if err != nil {
-			return err
-		}
-		size := update.EstimateIncrementalSize(ws)
-		log.Infof("Write block %v to updateDB", first-1)
-		udb.PutUpdateSet(first-1, &ws, destroyedAccounts)
-		log.Infof("\tAccounts: %v, Size: %v", len(ws), size)
-	}
-
-	iter := substate.NewSubstateIterator(first, cfg.Workers)
+	iter := sdb.NewSubstateIterator(int(first), cfg.Workers)
 	defer iter.Release()
 
 	var (
@@ -168,11 +167,18 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 			// write an update-set to updatedb if 1) interval condition is met or 2) estimated size > max size
 			if tx.Block > checkPoint || estimatedSize > maxSize {
 				log.Infof("Write block %v to updateDB", curBlock)
-				udb.PutUpdateSet(curBlock, &update, destroyedAccounts)
+				err = udb.PutUpdateSet(&updateset.UpdateSet{WorldState: update, Block: curBlock}, destroyedAccounts)
+				if err != nil {
+					return fmt.Errorf("cannot put updateset; %w", err)
+				}
 				log.Infof("\tTx: %v, Accounts: %v, Suicided: %v, Size: %v",
 					txCount, len(update), len(destroyedAccounts), estimatedSize)
 				if cfg.ValidateTxState {
-					if !udb.GetUpdateSet(curBlock).Equal(update) {
+					us, err := udb.GetUpdateSet(curBlock)
+					if err != nil {
+						return fmt.Errorf("cannot get update set; %w", err)
+					}
+					if !us.WorldState.Equal(update) {
 						return fmt.Errorf("validation failed\n")
 					}
 				}
@@ -183,7 +189,7 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 				}
 				estimatedSize = 0
 				destroyedAccounts = nil
-				update = make(substate.SubstateAlloc)
+				update = make(substate.WorldState)
 				txCount = 0
 			}
 
@@ -206,9 +212,9 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 		destroyedAccounts = append(destroyedAccounts, resurrected...)
 
 		// estimate update-set size after merge
-		estimatedSize += update.EstimateIncrementalSize(tx.Substate.OutputAlloc)
+		estimatedSize += update.EstimateIncrementalSize(tx.OutputSubstate)
 		// perform substate merge
-		update.Merge(tx.Substate.OutputAlloc)
+		update.Merge(tx.OutputSubstate)
 		txCount++
 	}
 

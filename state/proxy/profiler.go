@@ -1,8 +1,23 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package proxy
 
 import (
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -11,7 +26,10 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // ProfilerProxy data structure for capturing and recording
@@ -39,22 +57,22 @@ func (p *ProfilerProxy) CreateAccount(addr common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (p *ProfilerProxy) SubBalance(addr common.Address, amount *big.Int) {
+func (p *ProfilerProxy) SubBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	p.do(operation.SubBalanceID, func() {
-		p.db.SubBalance(addr, amount)
+		p.db.SubBalance(addr, amount, reason)
 	})
 }
 
 // AddBalance adds amount to a contract address.
-func (p *ProfilerProxy) AddBalance(addr common.Address, amount *big.Int) {
+func (p *ProfilerProxy) AddBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	p.do(operation.AddBalanceID, func() {
-		p.db.AddBalance(addr, amount)
+		p.db.AddBalance(addr, amount, reason)
 	})
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (p *ProfilerProxy) GetBalance(addr common.Address) *big.Int {
-	var res *big.Int
+func (p *ProfilerProxy) GetBalance(addr common.Address) *uint256.Int {
+	var res *uint256.Int
 	p.do(operation.GetBalanceID, func() {
 		res = p.db.GetBalance(addr)
 	})
@@ -159,22 +177,34 @@ func (p *ProfilerProxy) SetState(addr common.Address, key common.Hash, value com
 	})
 }
 
-// Suicide marks the given account as suicided. This clears the account balance.
-// The account is still available until the state is committed;
-// return a non-nil account after Suicide.
-func (p *ProfilerProxy) Suicide(addr common.Address) bool {
-	var suicide bool
-	p.do(operation.SuicideID, func() {
-		suicide = p.db.Suicide(addr)
+func (p *ProfilerProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.do(operation.SetTransientStateID, func() {
+		p.db.SetTransientState(addr, key, value)
 	})
-	return suicide
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (p *ProfilerProxy) HasSuicided(addr common.Address) bool {
+func (p *ProfilerProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	var res common.Hash
+	p.do(operation.GetTransientStateID, func() {
+		res = p.db.GetTransientState(addr, key)
+	})
+	return res
+}
+
+// SelfDestruct marks the given account as self destructed. This clears the account balance.
+// The account is still available until the state is committed;
+// return a non-nil account after SelfDestruct.
+func (p *ProfilerProxy) SelfDestruct(addr common.Address) {
+	p.do(operation.SelfDestructID, func() {
+		p.db.SelfDestruct(addr)
+	})
+}
+
+// HasSelfDestructed checks whether a contract has been suicided.
+func (p *ProfilerProxy) HasSelfDestructed(addr common.Address) bool {
 	var res bool
-	p.do(operation.HasSuicidedID, func() {
-		res = p.db.HasSuicided(addr)
+	p.do(operation.HasSelfDestructedID, func() {
+		res = p.db.HasSelfDestructed(addr)
 	})
 	return res
 }
@@ -199,7 +229,7 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 	return empty
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition with
+// Prepare handles the preparatory steps for executing a state transition with
 // regards to both EIP-2929 and EIP-2930:
 //
 // - Add sender to access list (2929)
@@ -208,9 +238,9 @@ func (p *ProfilerProxy) Empty(addr common.Address) bool {
 // - Add the contents of the optional tx access list (2930)
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
-func (p *ProfilerProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	p.do(operation.PrepareAccessListID, func() {
-		p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+func (p *ProfilerProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	p.do(operation.PrepareID, func() {
+		p.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 	})
 }
 
@@ -273,28 +303,36 @@ func (p *ProfilerProxy) do(opId byte, op func()) {
 	p.anlt.Update(opId, float64(elapsed))
 }
 
-func (p *ProfilerProxy) BeginTransaction(number uint32) {
+func (p *ProfilerProxy) BeginTransaction(number uint32) error {
+	var err error
 	p.do(operation.BeginTransactionID, func() {
-		p.db.BeginTransaction(number)
+		err = p.db.BeginTransaction(number)
 	})
+	return err
 }
 
-func (p *ProfilerProxy) EndTransaction() {
+func (p *ProfilerProxy) EndTransaction() error {
+	var err error
 	p.do(operation.EndTransactionID, func() {
-		p.db.EndTransaction()
+		err = p.db.EndTransaction()
 	})
+	return err
 }
 
-func (p *ProfilerProxy) BeginBlock(number uint64) {
+func (p *ProfilerProxy) BeginBlock(number uint64) error {
+	var err error
 	p.do(operation.BeginBlockID, func() {
-		p.db.BeginBlock(number)
+		err = p.db.BeginBlock(number)
 	})
+	return err
 }
 
-func (p *ProfilerProxy) EndBlock() {
+func (p *ProfilerProxy) EndBlock() error {
+	var err error
 	p.do(operation.EndBlockID, func() {
-		p.db.EndBlock()
+		err = p.db.EndBlock()
 	})
+	return err
 }
 
 func (p *ProfilerProxy) BeginSyncPeriod(number uint64) {
@@ -309,7 +347,7 @@ func (p *ProfilerProxy) EndSyncPeriod() {
 	})
 }
 
-func (p *ProfilerProxy) GetHash() common.Hash {
+func (p *ProfilerProxy) GetHash() (common.Hash, error) {
 	// TODO: add profiling for this operation
 	return p.db.GetHash()
 }
@@ -322,10 +360,10 @@ func (p *ProfilerProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (p *ProfilerProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+func (p *ProfilerProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	var logs []*types.Log
 	p.do(operation.GetLogsID, func() {
-		logs = p.db.GetLogs(hash, blockHash)
+		logs = p.db.GetLogs(hash, block, blockHash)
 	})
 	return logs
 }
@@ -337,19 +375,10 @@ func (p *ProfilerProxy) AddPreimage(addr common.Hash, image []byte) {
 	})
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (p *ProfilerProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	var err error
-	p.do(operation.ForEachStorageID, func() {
-		err = p.db.ForEachStorage(addr, fn)
-	})
-	return err
-}
-
 // Prepare sets the current transaction hash and index.
-func (p *ProfilerProxy) Prepare(thash common.Hash, ti int) {
-	p.do(operation.PrepareID, func() {
-		p.db.Prepare(thash, ti)
+func (p *ProfilerProxy) SetTxContext(thash common.Hash, ti int) {
+	p.do(operation.SetTxContextID, func() {
+		p.db.SetTxContext(thash, ti)
 	})
 }
 
@@ -371,11 +400,11 @@ func (p *ProfilerProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return hash
 }
 
-func (p *ProfilerProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (p *ProfilerProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	var hash common.Hash
 	var err error
 	p.do(operation.CommitID, func() {
-		hash, err = p.db.Commit(deleteEmptyObjects)
+		hash, err = p.db.Commit(block, deleteEmptyObjects)
 	})
 	return hash, err
 }
@@ -397,9 +426,9 @@ func (p *ProfilerProxy) Close() error {
 	return err
 }
 
-func (p *ProfilerProxy) StartBulkLoad(block uint64) state.BulkLoad {
+func (p *ProfilerProxy) StartBulkLoad(block uint64) (state.BulkLoad, error) {
 	p.log.Fatal("StartBulkLoad not supported by ProfilerProxy")
-	return nil
+	return nil, nil
 }
 
 func (p *ProfilerProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
@@ -416,4 +445,24 @@ func (p *ProfilerProxy) GetMemoryUsage() *state.MemoryUsage {
 
 func (p *ProfilerProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
+}
+
+func (p *ProfilerProxy) CreateContract(addr common.Address) {
+	p.do(operation.CreateContractID, func() {
+		p.db.CreateContract(addr)
+	})
+}
+
+func (p *ProfilerProxy) Selfdestruct6780(addr common.Address) {
+	p.do(operation.SelfDestruct6780ID, func() {
+		p.db.Selfdestruct6780(addr)
+	})
+}
+
+func (p *ProfilerProxy) GetStorageRoot(addr common.Address) common.Hash {
+	var res common.Hash
+	p.do(operation.GetStorageRootID, func() {
+		res = p.db.GetStorageRoot(addr)
+	})
+	return res
 }

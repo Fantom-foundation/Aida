@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package validator
 
 import (
@@ -15,6 +31,8 @@ import (
 )
 
 func MakeStateHashValidator[T any](cfg *utils.Config) executor.Extension[T] {
+	// todo make true when --validate is chosen (validate should enable all validations)
+
 	if !cfg.ValidateStateHashes {
 		return extension.NilExtension[T]{}
 	}
@@ -65,7 +83,10 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor
 
 	// NOTE: ContinueOnFailure does not make sense here, if hash does not
 	// match every block after this block would have different hash
-	got := ctx.State.GetHash()
+	got, err := ctx.State.GetHash()
+	if err != nil {
+		return fmt.Errorf("cannot get state hash; %w", err)
+	}
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
 	}
@@ -123,8 +144,11 @@ func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 
 		// NOTE: ContinueOnFailure does not make sense here, if hash does not
 		// match every block after this block would have different hash
-		got := archive.GetHash()
+		got, err := archive.GetHash()
 		archive.Release()
+		if err != nil {
+			return fmt.Errorf("cannot GetHash; %w", err)
+		}
 		if want != got {
 			return fmt.Errorf("unexpected hash for archive block %d\nwanted %v\n   got %v", cur, want, got)
 		}

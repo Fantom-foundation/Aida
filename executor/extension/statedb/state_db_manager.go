@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package statedb
 
 import (
@@ -48,7 +64,7 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 	if m.cfg.StateDbSrc != "" {
 		// if using pre-existing StateDb and running in read-only mode, we must report both source db and working tmp dir
 		m.log.Infof("Source storage directory: %v", m.cfg.StateDbSrc)
-		if m.cfg.SrcDbReadonly {
+		if m.cfg.StateDbSrcDirectAccess {
 			m.log.Infof("Working storage directory: %v", m.cfg.DbTmp)
 		}
 
@@ -71,7 +87,7 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 		m.log.Infof("Archive mode disabled")
 	}
 
-	if !m.cfg.KeepDb {
+	if !m.cfg.KeepDb && !m.cfg.StateDbSrcDirectAccess {
 		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
 	return nil
@@ -81,27 +97,27 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 	//  if state was not correctly initialized remove the stateDbPath and abort
 	if ctx.State == nil {
 		var err = fmt.Errorf("state-db is nil")
-		if !m.cfg.SrcDbReadonly {
+		if !m.cfg.StateDbSrcDirectAccess {
 			err = errors.Join(err, os.RemoveAll(ctx.StateDbPath))
 		}
 		return err
 	}
 
-	// if db isn't kept, then close and delete temporary state-db
-	if !m.cfg.KeepDb {
+	// db was not modified, then close db without chnaging state-db info and keep db folder as-is.
+	if m.cfg.StateDbSrcReadOnly {
 		if err := ctx.State.Close(); err != nil {
 			return fmt.Errorf("failed to close state-db; %v", err)
 		}
-
-		if !m.cfg.SrcDbReadonly {
-			return os.RemoveAll(ctx.StateDbPath)
-		}
+		m.log.Noticef("State-db directory was read-only %v. No updates to state-db info", ctx.StateDbPath)
 		return nil
 	}
 
-	if m.cfg.SrcDbReadonly {
-		m.log.Noticef("State-db directory was readonly %v", ctx.StateDbPath)
-		return nil
+	// if db isn't kept and db was not modified in-place, then close and delete temporary state-db.
+	if !m.cfg.KeepDb && !m.cfg.StateDbSrcDirectAccess {
+		if err := ctx.State.Close(); err != nil {
+			return fmt.Errorf("failed to close state-db; %v", err)
+		}
+		return os.RemoveAll(ctx.StateDbPath)
 	}
 
 	// lastProcessedBlock contains number of last successfully processed block
@@ -112,7 +128,10 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		lastProcessedBlock -= 1
 	}
 
-	rootHash := ctx.State.GetHash()
+	rootHash, err := ctx.State.GetHash()
+	if err != nil {
+		return fmt.Errorf("cannot get state hash; %w", err)
+	}
 	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, lastProcessedBlock, rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
@@ -122,8 +141,11 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		return fmt.Errorf("failed to close state-db; %v", err)
 	}
 
-	newName := utils.RenameTempStateDbDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
-	m.log.Noticef("State-db directory: %v", newName)
+	// if db was modified in-place, no need to rename state-db folder.
+	if !m.cfg.StateDbSrcDirectAccess {
+		newName := utils.RenameTempStateDbDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
+		m.log.Noticef("State-db directory: %v", newName)
+	}
 	return nil
 }
 

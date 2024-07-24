@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utildb
 
 import (
@@ -16,27 +32,25 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
 )
 
 // OpenSourceDatabases opens all databases required for merge
-func OpenSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
+func OpenSourceDatabases(sourceDbPaths []string) ([]db.BaseDB, error) {
 	if len(sourceDbPaths) < 1 {
 		return nil, fmt.Errorf("no source database were specified\n")
 	}
 
-	var sourceDbs []ethdb.Database
+	var sourceDbs []db.BaseDB
 	for i := 0; i < len(sourceDbPaths); i++ {
 		path := sourceDbPaths[i]
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("source database %s; doesn't exist\n", path)
 		}
-		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
+		db, err := db.NewReadOnlyBaseDB(path)
 		if err != nil {
 			return nil, fmt.Errorf("source database %s; error: %v", path, err)
 		}
@@ -47,7 +61,7 @@ func OpenSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
 }
 
 // MustCloseDB close database safely
-func MustCloseDB(db ethdb.Database) {
+func MustCloseDB(db db.BaseDB) {
 	if db != nil {
 		err := db.Close()
 		if err != nil {
@@ -340,7 +354,7 @@ func getOperaBinary(cfg *utils.Config) string {
 }
 
 // GetDbSize retrieves database size
-func GetDbSize(db ethdb.Database) uint64 {
+func GetDbSize(db db.BaseDB) uint64 {
 	var count uint64
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
@@ -353,15 +367,12 @@ func GetDbSize(db ethdb.Database) uint64 {
 // PrintMetadata from given AidaDb
 func PrintMetadata(pathToDb string) error {
 	log := logger.NewLogger("INFO", "Print-Metadata")
-	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
+	base, err := db.NewReadOnlyBaseDB(pathToDb)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db for printing metadata; %v", err)
+		return err
 	}
 
-	defer MustCloseDB(aidaDb)
-
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(base, "INFO")
 
 	log.Notice("AIDA-DB INFO:")
 
@@ -417,14 +428,14 @@ func printUpdateSetInfo(m *utils.AidaDbMetadata) {
 
 	log.Notice("UPDATE-SET INFO:")
 
-	intervalBytes, err := m.Db.Get([]byte(substate.UpdatesetIntervalKey))
+	intervalBytes, err := m.Db.Get([]byte(db.UpdatesetIntervalKey))
 	if err != nil {
 		log.Warning("Value for update-set interval does not exist in given Dbs metadata")
 	} else {
 		log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 	}
 
-	sizeBytes, err := m.Db.Get([]byte(substate.UpdatesetSizeKey))
+	sizeBytes, err := m.Db.Get([]byte(db.UpdatesetSizeKey))
 	if err != nil {
 		log.Warning("Value for update-set size does not exist in given Dbs metadata")
 	} else {
@@ -459,7 +470,7 @@ func printDbType(m *utils.AidaDbMetadata) error {
 }
 
 // LogDetailedSize counts and prints all prefix occurrence
-func LogDetailedSize(db ethdb.Database, log logger.Logger) {
+func LogDetailedSize(db db.BaseDB, log logger.Logger) {
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
 

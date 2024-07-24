@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utils
 
 import (
@@ -6,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -97,12 +113,12 @@ func MakeTestConfig(testCase StateDbTestCase) *Config {
 }
 
 // MakeWorldState generates randomized world state containing 100 accounts
-func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
+func MakeWorldState(t *testing.T) (txcontext.AidaWorldState, []common.Address) {
 	// create list of addresses
 	var addrList []common.Address
 
 	// create world state
-	ws := make(substate.SubstateAlloc)
+	ws := make(map[common.Address]txcontext.Account)
 
 	for i := 0; i < 100; i++ {
 		// create random address
@@ -111,13 +127,13 @@ func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 		// add to address list
 		addrList = append(addrList, addr)
 
-		acc := substate.SubstateAccount{
-			Nonce:   uint64(GetRandom(1, 1000*5000)),
-			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
-			Storage: MakeAccountStorage(t),
-			Code:    MakeRandomByteSlice(t, 2048),
-		}
-		ws[addr] = &acc
+		acc := txcontext.NewAccount(
+			MakeRandomByteSlice(t, 2048),
+			MakeAccountStorage(t),
+			big.NewInt(int64(GetRandom(1, 1000*5000))),
+			uint64(GetRandom(1, 1000*5000)),
+		)
+		ws[addr] = acc
 
 		// create account
 

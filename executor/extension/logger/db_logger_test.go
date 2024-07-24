@@ -1,9 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package logger
 
 import (
 	"fmt"
 	"io"
-	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -16,6 +31,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -75,7 +91,7 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 		t.Fatalf("pre-transaction returned err; %v", err)
 	}
 
-	balance := new(big.Int).SetInt64(10)
+	balance := new(uint256.Int).SetUint64(10)
 
 	beginBlock := fmt.Sprintf("BeginBlock, %v", 1)
 	beginTransaction := fmt.Sprintf("BeginTransaction, %v", 0)
@@ -107,14 +123,9 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 		t.Fatalf("post-run returned err; %v", err)
 	}
 
-	stat, err := os.Stat(fileName)
-	if err != nil {
-		t.Fatalf("cannot get file stats; %v", err)
-	}
-
-	if stat.Size() == 0 {
-		t.Fatal("log file should have something inside")
-	}
+	// signal and await the close
+	close(ext.input)
+	ext.wg.Wait()
 
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -231,5 +242,55 @@ func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxyIfStateIsNil(t *test
 
 	if ctx.State != nil {
 		t.Fatal("db must be nil!")
+	}
+}
+
+func TestDbLoggerExtension_StateDbCloseIsWrittenInTheFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	fileName := t.TempDir() + "test-log"
+	cfg := &utils.Config{}
+	cfg.DbLogging = fileName
+
+	ext := makeDbLogger[any](cfg, log)
+
+	ctx := &executor.Context{State: db}
+
+	err := ext.PreRun(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-run returned err; %v", err)
+	}
+
+	err = ext.PreTransaction(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction returned err; %v", err)
+	}
+
+	want := "Close"
+	gomock.InOrder(
+		db.EXPECT().Close().Return(nil),
+		log.EXPECT().Debug(want),
+	)
+
+	err = ctx.State.Close()
+	if err != nil {
+		t.Fatalf("cannot close database; %v", err)
+	}
+
+	file, err := os.Open(fileName)
+	if err != nil {
+		t.Fatalf("cannot open testing; %v", err)
+	}
+	defer file.Close()
+
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatalf("cannot read content of the testing log; %v", err)
+	}
+
+	if !strings.Contains(string(fileContent), want) {
+		t.Fatalf("close was not logged\nlog: %v", string(fileContent))
 	}
 }

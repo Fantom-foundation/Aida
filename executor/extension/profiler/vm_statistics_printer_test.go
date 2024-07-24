@@ -1,13 +1,27 @@
-package profiler
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
 
-//go:generate mockgen -source vm_statistics_printer_test.go -destination vm_statistics_printer_mocks_test.go -package profiler
+package profiler
 
 import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Tosca/go/vm/registry"
+	"github.com/Fantom-foundation/Tosca/go/vm"
 	"go.uber.org/mock/gomock"
 )
 
@@ -19,19 +33,14 @@ func TestVirtualMachineStatisticsPrinter_WorksWithDefaultSetup(t *testing.T) {
 
 func TestVirtualMachineStatisticsPrinter_TriggersStatPrintingAtEndOfRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	vm := NewMockProfilingVm(ctrl)
-	registry.RegisterVirtualMachine("test-vm", vm)
+	interpreter := vm.NewMockProfilingInterpreter(ctrl)
+	vm.RegisterInterpreter("test-vm", interpreter)
 
-	vm.EXPECT().DumpProfile()
+	interpreter.EXPECT().DumpProfile()
 
 	cfg := utils.Config{}
 	cfg.VmImpl = "test-vm"
 	ext := MakeVirtualMachineStatisticsPrinter[any](&cfg)
 
 	ext.PostRun(executor.State[any]{}, nil, nil)
-}
-
-type ProfilingVm interface {
-	registry.VirtualMachine
-	registry.ProfilingVM
 }

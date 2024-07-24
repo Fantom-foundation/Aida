@@ -1,19 +1,36 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package state
 
 import (
 	"bytes"
 	"errors"
-	"math/big"
 	"testing"
 
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid Variant
 func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
-	csDB, err := MakeCarmenStateDB("", "invalid-Variant", "", 1)
+	csDB, err := MakeCarmenStateDB("", "invalid-Variant", 5, "")
 	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
@@ -32,7 +49,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 	for _, tc := range GetAllCarmenConfigurations() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -53,20 +70,19 @@ func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 func TestCarmenState_AccountLifecycle(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -82,11 +98,8 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 				t.Fatal("failed to create carmen state DB account; should be empty")
 			}
 
-			if !csDB.Suicide(addr) {
-				t.Fatal("failed to suicide carmen state DB account;")
-			}
-
-			if !csDB.HasSuicided(addr) {
+			csDB.SelfDestruct(addr)
+			if !csDB.HasSelfDestructed(addr) {
 				t.Fatal("failed to suicide carmen state DB account;")
 			}
 		})
@@ -97,20 +110,19 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -119,19 +131,19 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 			csDB.CreateAccount(addr)
 
 			// get randomized balance
-			additionBase := GetRandom(1, 1000*5000)
-			addition := big.NewInt(int64(additionBase))
+			additionBase := GetRandom(t, 1, 5_000_000)
+			addition := uint256.NewInt(additionBase)
 
-			csDB.AddBalance(addr, addition)
+			csDB.AddBalance(addr, addition, 0)
 
 			if csDB.GetBalance(addr).Cmp(addition) != 0 {
 				t.Fatal("failed to add balance to carmen state DB account")
 			}
 
-			subtraction := big.NewInt(int64(GetRandom(1, additionBase)))
-			expectedResult := big.NewInt(0).Sub(addition, subtraction)
+			subtraction := uint256.NewInt(GetRandom(t, 1, int(additionBase)))
+			expectedResult := uint256.NewInt(0).Sub(addition, subtraction)
 
-			csDB.SubBalance(addr, subtraction)
+			csDB.SubBalance(addr, subtraction, 0)
 
 			if csDB.GetBalance(addr).Cmp(expectedResult) != 0 {
 				t.Fatal("failed to subtract balance to carmen state DB account")
@@ -144,7 +156,7 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 func TestCarmenState_NonceOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -155,9 +167,9 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -166,7 +178,7 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 			csDB.CreateAccount(addr)
 
 			// get randomized nonce
-			newNonce := uint64(GetRandom(1, 1000*5000))
+			newNonce := GetRandom(t, 1, 5_000_000)
 
 			csDB.SetNonce(addr, newNonce)
 
@@ -181,7 +193,7 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 func TestCarmenState_CodeOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -192,9 +204,9 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -226,7 +238,7 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 func TestCarmenState_StateOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -237,9 +249,9 @@ func TestCarmenState_StateOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -264,7 +276,7 @@ func TestCarmenState_StateOperations(t *testing.T) {
 func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -287,16 +299,28 @@ func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 				csDB.BeginSyncPeriod(uint64(i))
 
 				for j := 0; j < 100; j++ {
-					csDB.BeginBlock(uint64(blockNumber))
+					err = csDB.BeginBlock(uint64(blockNumber))
+					if err != nil {
+						t.Fatalf("cannot begin block; %v", err)
+					}
 					blockNumber++
 
 					for k := 0; k < 100; k++ {
-						csDB.BeginTransaction(uint32(trxNumber))
+						err = csDB.BeginTransaction(uint32(trxNumber))
+						if err != nil {
+							t.Fatalf("cannot begin transaction; %v", err)
+						}
 						trxNumber++
-						csDB.EndTransaction()
+						err = csDB.EndTransaction()
+						if err != nil {
+							t.Fatalf("cannot end transaction; %v", err)
+						}
 					}
 
-					csDB.EndBlock()
+					err = csDB.EndBlock()
+					if err != nil {
+						t.Fatalf("cannot end block; %v", err)
+					}
 				}
 
 				csDB.EndSyncPeriod()
@@ -309,24 +333,23 @@ func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 func TestCarmenState_RefundOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
-			refundValue := uint64(GetRandom(10000*4000, 10000*5000))
+			refundValue := GetRandom(t, 40_000_000, 50_000_000)
 			csDB.AddRefund(refundValue)
 
 			if csDB.GetRefund() != refundValue {
@@ -348,20 +371,19 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 func TestCarmenState_AccessListOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
@@ -393,7 +415,7 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 			}
 
 			// create access list
-			csDB.PrepareAccessList(sender, &dest, precompiles, txAccesses)
+			csDB.Prepare(params.Rules{}, sender, common.Address{}, &dest, precompiles, txAccesses)
 
 			// add some more data after the creation for good measure
 			newAddr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
@@ -443,24 +465,20 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 
 // TestCarmenState_GetArchiveState tests retrieving an Archive state
 func TestCarmenState_GetArchiveState(t *testing.T) {
-	for _, tc := range GetCarmenStateTestCases() {
-		if tc.Archive != "sqlite" && tc.Archive != "leveldb" {
+	cfgs := GetCarmenStateTestCases()
+	for _, tc := range cfgs {
+		if tc.Archive == "none" || tc.Archive == "" {
 			continue // relevant only if the Archive is enabled
 		}
 		t.Run(tc.String(), func(t *testing.T) {
 			tempDir := t.TempDir()
-			csDB, err := MakeCarmenStateDB(tempDir, tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(tempDir, tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
-
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
-
-			csDB.BeginBlock(1)
-			csDB.BeginTransaction(1)
-
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 			csDB.CreateAccount(addr)
@@ -471,16 +489,12 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 
 			csDB.SetState(addr, key, value)
 
-			csDB.EndTransaction()
-			csDB.EndBlock()
-
-			err = csDB.Close()
+			err = CloseCarmenDbTestContext(csDB)
 			if err != nil {
-				t.Fatalf("failed to close carmen state DB: %v", err)
+				t.Fatalf("cannot close carmen test context; %v", err)
 			}
 
-			csDB, err = MakeCarmenStateDB(tempDir, tc.Variant, tc.Archive, 1)
-
+			csDB, err = MakeCarmenStateDB(tempDir, tc.Variant, tc.Schema, tc.Archive)
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
@@ -493,10 +507,14 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 				}
 			}(csDB)
 
-			_, err = csDB.GetArchiveState(1)
-
+			archive, err := csDB.GetArchiveState(1)
 			if err != nil {
 				t.Fatalf("failed to retrieve Archive state of carmen state DB: %v", err)
+			}
+
+			err = archive.Release()
+			if err != nil {
+				t.Fatal("cannot release archive; %w", err)
 			}
 		})
 	}
@@ -506,7 +524,7 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -517,24 +535,32 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad(0)
+			cbl, err := csDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 			cbl.CreateAccount(addr)
 
-			newBalance := big.NewInt(int64(GetRandom(1, 1000*5000)))
+			newBalance := uint256.NewInt(GetRandom(t, 1, 5_000_000))
 			cbl.SetBalance(addr, newBalance)
 
 			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
+			}
+
+			err = BeginCarmenDbTestContext(csDB)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			if csDB.GetBalance(addr).Cmp(newBalance) != 0 {
@@ -548,7 +574,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -557,27 +583,35 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
-			// Close DB after test ends
+			// Closing of state DB
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad(0)
+			cbl, err := csDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 			cbl.CreateAccount(addr)
 
-			newNonce := uint64(GetRandom(1, 1000*5000))
+			newNonce := GetRandom(t, 1, 5_000_000)
 
 			cbl.SetNonce(addr, newNonce)
 
 			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
+			}
+
+			err = BeginCarmenDbTestContext(csDB)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			if csDB.GetNonce(addr) != newNonce {
@@ -591,7 +625,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -602,13 +636,16 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad(0)
+			cbl, err := csDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -625,6 +662,11 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
+			err = BeginCarmenDbTestContext(csDB)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if csDB.GetState(addr, key) != value {
 				t.Fatal("failed to update account state")
 			}
@@ -636,7 +678,7 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -647,13 +689,16 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
+				err = CloseCarmenDbTestContext(csDB)
 				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+					t.Fatalf("cannot close carmen test context; %v", err)
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad(0)
+			cbl, err := csDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -669,6 +714,11 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
+			err = BeginCarmenDbTestContext(csDB)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if !bytes.Equal(csDB.GetCode(addr), code) {
 				t.Fatal("failed to update account code")
 			}
@@ -680,7 +730,7 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_BulkloadOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenDbTestContext(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -691,9 +741,8 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
 
@@ -705,16 +754,26 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				csDB.CreateAccount(accounts[i])
 			}
 
-			cbl := csDB.StartBulkLoad(0)
+			if err = csDB.EndTransaction(); err != nil {
+				t.Fatalf("cannot end tx; %v", err)
+			}
+			if err = csDB.EndBlock(); err != nil {
+				t.Fatalf("cannot end block; %v", err)
+			}
+
+			cbl, err := csDB.StartBulkLoad(7)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			for _, account := range accounts {
 				// randomized operation
-				operationType := GetRandom(0, 4)
+				operationType := GetRandom(t, 0, 4)
 
 				switch {
 				case operationType == 1:
 					// set balance
-					newBalance := big.NewInt(int64(GetRandom(0, 1000*5000)))
+					newBalance := uint256.NewInt(GetRandom(t, 0, 5_000_000))
 
 					cbl.SetBalance(account, newBalance)
 				case operationType == 2:
@@ -730,7 +789,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 					cbl.SetState(account, key, value)
 				case operationType == 4:
 					// set nonce
-					newNonce := uint64(GetRandom(0, 1000*5000))
+					newNonce := GetRandom(t, 0, 5_000_000)
 
 					cbl.SetNonce(account, newNonce)
 				default:
@@ -754,7 +813,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 func TestCarmenState_GetShadowDB(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
+			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}

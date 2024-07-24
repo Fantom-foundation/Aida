@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package logger
 
 import (
@@ -34,7 +50,7 @@ func MakeDbLogger[T any](cfg *utils.Config) executor.Extension[T] {
 	return makeDbLogger[T](cfg, logger.NewLogger(cfg.LogLevel, "Db-Logger"))
 }
 
-func makeDbLogger[T any](cfg *utils.Config, log logger.Logger) executor.Extension[T] {
+func makeDbLogger[T any](cfg *utils.Config, log logger.Logger) *dbLogger[T] {
 	return &dbLogger[T]{
 		cfg:   cfg,
 		log:   log,
@@ -58,7 +74,7 @@ func (l *dbLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 
 	// in some cases, StateDb does not have to be initialized yet
 	if ctx.State != nil {
-		ctx.State = proxy.NewLoggerProxy(ctx.State, l.log, l.input)
+		ctx.State = proxy.NewLoggerProxy(ctx.State, l.log, l.input, l.wg)
 	}
 
 	return nil
@@ -72,31 +88,23 @@ func (l *dbLogger[T]) PreTransaction(_ executor.State[T], ctx *executor.Context)
 		return nil
 	}
 
-	ctx.State = proxy.NewLoggerProxy(ctx.State, l.log, l.input)
-	return nil
-}
-
-// PostRun flashes writer for last time and closes the file
-func (l *dbLogger[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	// close the logging thread and wait for thread-safety
-	close(l.input)
-	l.wg.Wait()
-
-	err := l.writer.Flush()
-	if err != nil {
-		return fmt.Errorf("cannot flush db-logging writer; %v", err)
-	}
-
-	err = l.file.Close()
-	if err != nil {
-		return fmt.Errorf("cannot close db-logging file; %v", err)
-	}
-
+	ctx.State = proxy.NewLoggerProxy(ctx.State, l.log, l.input, l.wg)
 	return nil
 }
 
 func (l *dbLogger[T]) doLogging() {
-	defer l.wg.Done()
+	defer func() {
+		err := l.writer.Flush()
+		if err != nil {
+			l.log.Errorf("cannot flush db-logging writer; %v", err)
+		}
+
+		err = l.file.Close()
+		if err != nil {
+			l.log.Errorf("cannot close db-logging file; %v", err)
+		}
+		l.wg.Done()
+	}()
 	for {
 		in, ok := <-l.input
 		if !ok {

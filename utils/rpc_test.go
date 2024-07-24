@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utils
 
 import (
@@ -6,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"golang.org/x/exp/maps"
 )
 
 const invalidChainID ChainID = -1
@@ -19,7 +37,7 @@ func TestSendRPCRequest_Positive(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range AvailableChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 
 			res, err := SendRpcRequest(req, id)
@@ -96,7 +114,7 @@ func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range AvailableChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			res, err := SendRpcRequest(req, id)
 			if errors.Is(err, RPCUnsupported) {
@@ -132,7 +150,7 @@ func TestSendRPCRequest_InvalidBlockNumber(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range AvailableChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			res, err := SendRpcRequest(req, id)
 			if errors.Is(err, RPCUnsupported) {
@@ -170,7 +188,7 @@ func TestRPCFindEpochNumber_Positive(t *testing.T) {
 		testingTestnetBlock  uint64 = 479_326
 	)
 
-	for _, id := range AvailableChainIDs {
+	for _, id := range maps.Keys(RealChainIDs) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			var testingBlock, expectedEpoch uint64
 

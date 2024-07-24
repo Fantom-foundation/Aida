@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package executor
 
 //go:generate mockgen -source executor.go -destination executor_mocks.go -package executor
@@ -5,6 +21,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -12,7 +29,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 )
 
 // ----------------------------------------------------------------------------
@@ -77,7 +94,7 @@ type Executor[T any] interface {
 	// PostXXX events are delivered in reverse order. If any of the extensions
 	// reports an error during processing of an event, the same event is still
 	// delivered to the remaining extensions before processing is aborted.
-	Run(params Params, processor Processor[T], extensions []Extension[T]) error
+	Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) error
 }
 
 // NewExecutor creates a new executor based on the given provider.
@@ -208,16 +225,16 @@ type Context struct {
 	StateDbPath string
 
 	// AidaDb is an optional LevelDb readonly database containing data for testing StateDb (i.e. state hashes).
-	AidaDb ethdb.Database
+	AidaDb db.BaseDB
 
 	// ErrorInput is used if continue-on-failure is enabled or if log-file is definer so that at the end
 	// of the run, we log all errors into a file. This chanel should be only used for processing errors,
 	// hence any non-fatal errors. Any fatal should still be returned so that the app ends.
 	ErrorInput chan error
 
-	// ExecutionResult is set after transaction is processed.
-	// It is used for validation
-	ExecutionResult txcontext.Receipt
+	// ExecutionResult is set after the execution.
+	// It is used for validation and gas measurements.
+	ExecutionResult txcontext.Result
 }
 
 // ----------------------------------------------------------------------------
@@ -229,15 +246,16 @@ type executor[T any] struct {
 	log      logger.Logger
 }
 
-func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) (err error) {
+func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) (err error) {
 	state := State[T]{}
-	ctx := Context{State: params.State}
+	ctx := Context{State: params.State, AidaDb: aidaDb}
 
 	defer func() {
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
 		// on the state of anything, and PostRun operations may deadlock or cause damage.
 		if r := recover(); r != nil {
-			panic(r)
+			msg := fmt.Sprintf("%v\n%s", r, string(debug.Stack()))
+			panic(msg)
 		}
 		err = errors.Join(
 			err,
@@ -281,7 +299,8 @@ func runBlock[T any](
 	defer func() {
 		if r := recover(); r != nil {
 			abort.Signal() // stop forwarder and other workers too
-			cachedPanic.Store(r)
+			msg := fmt.Sprintf("worker %v recovered panic; %v\n%s", workerNumber, r, string(debug.Stack()))
+			cachedPanic.Store(msg)
 		}
 		wg.Done()
 	}()
@@ -428,7 +447,8 @@ func (e *executor[T]) runTransactions(params Params, processor Processor[T], ext
 			defer func() {
 				if r := recover(); r != nil {
 					abort.Signal() // stop forwarder and other workers too
-					cachedPanic.Store(r)
+					msg := fmt.Sprintf("worker %v recovered panic; %v\n%s", i, r, string(debug.Stack()))
+					cachedPanic.Store(msg)
 				}
 				wg.Done()
 			}()
@@ -520,10 +540,25 @@ func (e *executor[T]) runBlocks(params Params, processor Processor[T], extension
 	return err
 }
 
+func RunUtilPrimer[T any](params Params, extensions []Extension[T], aidaDb db.BaseDB) (err error) {
+	state := State[T]{}
+	ctx := Context{State: params.State, AidaDb: aidaDb}
+
+	state.Block = params.To
+	if err = signalPreRun(state, &ctx, extensions); err != nil {
+		return err
+	}
+
+	return errors.Join(
+		err,
+		signalPostRun(state, &ctx, err, extensions),
+	)
+}
+
 func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PreRun; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PreRun; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -536,7 +571,7 @@ func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]
 func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []Extension[T]) (recoveredPanic error) {
 	defer func() {
 		if r := recover(); r != nil {
-			recoveredPanic = fmt.Errorf("sending forward recovered panic from PostRun; %v", r)
+			recoveredPanic = fmt.Errorf("sending forward recovered panic from PostRun; %v\n%s", r, string(debug.Stack()))
 			return
 		}
 
@@ -549,7 +584,7 @@ func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []
 func signalPreBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PreBlock; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PreBlock; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -562,7 +597,7 @@ func signalPreBlock[T any](state State[T], ctx *Context, extensions []Extension[
 func signalPostBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PostBlock; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PostBlock; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -575,7 +610,7 @@ func signalPostBlock[T any](state State[T], ctx *Context, extensions []Extension
 func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PreTransaction; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PreTransaction; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 
@@ -588,7 +623,7 @@ func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Exte
 func signalPostTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	defer func() {
 		if r := recover(); r != nil {
-			p := fmt.Sprintf("sending forward recovered panic from PostTransaction; %v", r)
+			p := fmt.Sprintf("sending forward recovered panic from PostTransaction; %v\n%s", r, string(debug.Stack()))
 			panic(p)
 		}
 

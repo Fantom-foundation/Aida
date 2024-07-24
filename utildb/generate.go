@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utildb
 
 import (
@@ -17,11 +33,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/util-updateset/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,8 +52,8 @@ type Generator struct {
 	ctx               *cli.Context
 	Log               logger.Logger
 	md                *utils.AidaDbMetadata
-	AidaDb            ethdb.Database
-	DeletionDbTmp     ethdb.Database
+	AidaDb            db.BaseDB
+	DeletionDbTmp     db.BaseDB
 	DeletionDbTmpPath string
 	Opera             *aidaOpera
 	TargetEpoch       uint64
@@ -73,8 +86,9 @@ func (g *Generator) PrepareManualGenerate(ctx *cli.Context, cfg *utils.Config) (
 		return fmt.Errorf("generation range first epoch %v cannot be greater than available last epoch %v", g.Opera.FirstEpoch, g.Opera.lastEpoch)
 	}
 
-	firstSubstate := substate.NewSubstateDB(g.AidaDb).GetFirstSubstate()
-	lastSubstate, err := substate.NewSubstateDB(g.AidaDb).GetLastSubstate()
+	sdb := db.MakeDefaultSubstateDBFromBaseDB(g.AidaDb)
+	firstSubstate := sdb.GetFirstSubstate()
+	lastSubstate, err := sdb.GetLastSubstate()
 	if err != nil {
 		return fmt.Errorf("cannot get last substate; %v", err)
 	}
@@ -113,12 +127,10 @@ func NewGenerator(ctx *cli.Context, cfg *utils.Config) (*Generator, error) {
 		return nil, fmt.Errorf("you need to specify aida-db (--aida-db)")
 	}
 
-	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create new db; %v", err)
 	}
-
-	substate.SetSubstateDbBackend(db)
 
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Generator")
 
@@ -126,7 +138,7 @@ func NewGenerator(ctx *cli.Context, cfg *utils.Config) (*Generator, error) {
 		Cfg:    cfg,
 		Log:    log,
 		Opera:  newAidaOpera(ctx, cfg, log),
-		AidaDb: db,
+		AidaDb: base,
 		ctx:    ctx,
 		start:  time.Now(),
 	}, nil
@@ -261,7 +273,7 @@ func (g *Generator) runDbHashGeneration(err error) error {
 }
 
 // init initializes database (DestroyedDb and UpdateDb wrappers) and loads next block for updateset generation
-func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, uint64, error) {
+func (g *Generator) init() (*db.DestroyedAccountDB, db.UpdateDB, uint64, error) {
 	var err error
 
 	// create temporary deletionDb for separate generation
@@ -269,14 +281,13 @@ func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, ui
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("cannot create tmp dir; %v", err)
 	}
-	g.DeletionDbTmp, err = rawdb.NewLevelDBDatabase(g.DeletionDbTmpPath, 1024, 100, "profiling", false)
+	g.DeletionDbTmp, err = db.NewDefaultBaseDB(g.DeletionDbTmpPath)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("cannot open tmp deletion-db; %v", err)
 	}
 
-	deleteDb := substate.NewDestroyedAccountDB(g.DeletionDbTmp)
-
-	updateDb := substate.NewUpdateDB(g.AidaDb)
+	deleteDb := db.MakeDefaultDestroyedAccountDBFromBaseDB(g.DeletionDbTmp)
+	updateDb := db.MakeDefaultUpdateDBFromBaseDB(g.AidaDb)
 
 	// set first updateset block
 	nextUpdateSetStart, err := updateDb.GetLastKey()
@@ -289,19 +300,23 @@ func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, ui
 		// generating for next block
 		nextUpdateSetStart += 1
 	} else {
-		g.Opera.isNew = true
-		g.Log.Infof("Previous UpdateSet not found - generating from %v", nextUpdateSetStart)
-		_, err = os.Stat(g.Cfg.WorldStateDb)
-		if os.IsNotExist(err) {
-			return nil, nil, 0, fmt.Errorf("you need to specify worldstate extracted before the starting block (--%v)", utils.WorldStateFlag.Name)
-		}
+		// TODO resolve dependencies
+		g.Log.Error("Error: Previous UpdateSet not found")
+		/*
+			g.Opera.isNew = true
+			g.Log.Infof("Previous UpdateSet not found - generating from %v", nextUpdateSetStart)
+			_, err = os.Stat(g.Cfg.WorldStateDb)
+			if os.IsNotExist(err) {
+				return nil, nil, 0, fmt.Errorf("you need to specify worldstate extracted before the starting block (--%v)", utils.WorldStateFlag.Name)
+			}
+		*/
 	}
 
 	return deleteDb, updateDb, nextUpdateSetStart, err
 }
 
 // processDeletedAccounts invokes DeletedAccounts generation and then merges it into AidaDb
-func (g *Generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) error {
+func (g *Generator) processDeletedAccounts(ddb *db.DestroyedAccountDB) error {
 	var (
 		err   error
 		start time.Time
@@ -310,13 +325,10 @@ func (g *Generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 	start = time.Now()
 	g.Log.Noticef("Generating DeletionDb...")
 
-	err = GenDeletedAccountsAction(g.Cfg, ddb, 0, g.Opera.lastBlock)
+	err = GenDeletedAccountsAction(g.Cfg, nil, ddb, 0, g.Opera.lastBlock)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
-
-	// explicitly release code cache
-	state.ReleaseCache()
 
 	g.Log.Noticef("Deleted accounts generated successfully. It took: %v", time.Since(start).Round(1*time.Second))
 	g.Log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
@@ -324,7 +336,7 @@ func (g *Generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 }
 
 // processUpdateSet invokes UpdateSet generation and then merges it into AidaDb
-func (g *Generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, updateDb *substate.UpdateDB, nextUpdateSetStart uint64) error {
+func (g *Generator) processUpdateSet(deleteDb *db.DestroyedAccountDB, updateDb db.UpdateDB, nextUpdateSetStart uint64) error {
 	var (
 		err   error
 		start time.Time
@@ -333,7 +345,7 @@ func (g *Generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, upda
 	start = time.Now()
 	g.Log.Notice("Generating UpdateDb...")
 
-	err = updateset.GenUpdateSet(g.Cfg, updateDb, deleteDb, nextUpdateSetStart, g.Opera.lastBlock, updateSetInterval)
+	err = updateset.GenUpdateSet(g.Cfg, db.MakeDefaultSubstateDBFromBaseDB(updateDb), updateDb, deleteDb, nextUpdateSetStart, g.Opera.lastBlock, updateSetInterval)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations update-db; %v", err)
 	}
@@ -364,7 +376,7 @@ func (g *Generator) createPatch() (string, error) {
 	g.Cfg.First = g.Opera.firstBlock
 	g.Cfg.Last = g.Opera.lastBlock
 
-	patchDb, err := rawdb.NewLevelDBDatabase(g.Cfg.TargetDb, 1024, 100, "profiling", false)
+	patchDb, err := db.NewReadOnlyBaseDB(g.Cfg.TargetDb)
 	if err != nil {
 		return "", fmt.Errorf("cannot open patch db; %v", err)
 	}
@@ -381,7 +393,7 @@ func (g *Generator) createPatch() (string, error) {
 		return "", err
 	}
 
-	MustCloseDB(patchDb)
+	patchDb.Close()
 
 	g.Log.Noticef("Printing newly generated patch METADATA:")
 	err = PrintMetadata(patchPath)
@@ -610,15 +622,15 @@ func (g *Generator) calculatePatchEnd() error {
 }
 
 // mergeTemporaryDeletionDb merges temporary deletion db into aidaDb
-func (g *Generator) mergeTemporaryDeletionDb() (*substate.DestroyedAccountDB, error) {
+func (g *Generator) mergeTemporaryDeletionDb() (*db.DestroyedAccountDB, error) {
 	g.Log.Noticef("Merging DeletionDb...")
 	blockBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(blockBytes, g.Opera.firstBlock)
 
 	// insert just range of new patch deletion db into aidaDb
-	iter := g.DeletionDbTmp.NewIterator([]byte(substate.DestroyedAccountPrefix), blockBytes)
+	iter := g.DeletionDbTmp.NewIterator([]byte(db.DestroyedAccountPrefix), blockBytes)
 	for iter.Next() {
-		_, _, err := substate.DecodeDestroyedAccountKey(iter.Key())
+		_, _, err := db.DecodeDestroyedAccountKey(iter.Key())
 		if err != nil {
 			return nil, fmt.Errorf("cannot decode deletion key; %v", err)
 		}
@@ -630,7 +642,7 @@ func (g *Generator) mergeTemporaryDeletionDb() (*substate.DestroyedAccountDB, er
 	}
 
 	iter.Release()
-	MustCloseDB(g.DeletionDbTmp)
+	g.DeletionDbTmp.Close()
 	err := os.RemoveAll(g.DeletionDbTmpPath)
 	if err != nil {
 		return nil, err
@@ -638,7 +650,7 @@ func (g *Generator) mergeTemporaryDeletionDb() (*substate.DestroyedAccountDB, er
 	g.Log.Noticef("DeletionDbTmp successfully merged into AidaDb...")
 
 	// return deleteDb pointing to AidaDb
-	deleteDb := substate.NewDestroyedAccountDB(g.AidaDb)
+	deleteDb := db.MakeDefaultDestroyedAccountDBFromBaseDB(g.AidaDb)
 	return deleteDb, nil
 }
 

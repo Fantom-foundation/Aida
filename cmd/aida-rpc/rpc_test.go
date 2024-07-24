@@ -1,8 +1,23 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
 	"encoding/json"
-	"math/big"
 	"strings"
 	"testing"
 
@@ -12,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -26,14 +42,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
 	archiveFour := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		SkipPriming: true,
-		Workers:     1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -53,19 +62,27 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	gomock.InOrder(
 		// Req 1
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
-		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveOne.EXPECT().BeginTransaction(uint32(1)),
+		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
+		archiveOne.EXPECT().EndTransaction(),
 		archiveOne.EXPECT().Release(),
 		// Req 2
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveTwo, nil),
-		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveTwo.EXPECT().BeginTransaction(uint32(2)),
+		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
+		archiveTwo.EXPECT().EndTransaction(),
 		archiveTwo.EXPECT().Release(),
 		// Req 3
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveThree, nil),
+		archiveThree.EXPECT().BeginTransaction(uint32(1)),
 		archiveThree.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(1)),
+		archiveThree.EXPECT().EndTransaction(),
 		archiveThree.EXPECT().Release(),
 		// Req 4
 		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveFour, nil),
+		archiveFour.EXPECT().BeginTransaction(uint32(0)),
 		archiveFour.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
+		archiveFour.EXPECT().EndTransaction(),
 		archiveFour.EXPECT().Release(),
 	)
 
@@ -81,25 +98,17 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	archiveOne := state.NewMockNonCommittableStateDB(ctrl)
 	archiveTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
-	archiveFour := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		SkipPriming: true,
-		Workers:     4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.Workers = 2
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*rpc.RequestAndResults]) error {
 			// Block 2
 			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 2, Transaction: 1, Data: reqBlockTwo})
-			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 2, Transaction: 2, Data: reqBlockTwo})
 			// Block 3
-			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 3, Transaction: 1, Data: reqBlockThree})
+			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 3, Transaction: 2, Data: reqBlockThree})
 			// Block 4
 			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 4, Transaction: 0, Data: reqBlockFour})
 			return nil
@@ -110,26 +119,26 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	gomock.InOrder(
 		// Req 1
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
-		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archiveOne.EXPECT().BeginTransaction(uint32(1)),
+		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
+		archiveOne.EXPECT().EndTransaction(),
 		archiveOne.EXPECT().Release(),
 	)
 	gomock.InOrder(
 		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveTwo, nil),
-		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveTwo, nil),
+		archiveTwo.EXPECT().BeginTransaction(uint32(2)),
+		archiveTwo.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(3)),
+		archiveTwo.EXPECT().EndTransaction(),
 		archiveTwo.EXPECT().Release(),
 	)
 	gomock.InOrder(
 		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveThree, nil),
-		archiveThree.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(1)),
+		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveThree, nil),
+		archiveThree.EXPECT().BeginTransaction(uint32(0)),
+		archiveThree.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
+		archiveThree.EXPECT().EndTransaction(),
 		archiveThree.EXPECT().Release(),
-	)
-	gomock.InOrder(
-		// Req 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveFour, nil),
-		archiveFour.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
-		archiveFour.EXPECT().Release(),
 	)
 
 	if err := run(cfg, provider, db, rpcProcessor{cfg}, nil); err != nil {
@@ -145,14 +154,7 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 
-	config := &utils.Config{
-		First:    2,
-		Last:     4,
-		ChainID:  utils.MainnetChainID,
-		LogLevel: "Critical",
-		Workers:  1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -177,36 +179,44 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 
 		// Req 1
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 
 		// Req 2
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(2)),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 
 		// Req 3
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 
 		// Block 4
 		db.EXPECT().GetArchiveState(uint64(4)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(0)),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 
 		ext.EXPECT().PostRun(executor.AtBlock[*rpc.RequestAndResults](5), gomock.Any(), nil),
 	)
 
-	if err := run(config, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
+	if err := run(cfg, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -215,27 +225,22 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*rpc.RequestAndResults](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	archive := state.NewMockNonCommittableStateDB(ctrl)
+	archiveOne := state.NewMockNonCommittableStateDB(ctrl)
+	archiveTwo := state.NewMockNonCommittableStateDB(ctrl)
+	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 
-	config := &utils.Config{
-		First:    2,
-		Last:     4,
-		ChainID:  utils.MainnetChainID,
-		LogLevel: "Critical",
-		Workers:  4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.Workers = 2
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*rpc.RequestAndResults]) error {
 			// Block 2
 			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 2, Transaction: 1, Data: reqBlockTwo})
-			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 2, Transaction: 2, Data: reqBlockTwo})
 			// Block 3
-			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 3, Transaction: 1, Data: reqBlockThree})
+			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 3, Transaction: 2, Data: reqBlockThree})
 			// Block 4
 			consumer(executor.TransactionInfo[*rpc.RequestAndResults]{Block: 4, Transaction: 0, Data: reqBlockFour})
 			return nil
@@ -252,45 +257,43 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		pre,
 		// Req 1
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
+		archiveOne.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
-		archive.EXPECT().Release(),
-		post,
-	)
-	gomock.InOrder(
-		pre,
-		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
-		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
-		archive.EXPECT().Release(),
-		post,
-	)
-	gomock.InOrder(
-		pre,
-		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
-		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
-		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
-		archive.EXPECT().Release(),
-		post,
-	)
-	gomock.InOrder(
-		pre,
-		// Req 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archive, nil),
-		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
-		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
-		archive.EXPECT().Release(),
+		archiveOne.EXPECT().EndTransaction(),
+		archiveOne.EXPECT().Release(),
 		post,
 	)
 
-	if err := run(config, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
+	gomock.InOrder(
+		pre,
+		// Req 2
+		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveTwo, nil),
+		archiveTwo.EXPECT().BeginTransaction(uint32(2)),
+		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
+		archiveTwo.EXPECT().EndTransaction(),
+		archiveTwo.EXPECT().Release(),
+		post,
+	)
+
+	gomock.InOrder(
+		pre,
+		// Req 3
+		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveThree, nil),
+		archiveThree.EXPECT().BeginTransaction(uint32(0)),
+		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
+		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
+		archiveThree.EXPECT().EndTransaction(),
+		archiveThree.EXPECT().Release(),
+		post,
+	)
+
+	if err := run(cfg, provider, db, processor, []executor.Extension[*rpc.RequestAndResults]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -301,15 +304,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -324,7 +319,9 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archive.EXPECT().BeginTransaction(uint32(1)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
 
@@ -341,15 +338,8 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -364,7 +354,9 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
+		archive.EXPECT().BeginTransaction(uint32(1)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(1)),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
 
@@ -381,15 +373,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     1,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -404,7 +388,9 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(2)),
+		archive.EXPECT().BeginTransaction(uint32(1)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(2)),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
 
@@ -425,15 +411,8 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		Validate:    true,
-		SkipPriming: true,
-		Workers:     4,
-	}
-
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -448,7 +427,9 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(2)),
+		archive.EXPECT().BeginTransaction(uint32(1)),
+		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(uint256.Int).SetUint64(2)),
+		archive.EXPECT().EndTransaction(),
 		archive.EXPECT().Release(),
 	)
 

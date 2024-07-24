@@ -1,15 +1,33 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package proxy
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // RecorderProxy data structure for capturing and recording
@@ -40,21 +58,21 @@ func (r *RecorderProxy) CreateAccount(addr common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (r *RecorderProxy) SubBalance(addr common.Address, amount *big.Int) {
+func (r *RecorderProxy) SubBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	contract := r.ctx.EncodeContract(addr)
-	r.write(operation.NewSubBalance(contract, amount))
-	r.db.SubBalance(addr, amount)
+	r.write(operation.NewSubBalance(contract, amount, reason))
+	r.db.SubBalance(addr, amount, reason)
 }
 
 // AddBalance adds amount to a contract address.
-func (r *RecorderProxy) AddBalance(addr common.Address, amount *big.Int) {
+func (r *RecorderProxy) AddBalance(addr common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	contract := r.ctx.EncodeContract(addr)
-	r.write(operation.NewAddBalance(contract, amount))
-	r.db.AddBalance(addr, amount)
+	r.write(operation.NewAddBalance(contract, amount, reason))
+	r.db.AddBalance(addr, amount, reason)
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (r *RecorderProxy) GetBalance(addr common.Address) *big.Int {
+func (r *RecorderProxy) GetBalance(addr common.Address) *uint256.Int {
 	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewGetBalance(contract))
 	balance := r.db.GetBalance(addr)
@@ -178,20 +196,54 @@ func (r *RecorderProxy) SetState(addr common.Address, key common.Hash, value com
 	r.db.SetState(addr, key, value)
 }
 
-// Suicide marks the given account as suicided. This clears the account balance.
-// The account is still available until the state is committed;
-// return a non-nil account after Suicide.
-func (r *RecorderProxy) Suicide(addr common.Address) bool {
+func (r *RecorderProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	previousContract := r.ctx.PrevContract()
 	contract := r.ctx.EncodeContract(addr)
-	r.write(operation.NewSuicide(contract))
-	ok := r.db.Suicide(addr)
-	return ok
+	key, kPos := r.ctx.EncodeKey(key)
+
+	if contract == previousContract && kPos == 0 {
+		r.write(operation.NewSetTransientStateLcls(value))
+	} else {
+		r.write(operation.NewSetTransientState(contract, key, value))
+	}
+	r.db.SetState(addr, key, value)
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (r *RecorderProxy) HasSuicided(addr common.Address) bool {
-	hasSuicided := r.db.HasSuicided(addr)
-	return hasSuicided
+func (r *RecorderProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
+	key, kPos := r.ctx.EncodeKey(key)
+	var op operation.Operation
+	if contract == previousContract {
+		if kPos == 0 {
+			op = operation.NewGetTransientStateLcls()
+		} else if kPos != -1 {
+			op = operation.NewGetTransientStateLccs(kPos)
+		} else {
+			op = operation.NewGetTransientStateLc(key)
+		}
+	} else {
+		op = operation.NewGetTransientState(contract, key)
+	}
+	r.write(op)
+	value := r.db.GetTransientState(addr, key)
+	return value
+}
+
+// SelfDestruct marks the given account as suicided. This clears the account balance.
+// The account is still available until the state is committed;
+// return a non-nil account after SelfDestruct.
+func (r *RecorderProxy) SelfDestruct(addr common.Address) {
+	contract := r.ctx.EncodeContract(addr)
+	r.write(operation.NewSelfDestruct(contract))
+	r.db.SelfDestruct(addr)
+}
+
+// HasSelfDestructed checks whether a contract has been suicided.
+func (r *RecorderProxy) HasSelfDestructed(addr common.Address) bool {
+	hasSelfDestructed := r.db.HasSelfDestructed(addr)
+	r.write(operation.NewHasSelfDestructed(addr))
+	return hasSelfDestructed
 }
 
 // Exist checks whether the contract exists in the StateDB.
@@ -218,8 +270,8 @@ func (r *RecorderProxy) Empty(addr common.Address) bool {
 // - Add the contents of the optional tx access list (2930)
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
-func (r *RecorderProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	r.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+func (r *RecorderProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	r.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 }
 
 // AddAddressToAccessList adds an address to the access list.
@@ -264,8 +316,8 @@ func (r *RecorderProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (r *RecorderProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	return r.db.GetLogs(hash, blockHash)
+func (r *RecorderProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	return r.db.GetLogs(hash, block, blockHash)
 }
 
 // AddPreimage adds a SHA3 preimage.
@@ -273,15 +325,9 @@ func (r *RecorderProxy) AddPreimage(addr common.Hash, image []byte) {
 	r.db.AddPreimage(addr, image)
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (r *RecorderProxy) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	err := r.db.ForEachStorage(addr, fn)
-	return err
-}
-
-// Prepare sets the current transaction hash and index.
-func (r *RecorderProxy) Prepare(thash common.Hash, ti int) {
-	r.db.Prepare(thash, ti)
+// SetTxContext sets the current transaction hash and index.
+func (r *RecorderProxy) SetTxContext(thash common.Hash, ti int) {
+	r.db.SetTxContext(thash, ti)
 }
 
 // Finalise the state in StateDB.
@@ -297,8 +343,8 @@ func (r *RecorderProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return r.db.IntermediateRoot(deleteEmptyObjects)
 }
 
-func (r *RecorderProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return r.db.Commit(deleteEmptyObjects)
+func (r *RecorderProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
+	return r.db.Commit(block, deleteEmptyObjects)
 }
 
 func (r *RecorderProxy) Error() error {
@@ -314,24 +360,28 @@ func (r *RecorderProxy) PrepareSubstate(substate txcontext.WorldState, block uin
 	r.db.PrepareSubstate(substate, block)
 }
 
-func (r *RecorderProxy) BeginTransaction(number uint32) {
+func (r *RecorderProxy) BeginTransaction(number uint32) error {
 	r.write(operation.NewBeginTransaction(number))
 	r.db.BeginTransaction(number)
+	return nil
 }
 
-func (r *RecorderProxy) EndTransaction() {
+func (r *RecorderProxy) EndTransaction() error {
 	r.write(operation.NewEndTransaction())
 	r.db.EndTransaction()
+	return nil
 }
 
-func (r *RecorderProxy) BeginBlock(number uint64) {
+func (r *RecorderProxy) BeginBlock(number uint64) error {
 	r.write(operation.NewBeginBlock(number))
 	r.db.BeginBlock(number)
+	return nil
 }
 
-func (r *RecorderProxy) EndBlock() {
+func (r *RecorderProxy) EndBlock() error {
 	r.write(operation.NewEndBlock())
 	r.db.EndBlock()
+	return nil
 }
 
 func (r *RecorderProxy) BeginSyncPeriod(number uint64) {
@@ -344,7 +394,7 @@ func (r *RecorderProxy) EndSyncPeriod() {
 	r.db.EndSyncPeriod()
 }
 
-func (r *RecorderProxy) GetHash() common.Hash {
+func (r *RecorderProxy) GetHash() (common.Hash, error) {
 	// TODO: record this event
 	return r.db.GetHash()
 }
@@ -361,7 +411,7 @@ func (r *RecorderProxy) Close() error {
 	return r.db.Close()
 }
 
-func (r *RecorderProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (r *RecorderProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("StartBulkLoad not supported by RecorderProxy")
 }
 
@@ -371,4 +421,15 @@ func (r *RecorderProxy) GetMemoryUsage() *state.MemoryUsage {
 
 func (r *RecorderProxy) GetShadowDB() state.StateDB {
 	return r.db.GetShadowDB()
+}
+func (r *RecorderProxy) CreateContract(addr common.Address) {
+	r.db.CreateContract(addr)
+}
+
+func (r *RecorderProxy) Selfdestruct6780(addr common.Address) {
+	r.db.Selfdestruct6780(addr)
+}
+
+func (r *RecorderProxy) GetStorageRoot(addr common.Address) common.Hash {
+	return r.db.GetStorageRoot(addr)
 }

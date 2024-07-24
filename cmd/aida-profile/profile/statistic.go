@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package profile
 
 import (
@@ -6,7 +22,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -74,7 +91,7 @@ func runStatCollector[T comparable](stats *AccessStatistics[T], src <-chan T, do
 }
 
 // collectAddressStats collects statistical information on address usage.
-func collectStats[T comparable](dest chan<- T, extract Extractor[T], block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func collectStats[T comparable](dest chan<- T, extract Extractor[T], block uint64, tx int, st *substate.Substate, taskPool *db.SubstateTaskPool) error {
 	info := TransactionInfo{
 		block: block,
 		tx:    tx,
@@ -115,9 +132,10 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	// TODO this print has not been working ever since this functionality was introduced to aidaDb
 	//log.Infof("contract-db: %v\n", cfg.Db)
 
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %w", err)
+	}
 
 	// Start Collector.
 	stats := newStatistics[T](log)
@@ -126,12 +144,12 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	go runStatCollector(&stats, refs, done)
 
 	// Create per-transaction task.
-	task := func(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+	task := func(block uint64, tx int, st *substate.Substate, taskPool *db.SubstateTaskPool) error {
 		return collectStats(refs, extract, block, tx, st, taskPool)
 	}
 
 	// Process all transactions in parallel, out-of-order.
-	taskPool := substate.NewSubstateTaskPool(fmt.Sprintf("aida-vm %v", cli_command), task, cfg.First, cfg.Last, ctx)
+	taskPool := sdb.NewSubstateTaskPool(fmt.Sprintf("aida-vm %v", cli_command), task, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	if err != nil {
 		return err

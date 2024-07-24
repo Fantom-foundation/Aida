@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package state
 
 import (
@@ -6,16 +22,20 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
-	return MakeInMemoryStateDB(substatecontext.NewWorldState(make(substate.SubstateAlloc)), 0), nil
+	return MakeInMemoryStateDB(substatecontext.NewWorldState(make(substate.WorldState)), 0), nil
 }
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
@@ -33,6 +53,16 @@ type inMemoryStateDB struct {
 	blockNum         uint64
 }
 
+func (db *inMemoryStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s := slot{addr: addr, key: key}
+	db.state.transientStorage[s] = value
+}
+
+func (db *inMemoryStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	s := slot{addr: addr, key: key}
+	return db.state.transientStorage[s]
+}
+
 type slot struct {
 	addr common.Address
 	key  common.Hash
@@ -43,17 +73,19 @@ type snapshot struct {
 	id     int
 
 	touched           map[common.Address]int // Set of referenced accounts
-	balances          map[common.Address]*big.Int
+	balances          map[common.Address]*uint256.Int
 	nonces            map[common.Address]uint64
 	codes             map[common.Address][]byte
 	suicided          map[common.Address]int // Set of destructed accounts
 	storage           map[slot]common.Hash
+	transientStorage  map[slot]common.Hash
 	accessed_accounts map[common.Address]int
 	accessed_slots    map[slot]int
 	logs              []*types.Log
 	refund            uint64
 	createdAccounts   map[common.Address]int
 	touchedSlots      map[slot]int
+	createdContracts  map[common.Address]struct{}
 }
 
 func makeSnapshot(parent *snapshot, id int) *snapshot {
@@ -65,17 +97,19 @@ func makeSnapshot(parent *snapshot, id int) *snapshot {
 		parent:            parent,
 		id:                id,
 		touched:           map[common.Address]int{},
-		balances:          map[common.Address]*big.Int{},
+		balances:          map[common.Address]*uint256.Int{},
 		nonces:            map[common.Address]uint64{},
 		codes:             map[common.Address][]byte{},
 		suicided:          map[common.Address]int{},
 		storage:           map[slot]common.Hash{},
+		transientStorage:  map[slot]common.Hash{},
 		accessed_accounts: map[common.Address]int{},
 		accessed_slots:    map[slot]int{},
 		logs:              make([]*types.Log, 0),
 		refund:            refund,
 		createdAccounts:   map[common.Address]int{},
 		touchedSlots:      map[slot]int{},
+		createdContracts:  map[common.Address]struct{}{},
 	}
 }
 
@@ -85,31 +119,35 @@ func (db *inMemoryStateDB) CreateAccount(addr common.Address) {
 	}
 }
 
-func (db *inMemoryStateDB) SubBalance(addr common.Address, value *big.Int) {
+func (db *inMemoryStateDB) CreateContract(addr common.Address) {
+	db.state.createdContracts[addr] = struct{}{}
+}
+
+func (db *inMemoryStateDB) SubBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
 	if value.Sign() == 0 {
 		return
 	}
 	db.state.touched[addr] = 0
-	db.state.balances[addr] = new(big.Int).Sub(db.GetBalance(addr), value)
+	db.state.balances[addr] = new(uint256.Int).Sub(db.GetBalance(addr), value)
 }
 
-func (db *inMemoryStateDB) AddBalance(addr common.Address, value *big.Int) {
+func (db *inMemoryStateDB) AddBalance(addr common.Address, value *uint256.Int, _ tracing.BalanceChangeReason) {
 	db.state.touched[addr] = 0
-	db.state.balances[addr] = new(big.Int).Add(db.GetBalance(addr), value)
+	db.state.balances[addr] = new(uint256.Int).Add(db.GetBalance(addr), value)
 }
 
-func (db *inMemoryStateDB) GetBalance(addr common.Address) *big.Int {
+func (db *inMemoryStateDB) GetBalance(addr common.Address) *uint256.Int {
 	for state := db.state; state != nil; state = state.parent {
 		val, exists := state.balances[addr]
 		if exists {
-			return new(big.Int).Set(val)
+			return val
 		}
 	}
 	acc := db.ws.Get(addr)
 	if acc == nil {
-		return new(big.Int).Set(common.Big0)
+		return uint256.MustFromBig(common.Big0)
 	}
-	return new(big.Int).Set(acc.GetBalance())
+	return new(uint256.Int).Set(acc.GetBalance())
 }
 
 func (db *inMemoryStateDB) GetNonce(addr common.Address) uint64 {
@@ -135,7 +173,7 @@ func (db *inMemoryStateDB) GetCodeHash(addr common.Address) common.Hash {
 	if !db.Exist(addr) {
 		return common.Hash{}
 	}
-	return getHash(addr, db.GetCode(addr))
+	return createCodeHash(db.GetCode(addr))
 }
 
 func (db *inMemoryStateDB) GetCode(addr common.Address) []byte {
@@ -178,7 +216,6 @@ func (db *inMemoryStateDB) GetCommittedState(addr common.Address, key common.Has
 }
 
 func (db *inMemoryStateDB) GetState(addr common.Address, key common.Hash) common.Hash {
-	//fmt.Printf("SLOAD: %v %v\n", addr, key)
 	slot := slot{addr, key}
 	for state := db.state; state != nil; state = state.parent {
 		val, exists := state.storage[slot]
@@ -200,12 +237,40 @@ func (db *inMemoryStateDB) SetState(addr common.Address, key common.Hash, value 
 	db.state.storage[slot{addr, key}] = value
 }
 
-func (db *inMemoryStateDB) Suicide(addr common.Address) bool {
-	db.state.suicided[addr] = 0
-	db.state.balances[addr] = new(big.Int) // Apparently when you die all your money is gone.
-	return true
+func (db *inMemoryStateDB) GetStorageRoot(addr common.Address) common.Hash {
+	empty := common.Hash{0}
+	notEmpty := common.Hash{1}
+	for state := db.state; state != nil; state = state.parent {
+		for key := range state.storage {
+			if key.addr == addr {
+				return notEmpty
+			}
+		}
+	}
+	return empty
 }
-func (db *inMemoryStateDB) HasSuicided(addr common.Address) bool {
+
+func (db *inMemoryStateDB) SelfDestruct(addr common.Address) {
+	db.state.suicided[addr] = 0
+	db.state.balances[addr] = new(uint256.Int) // Apparently when you die all your money is gone.
+}
+
+func (db *inMemoryStateDB) hasBeenCreatedInThisTransaction(addr common.Address) bool {
+	for state := db.state; state != nil; state = state.parent {
+		if _, exists := state.createdContracts[addr]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+func (db *inMemoryStateDB) Selfdestruct6780(addr common.Address) {
+	if db.hasBeenCreatedInThisTransaction(addr) {
+		db.SelfDestruct(addr)
+	}
+}
+
+func (db *inMemoryStateDB) HasSelfDestructed(addr common.Address) bool {
 	for state := db.state; state != nil; state = state.parent {
 		_, exists := state.suicided[addr]
 		if exists {
@@ -229,7 +294,7 @@ func (db *inMemoryStateDB) Empty(addr common.Address) bool {
 	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0 && db.GetCodeSize(addr) == 0
 }
 
-func (db *inMemoryStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (db *inMemoryStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	db.AddAddressToAccessList(sender)
 	if dest != nil {
 		db.AddAddressToAccessList(*dest)
@@ -304,12 +369,7 @@ func (db *inMemoryStateDB) AddPreimage(common.Hash, []byte) {
 	panic("not implemented")
 }
 
-func (db *inMemoryStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
-	panic("not implemented")
-	return nil
-}
-
-func (db *inMemoryStateDB) Prepare(common.Hash, int) {
+func (db *inMemoryStateDB) SetTxContext(common.Hash, int) {
 	// nothing to do ...
 }
 
@@ -320,7 +380,7 @@ func (db *inMemoryStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash
 	panic("not implemented")
 }
 
-func (db *inMemoryStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (db *inMemoryStateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
@@ -333,7 +393,7 @@ func collectLogs(s *snapshot) []*types.Log {
 	return logs
 }
 
-func (db *inMemoryStateDB) GetLogs(txHash common.Hash, blockHash common.Hash) []*types.Log {
+func (db *inMemoryStateDB) GetLogs(txHash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	// Since the in-memory stateDB is only to be used for a single
 	// transaction, all logs are from the same transactions. But
 	// those need to be collected in the right order (inverse order
@@ -346,7 +406,7 @@ func (s *inMemoryStateDB) Error() error {
 	return nil
 }
 
-func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
+func (db *inMemoryStateDB) getEffects() substate.WorldState {
 	// todo this should return txcontext.WorldState
 	// collect all modified accounts
 	touched := map[common.Address]int{}
@@ -357,13 +417,13 @@ func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
 	}
 
 	// build state of all touched addresses
-	res := make(substate.SubstateAlloc)
+	res := make(substate.WorldState)
 	for addr := range touched {
-		cur := new(substate.SubstateAccount)
+		cur := new(substate.Account)
 		cur.Nonce = db.GetNonce(addr)
-		cur.Balance = db.GetBalance(addr)
+		cur.Balance = db.GetBalance(addr).ToBig()
 		cur.Code = db.GetCode(addr)
-		cur.Storage = make(map[common.Hash]common.Hash)
+		cur.Storage = make(map[substatetypes.Hash]substatetypes.Hash)
 
 		reported := map[common.Hash]int{}
 		for state := db.state; state != nil; state = state.parent {
@@ -372,13 +432,13 @@ func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
 					_, exist := reported[key.key]
 					if !exist {
 						reported[key.key] = 0
-						cur.Storage[key.key] = value
+						cur.Storage[substatetypes.Hash(key.key)] = substatetypes.Hash(value)
 					}
 				}
 			}
 		}
 
-		res[addr] = cur
+		res[substatetypes.Address(addr)] = cur
 	}
 
 	return res
@@ -387,15 +447,15 @@ func (db *inMemoryStateDB) getEffects() substate.SubstateAlloc {
 func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// todo we should not copy the map
 	// rn the inMemoryDb is broken and unused anyway, when fixed this should be reworked
-	res := make(substate.SubstateAlloc)
+	res := make(substate.WorldState)
 	db.ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
-		storage := make(map[common.Hash]common.Hash)
+		storage := make(map[substatetypes.Hash]substatetypes.Hash)
 		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
-			storage[keyHash] = valueHash
+			storage[substatetypes.Hash(keyHash)] = substatetypes.Hash(valueHash)
 		})
-		res[addr] = &substate.SubstateAccount{
+		res[substatetypes.Address(addr)] = &substate.Account{
 			Nonce:   acc.GetNonce(),
-			Balance: acc.GetBalance(),
+			Balance: acc.GetBalance().ToBig(),
 			Storage: storage,
 			Code:    acc.GetCode(),
 		}
@@ -418,16 +478,18 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	}
 	for state := db.state; state != nil; state = state.parent {
 		for slot := range state.touchedSlots {
-			if _, exist := res[slot.addr]; exist {
-				if _, contain := res[slot.addr].Storage[slot.key]; !contain {
-					res[slot.addr].Storage[slot.key] = common.Hash{}
+			typedAddr := substatetypes.Address(slot.addr)
+			typedKey := substatetypes.Hash(slot.key)
+			if _, exist := res[typedAddr]; exist {
+				if _, contain := res[typedAddr].Storage[typedKey]; !contain {
+					res[typedAddr].Storage[typedKey] = substatetypes.Hash{}
 				}
 			}
 		}
 	}
 
 	for key := range res {
-		if db.HasSuicided(key) || db.Empty(key) {
+		if db.HasSelfDestructed(common.Address(key)) || db.Empty(common.Address(key)) {
 			delete(res, key)
 			continue
 		}
@@ -436,20 +498,24 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	return substatecontext.NewWorldState(res)
 }
 
-func (db *inMemoryStateDB) BeginTransaction(number uint32) {
+func (db *inMemoryStateDB) BeginTransaction(number uint32) error {
 	// ignored
+	return nil
 }
 
-func (db *inMemoryStateDB) EndTransaction() {
+func (db *inMemoryStateDB) EndTransaction() error {
 	db.Finalise(true)
+	return nil
 }
 
-func (db *inMemoryStateDB) BeginBlock(number uint64) {
+func (db *inMemoryStateDB) BeginBlock(number uint64) error {
 	db.blockNum = number
+	return nil
 }
 
-func (db *inMemoryStateDB) EndBlock() {
+func (db *inMemoryStateDB) EndBlock() error {
 	// ignored
+	return nil
 }
 
 func (db *inMemoryStateDB) BeginSyncPeriod(number uint64) {
@@ -460,8 +526,8 @@ func (db *inMemoryStateDB) EndSyncPeriod() {
 	// ignored
 }
 
-func (s *inMemoryStateDB) GetHash() common.Hash {
-	return common.Hash{} // not a great hash function, but a valid one :)
+func (s *inMemoryStateDB) GetHash() (common.Hash, error) {
+	return common.Hash{}, nil // not a great hash function, but a valid one :)
 }
 
 func (db *inMemoryStateDB) Close() error {
@@ -488,8 +554,8 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc txcontext.WorldState, block uin
 	db.blockNum = block
 }
 
-func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
-	return &gethInMemoryBulkLoad{}
+func (s *inMemoryStateDB) StartBulkLoad(uint64) (BulkLoad, error) {
+	return &gethInMemoryBulkLoad{}, nil
 }
 
 func (s *inMemoryStateDB) GetShadowDB() StateDB {
@@ -502,7 +568,7 @@ func (l *gethInMemoryBulkLoad) CreateAccount(addr common.Address) {
 	// ignored
 }
 
-func (l *gethInMemoryBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+func (l *gethInMemoryBulkLoad) SetBalance(addr common.Address, value *uint256.Int) {
 	// ignored
 }
 

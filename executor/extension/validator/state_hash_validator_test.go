@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package validator
 
 import (
@@ -84,7 +100,7 @@ func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 
 	gomock.InOrder(
 		hashProvider.EXPECT().GetStateHash(blockNumber).Return(common.Hash([]byte(exampleHashA)), nil),
-		db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
+		db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB)), nil),
 	)
 
 	ctx := &executor.Context{State: db}
@@ -115,13 +131,13 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 	gomock.InOrder(
 		// live state check goes through
 		hashProvider.EXPECT().GetStateHash(blockNumber).Return(common.Hash([]byte(exampleHashA)), nil),
-		db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA))),
+		db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)), nil),
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(blockNumber), false, nil),
 
 		// archive state check fails
 		hashProvider.EXPECT().GetStateHash(blockNumber-1).Return(common.Hash([]byte(exampleHashA)), nil),
 		db.EXPECT().GetArchiveState(uint64(blockNumber-1)).Return(archive, nil),
-		archive.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
+		archive.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB)), nil),
 		archive.EXPECT().Release(),
 	)
 
@@ -138,7 +154,7 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	hashProvider := utils.NewMockStateHashProvider(ctrl)
 
-	db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)))
+	db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)), nil)
 	hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashA)), nil)
 
 	archive0 := state.NewMockNonCommittableStateDB(ctrl)
@@ -149,7 +165,7 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		hashProvider.EXPECT().GetStateHash(0).Return(common.Hash([]byte(exampleHashB)), nil),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
-		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
+		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB)), nil),
 		archive0.EXPECT().Release(),
 
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
@@ -158,11 +174,11 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
 		hashProvider.EXPECT().GetStateHash(1).Return(common.Hash([]byte(exampleHashC)), nil),
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
-		archive1.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashC))),
+		archive1.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashC)), nil),
 		archive1.EXPECT().Release(),
 		hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashD)), nil),
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
-		archive2.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA))),
+		archive2.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)), nil),
 		archive2.EXPECT().Release(),
 	)
 
@@ -194,7 +210,7 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	db := state.NewMockStateDB(ctrl)
 	hashProvider := utils.NewMockStateHashProvider(ctrl)
 
-	db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)))
+	db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)), nil)
 	hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashA)), nil)
 
 	archive0 := state.NewMockNonCommittableStateDB(ctrl)
@@ -205,17 +221,17 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		hashProvider.EXPECT().GetStateHash(0).Return(common.Hash([]byte(exampleHashB)), nil),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
-		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
+		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB)), nil),
 		archive0.EXPECT().Release(),
 
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
 		hashProvider.EXPECT().GetStateHash(1).Return(common.Hash([]byte(exampleHashC)), nil),
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
-		archive1.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashC))),
+		archive1.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashC)), nil),
 		archive1.EXPECT().Release(),
 		hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashD)), nil),
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
-		archive2.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashD))),
+		archive2.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashD)), nil),
 		archive2.EXPECT().Release(),
 	)
 
@@ -248,7 +264,7 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	db := state.NewMockStateDB(ctrl)
 	hashProvider := utils.NewMockStateHashProvider(ctrl)
 
-	db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)))
+	db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA)), nil)
 	hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashA)), nil)
 
 	archive0 := state.NewMockNonCommittableStateDB(ctrl)
@@ -257,7 +273,7 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		hashProvider.EXPECT().GetStateHash(0).Return(common.Hash([]byte(exampleHashB)), nil),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
-		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
+		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB)), nil),
 		archive0.EXPECT().Release(),
 	)
 

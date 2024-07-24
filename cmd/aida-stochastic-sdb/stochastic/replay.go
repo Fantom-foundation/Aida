@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package stochastic
 
 import (
@@ -55,7 +71,8 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("missing simulation file and simulation length as parameter")
 	}
-	simLength, perr := strconv.ParseInt(ctx.Args().Get(0), 10, 64)
+
+	simLength, perr := strconv.Atoi(ctx.Args().Get(0))
 	if perr != nil {
 		return fmt.Errorf("simulation length is not an integer; %v", perr)
 	}
@@ -103,7 +120,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// run simulation.
 	log.Info("Run simulation")
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, logger.NewLogger(cfg.LogLevel, "Stochastic"))
+	runErr := stochastic.RunStochasticReplay(db, simulation, simLength, cfg, logger.NewLogger(cfg.LogLevel, "Stochastic"))
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {

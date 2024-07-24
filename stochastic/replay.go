@@ -1,9 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package stochastic
 
 import (
 	"encoding/binary"
 	"fmt"
-	"math/big"
 	"math/rand"
 	"time"
 
@@ -14,6 +29,7 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 )
 
 // Parameterisable simulation constants
@@ -40,7 +56,7 @@ type stochasticState struct {
 	blockNum       uint64                    // current block number
 	syncPeriodNum  uint64                    // current sync-period number
 	snapshot       []int                     // stack of active snapshots
-	suicided       []int64                   // list of suicided accounts
+	selfDestructed []int64                   // list of self destructed accounts
 	traceDebug     bool                      // trace-debug flag
 	rg             *rand.Rand                // random generator for sampling
 	log            logger.Logger
@@ -230,7 +246,7 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 		values:         values,
 		snapshotLambda: snapshotLambda,
 		traceDebug:     false,
-		suicided:       []int64{},
+		selfDestructed: []int64{},
 		blockNum:       1,
 		syncPeriodNum:  1,
 		rg:             rg,
@@ -253,7 +269,7 @@ func (ss *stochasticState) prime() {
 	for i := int64(0); i <= numInitialAccounts; i++ {
 		addr := toAddress(i)
 		db.CreateAccount(addr)
-		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(BalanceRange)))
+		db.AddBalance(addr, uint256.NewInt(uint64(ss.rg.Int63n(BalanceRange))), 0)
 		pt.PrintProgress()
 	}
 	ss.log.Notice("Finalizing...")
@@ -317,7 +333,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if ss.traceDebug {
 			ss.log.Infof("value: %v", value)
 		}
-		db.AddBalance(addr, big.NewInt(value))
+		db.AddBalance(addr, uint256.NewInt(uint64(value)), 0)
 
 	case BeginBlockID:
 		if ss.traceDebug {
@@ -325,7 +341,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		db.BeginBlock(ss.blockNum)
 		ss.txNum = 0
-		ss.suicided = []int64{}
+		ss.selfDestructed = []int64{}
 
 	case BeginSyncPeriodID:
 		if ss.traceDebug {
@@ -339,10 +355,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		db.BeginTransaction(ss.txNum)
 		ss.snapshot = []int{}
-		ss.suicided = []int64{}
+		ss.selfDestructed = []int64{}
 
 	case CreateAccountID:
 		db.CreateAccount(addr)
+
+	case CreateContractID:
+		db.CreateContract(addr)
 
 	case EmptyID:
 		db.Empty(addr)
@@ -385,8 +404,11 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	case GetStateID:
 		db.GetState(addr, key)
 
-	case HasSuicidedID:
-		db.HasSuicided(addr)
+	case GetStorageRootID:
+		db.GetStorageRoot(addr)
+
+	case HasSelfDestructedID:
+		db.HasSelfDestructed(addr)
 
 	case RevertToSnapshotID:
 		snapshotNum := len(ss.snapshot)
@@ -432,26 +454,32 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SubBalanceID:
 		shadowDB := db.GetShadowDB()
-		var balance int64
+		var balance uint64
 		if shadowDB == nil {
-			balance = db.GetBalance(addr).Int64()
+			balance = db.GetBalance(addr).Uint64()
 		} else {
-			balance = shadowDB.GetBalance(addr).Int64()
+			balance = shadowDB.GetBalance(addr).Uint64()
 		}
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
-			value := rg.Int63n(balance)
+			value := uint64(rg.Int63n(int64(balance)))
 			if ss.traceDebug {
 				ss.log.Infof(" value: %v", value)
 			}
-			db.SubBalance(addr, big.NewInt(value))
+			db.SubBalance(addr, uint256.NewInt(value), 0)
 		}
 
-	case SuicideID:
-		db.Suicide(addr)
-		if idx := find(ss.suicided, addrIdx); idx == -1 {
-			ss.suicided = append(ss.suicided, addrIdx)
+	case SelfDestructID:
+		db.SelfDestruct(addr)
+		if idx := find(ss.selfDestructed, addrIdx); idx == -1 {
+			ss.selfDestructed = append(ss.selfDestructed, addrIdx)
+		}
+
+	case SelfDestruct6780ID:
+		db.Selfdestruct6780(addr)
+		if idx := find(ss.selfDestructed, addrIdx); idx == -1 {
+			ss.selfDestructed = append(ss.selfDestructed, addrIdx)
 		}
 
 	default:
@@ -521,10 +549,10 @@ func toHash(idx int64) common.Hash {
 // delete account information when suicide was invoked
 func (ss *stochasticState) deleteAccounts() {
 	// remove account information when suicide was invoked in the block.
-	for _, addrIdx := range ss.suicided {
+	for _, addrIdx := range ss.selfDestructed {
 		if err := ss.contracts.DeleteIndex(addrIdx); err != nil {
 			ss.log.Fatal("failed deleting index")
 		}
 	}
-	ss.suicided = []int64{}
+	ss.selfDestructed = []int64{}
 }

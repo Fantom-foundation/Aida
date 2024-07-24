@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utildb
 
 import (
@@ -7,12 +23,11 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -21,7 +36,8 @@ const cloneWriteChanSize = 1
 type cloner struct {
 	cfg             *utils.Config
 	log             logger.Logger
-	aidaDb, cloneDb ethdb.Database
+	aidaDb, cloneDb db.BaseDB
+	cloneComponent  dbcomponent.DbComponent
 	count           uint64
 	typ             utils.AidaDbType
 	writeCh         chan rawEntry
@@ -36,7 +52,7 @@ type rawEntry struct {
 }
 
 // CreatePatchClone creates aida-db patch
-func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64, isNewOpera bool) error {
+func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb db.BaseDB, firstEpoch, lastEpoch uint64, isNewOpera bool) error {
 	var isFirstGenerationFromGenesis = false
 
 	var cloneType = utils.PatchType
@@ -70,20 +86,30 @@ func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstE
 }
 
 // clone creates aida-db copy or subset - either clone(standalone - containing all necessary data for given range) or patch(containing data only for given range)
-func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType, isFirstGenerationFromGenesis bool) error {
+func Clone(cfg *utils.Config, aidaDb, cloneDb db.BaseDB, cloneType utils.AidaDbType, isFirstGenerationFromGenesis bool) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
+	var dbComponent dbcomponent.DbComponent
+
+	if cloneType == utils.CustomType {
+		dbComponent, err = dbcomponent.ParseDbComponent(cfg.DbComponent)
+		if err != nil {
+			return err
+		}
+	}
+
 	start := time.Now()
 	c := cloner{
-		cfg:     cfg,
-		cloneDb: cloneDb,
-		aidaDb:  aidaDb,
-		log:     log,
-		typ:     cloneType,
-		writeCh: make(chan rawEntry, cloneWriteChanSize),
-		errCh:   make(chan error, 1),
-		stopCh:  make(chan any),
+		cfg:            cfg,
+		cloneDb:        cloneDb,
+		aidaDb:         aidaDb,
+		log:            log,
+		typ:            cloneType,
+		cloneComponent: dbComponent,
+		writeCh:        make(chan rawEntry, cloneWriteChanSize),
+		errCh:          make(chan error, 1),
+		stopCh:         make(chan any),
 	}
 
 	if err = c.clone(isFirstGenerationFromGenesis); err != nil {
@@ -116,11 +142,13 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 		}
 	}
 
-	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
-	chainID := sourceMD.GetChainID()
+	if c.typ != utils.CustomType {
+		sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
+		chainID := sourceMD.GetChainID()
 
-	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
-		return err
+		if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+			return err
+		}
 	}
 
 	//  compact written data
@@ -140,7 +168,11 @@ func (c *cloner) readData(isFirstGenerationFromGenesis bool) error {
 	// notify writer that all data was read
 	defer close(c.writeCh)
 
-	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
+	if c.typ == utils.CustomType {
+		return c.readDataCustom()
+	}
+
+	c.read([]byte(db.CodeDBPrefix), 0, nil)
 
 	firstDeletionBlock := c.cfg.First
 
@@ -180,7 +212,7 @@ func (c *cloner) write() {
 		err         error
 		data        rawEntry
 		ok          bool
-		batchWriter ethdb.Batch
+		batchWriter db.Batch
 	)
 
 	batchWriter = c.cloneDb.NewBatch()
@@ -227,7 +259,7 @@ func (c *cloner) write() {
 func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (bool, error)) {
 	c.log.Noticef("Copying data with prefix %v", string(prefix))
 
-	iter := c.aidaDb.NewIterator(prefix, substate.BlockToBytes(start))
+	iter := c.aidaDb.NewIterator(prefix, db.BlockToBytes(start))
 	defer iter.Release()
 
 	for iter.Next() {
@@ -259,7 +291,7 @@ func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 	// labeling last updateSet before interval - need to export substate for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
-		block, err := substate.DecodeUpdateSetKey(key)
+		block, err := db.DecodeUpdateSetKey(key)
 		if err != nil {
 			return false, err
 		}
@@ -273,11 +305,11 @@ func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 	}
 
 	if c.typ == utils.CloneType {
-		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
+		c.read([]byte(db.UpdateDBPrefix), 0, endCond)
 
 		// if there is no updateset before interval (first 1M blocks) then 0 is returned
 		return lastUpdateBeforeRange
-	} else if c.typ == utils.PatchType {
+	} else if c.typ == utils.PatchType || c.typ == utils.CustomType {
 		var wantedBlock uint64
 
 		// if we are working with first patch that was created from genesis we need to move the start of the iterator minus one block
@@ -288,7 +320,7 @@ func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 			wantedBlock = c.cfg.First
 		}
 
-		c.read([]byte(substate.SubstateAllocPrefix), wantedBlock, endCond)
+		c.read([]byte(db.UpdateDBPrefix), wantedBlock, endCond)
 		return 0
 	} else {
 		c.errCh <- fmt.Errorf("incorrect clone type: %v", c.typ)
@@ -299,7 +331,7 @@ func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 // readSubstate from last updateSet before cfg.First until cfg.Last
 func (c *cloner) readSubstate() error {
 	endCond := func(key []byte) (bool, error) {
-		block, _, err := substate.DecodeStage1SubstateKey(key)
+		block, _, err := db.DecodeSubstateDBKey(key)
 		if err != nil {
 			return false, err
 		}
@@ -309,7 +341,7 @@ func (c *cloner) readSubstate() error {
 		return false, nil
 	}
 
-	c.read([]byte(substate.Stage1SubstatePrefix), c.cfg.First, endCond)
+	c.read([]byte(db.SubstateDBPrefix), c.cfg.First, endCond)
 
 	return nil
 }
@@ -370,7 +402,7 @@ func (c *cloner) sendToWriteChan(k, v []byte) bool {
 // readDeletions from last updateSet before cfg.First until cfg.Last
 func (c *cloner) readDeletions(firstDeletionBlock uint64) error {
 	endCond := func(key []byte) (bool, error) {
-		block, _, err := substate.DecodeDestroyedAccountKey(key)
+		block, _, err := db.DecodeDestroyedAccountKey(key)
 		if err != nil {
 			return false, err
 		}
@@ -380,7 +412,7 @@ func (c *cloner) readDeletions(firstDeletionBlock uint64) error {
 		return false, nil
 	}
 
-	c.read([]byte(substate.DestroyedAccountPrefix), firstDeletionBlock, endCond)
+	c.read([]byte(db.DestroyedAccountPrefix), firstDeletionBlock, endCond)
 
 	return nil
 }
@@ -418,8 +450,40 @@ func (c *cloner) stop() {
 	}
 }
 
+// readDataCustom retrieves data from source AidaDb based on given dbComponent
+func (c *cloner) readDataCustom() error {
+	if c.cloneComponent == dbcomponent.Substate || c.cloneComponent == dbcomponent.All {
+		c.read([]byte(db.SubstateDBPrefix), 0, nil)
+		err := c.readSubstate()
+		if err != nil {
+			return fmt.Errorf("cannot read substate; %v", err)
+		}
+	}
+
+	if c.cloneComponent == dbcomponent.Delete || c.cloneComponent == dbcomponent.All {
+		err := c.readDeletions(c.cfg.First)
+		if err != nil {
+			return fmt.Errorf("cannot read deletions; %v", err)
+		}
+	}
+
+	if c.cloneComponent == dbcomponent.Update || c.cloneComponent == dbcomponent.All {
+		lastUpdateBeforeRange := c.readUpdateSet(false)
+		c.log.Noticef("Last updateset found at block %v", lastUpdateBeforeRange)
+	}
+
+	if c.cloneComponent == dbcomponent.StateHash || c.cloneComponent == dbcomponent.All {
+		err := c.readStateHashes()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // OpenCloningDbs prepares aida and target databases
-func OpenCloningDbs(aidaDbPath, targetDbPath string) (ethdb.Database, ethdb.Database, error) {
+func OpenCloningDbs(aidaDbPath, targetDbPath string) (db.BaseDB, db.BaseDB, error) {
 	var err error
 
 	// if source db doesn't exist raise error
@@ -434,16 +498,16 @@ func OpenCloningDbs(aidaDbPath, targetDbPath string) (ethdb.Database, ethdb.Data
 		return nil, nil, fmt.Errorf("specified target-db %v already exists\n", targetDbPath)
 	}
 
-	var aidaDb, cloneDb ethdb.Database
+	var aidaDb, cloneDb db.BaseDB
 
 	// open db
-	aidaDb, err = rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", true)
+	aidaDb, err = db.NewReadOnlyBaseDB(aidaDbPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("aidaDb %v; %v", aidaDbPath, err)
 	}
 
 	// open createDbClone
-	cloneDb, err = rawdb.NewLevelDBDatabase(targetDbPath, 1024, 100, "profiling", false)
+	cloneDb, err = db.NewDefaultBaseDB(targetDbPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("targetDb %v; %v", targetDbPath, err)
 	}

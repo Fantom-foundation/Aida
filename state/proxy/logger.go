@@ -1,25 +1,45 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package proxy
 
 import (
 	"encoding/hex"
 	"fmt"
-	"math/big"
+	"sync"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // NewLoggerProxy wraps the given StateDB instance into a logging wrapper causing
 // every StateDB operation (except BulkLoading) to be logged for debugging.
-func NewLoggerProxy(db state.StateDB, log logger.Logger, output chan string) state.StateDB {
+func NewLoggerProxy(db state.StateDB, log logger.Logger, output chan string, wg *sync.WaitGroup) state.StateDB {
 	return &LoggingStateDb{
 		loggingVmStateDb: loggingVmStateDb{
 			db:     db,
 			log:    log,
 			output: output,
+			wg:     wg,
 		},
 
 		state: db,
@@ -30,6 +50,7 @@ type loggingVmStateDb struct {
 	db     state.VmStateDB
 	log    logger.Logger
 	output chan string
+	wg     *sync.WaitGroup
 }
 
 type loggingNonCommittableStateDb struct {
@@ -59,32 +80,31 @@ func (s *loggingVmStateDb) Empty(addr common.Address) bool {
 	return res
 }
 
-func (s *loggingVmStateDb) Suicide(addr common.Address) bool {
-	res := s.db.Suicide(addr)
-	s.writeLog("Suicide, %v, %v", addr, res)
+func (s *loggingVmStateDb) SelfDestruct(addr common.Address) {
+	s.db.SelfDestruct(addr)
+	s.writeLog("SelfDestruct, %v", addr)
+}
+
+func (s *loggingVmStateDb) HasSelfDestructed(addr common.Address) bool {
+	res := s.db.HasSelfDestructed(addr)
+	s.writeLog("HasSelfDestructed, %v, %v", addr, res)
 	return res
 }
 
-func (s *loggingVmStateDb) HasSuicided(addr common.Address) bool {
-	res := s.db.HasSuicided(addr)
-	s.writeLog("HasSuicided, %v, %v", addr, res)
-	return res
-}
-
-func (s *loggingVmStateDb) GetBalance(addr common.Address) *big.Int {
+func (s *loggingVmStateDb) GetBalance(addr common.Address) *uint256.Int {
 	res := s.db.GetBalance(addr)
 	s.writeLog("GetBalance, %v, %v", addr, res)
 	return res
 }
 
-func (s *loggingVmStateDb) AddBalance(addr common.Address, value *big.Int) {
-	s.db.AddBalance(addr, value)
-	s.writeLog("AddBalance, %v, %v, %v", addr, value, s.db.GetBalance(addr))
+func (s *loggingVmStateDb) AddBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.db.AddBalance(addr, value, reason)
+	s.writeLog("AddBalance, %v, %v, %v, %v", addr, value, s.db.GetBalance(addr), reason)
 }
 
-func (s *loggingVmStateDb) SubBalance(addr common.Address, value *big.Int) {
-	s.db.SubBalance(addr, value)
-	s.writeLog("SubBalance, %v, %v, %v", addr, value, s.db.GetBalance(addr))
+func (s *loggingVmStateDb) SubBalance(addr common.Address, value *uint256.Int, reason tracing.BalanceChangeReason) {
+	s.db.SubBalance(addr, value, reason)
+	s.writeLog("SubBalance, %v, %v, %v, %v", addr, value, s.db.GetBalance(addr), reason)
 }
 
 func (s *loggingVmStateDb) GetNonce(addr common.Address) uint64 {
@@ -113,6 +133,17 @@ func (s *loggingVmStateDb) GetState(addr common.Address, key common.Hash) common
 func (s *loggingVmStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	s.db.SetState(addr, key, value)
 	s.writeLog("SetState, %v, %v, %v", addr, key, value)
+}
+
+func (s *loggingVmStateDb) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	s.writeLog("SetTransientState, %v, %v, %v", addr, key, value)
+	s.db.SetTransientState(addr, key, value)
+}
+
+func (s *loggingVmStateDb) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	value := s.db.GetTransientState(addr, key)
+	s.writeLog("GetTransientState, %v, %v, %v", addr, key, value)
+	return value
 }
 
 func (s *loggingVmStateDb) GetCode(addr common.Address) []byte {
@@ -155,24 +186,24 @@ func (s *LoggingStateDb) Error() error {
 	return err
 }
 
-func (s *loggingVmStateDb) BeginTransaction(tx uint32) {
+func (s *loggingVmStateDb) BeginTransaction(tx uint32) error {
 	s.writeLog("BeginTransaction, %v", tx)
-	s.db.BeginTransaction(tx)
+	return s.db.BeginTransaction(tx)
 }
 
-func (s *loggingVmStateDb) EndTransaction() {
+func (s *loggingVmStateDb) EndTransaction() error {
 	s.writeLog("EndTransaction")
-	s.db.EndTransaction()
+	return s.db.EndTransaction()
 }
 
-func (s *LoggingStateDb) BeginBlock(blk uint64) {
+func (s *LoggingStateDb) BeginBlock(blk uint64) error {
 	s.writeLog("BeginBlock, %v", blk)
-	s.state.BeginBlock(blk)
+	return s.state.BeginBlock(blk)
 }
 
-func (s *LoggingStateDb) EndBlock() {
+func (s *LoggingStateDb) EndBlock() error {
 	s.writeLog("EndBlock")
-	s.state.EndBlock()
+	return s.state.EndBlock()
 }
 
 func (s *LoggingStateDb) BeginSyncPeriod(number uint64) {
@@ -185,22 +216,29 @@ func (s *LoggingStateDb) EndSyncPeriod() {
 	s.state.EndSyncPeriod()
 }
 
-func (s *LoggingStateDb) GetHash() common.Hash {
-	hash := s.state.GetHash()
+func (s *LoggingStateDb) GetHash() (common.Hash, error) {
+	hash, err := s.state.GetHash()
 	s.writeLog("GetHash, %v", hash)
-	return hash
+	return hash, err
 }
 
-func (s *loggingNonCommittableStateDb) GetHash() common.Hash {
-	hash := s.nonCommittableStateDB.GetHash()
-	s.writeLog("GetHash, %v", hash)
-	return hash
+func (s *loggingNonCommittableStateDb) GetHash() (common.Hash, error) {
+	hash, err := s.nonCommittableStateDB.GetHash()
+	if err != nil {
+		s.writeLog("GetHash, %v", err)
+		return common.Hash{}, err
+	} else {
+		s.writeLog("GetHash, %v", hash)
+	}
+	return hash, nil
 }
 
 func (s *LoggingStateDb) Close() error {
 	res := s.state.Close()
-	str := fmt.Sprintf("EndSyncPeriod, %v", res)
-	s.log.Debug(str)
+	s.writeLog("Close")
+	// signal and await the close
+	close(s.output)
+	s.wg.Wait()
 	return res
 }
 
@@ -220,9 +258,9 @@ func (s *loggingVmStateDb) GetRefund() uint64 {
 	return res
 }
 
-func (s *loggingVmStateDb) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.writeLog("PrepareAccessList, %v, %v, %v, %v", sender, dest, precompiles, txAccesses)
-	s.db.PrepareAccessList(sender, dest, precompiles, txAccesses)
+func (s *loggingVmStateDb) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	s.writeLog("Prepare, %v, %v, %v, %v", sender, dest, precompiles, txAccesses)
+	s.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 }
 
 func (s *loggingVmStateDb) AddressInAccessList(addr common.Address) bool {
@@ -252,9 +290,9 @@ func (s *loggingVmStateDb) AddLog(entry *types.Log) {
 	s.db.AddLog(entry)
 }
 
-func (s *loggingVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	res := s.db.GetLogs(hash, blockHash)
-	s.writeLog("GetLogs, %v, %v, %v", hash, blockHash, res)
+func (s *loggingVmStateDb) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
+	res := s.db.GetLogs(hash, block, blockHash)
+	s.writeLog("GetLogs, %v, %v, %v, %v", hash, block, blockHash, res)
 	return res
 }
 
@@ -269,15 +307,15 @@ func (s *LoggingStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return res
 }
 
-func (s *LoggingStateDb) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	hash, err := s.state.Commit(deleteEmptyObjects)
+func (s *LoggingStateDb) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
+	hash, err := s.state.Commit(block, deleteEmptyObjects)
 	s.writeLog("Commit, %v, %v, %v", deleteEmptyObjects, hash, err)
 	return hash, err
 }
 
-func (s *loggingVmStateDb) Prepare(thash common.Hash, ti int) {
-	s.db.Prepare(thash, ti)
-	s.writeLog("Prepare, %v, %v", thash, ti)
+func (s *loggingVmStateDb) SetTxContext(thash common.Hash, ti int) {
+	s.db.SetTxContext(thash, ti)
+	s.writeLog("SetTxContext, %v, %v", thash, ti)
 }
 
 func (s *LoggingStateDb) PrepareSubstate(substate txcontext.WorldState, block uint64) {
@@ -296,16 +334,15 @@ func (s *loggingVmStateDb) AddPreimage(hash common.Hash, data []byte) {
 	s.writeLog("AddPreimage, %v, %v", hash, data)
 }
 
-func (s *loggingVmStateDb) ForEachStorage(addr common.Address, op func(common.Hash, common.Hash) bool) error {
-	// no logging in this case
-	return s.db.ForEachStorage(addr, op)
-}
-
-func (s *LoggingStateDb) StartBulkLoad(block uint64) state.BulkLoad {
-	return &loggingBulkLoad{
-		nested:   s.state.StartBulkLoad(block),
-		writeLog: s.writeLog,
+func (s *LoggingStateDb) StartBulkLoad(block uint64) (state.BulkLoad, error) {
+	bl, err := s.state.StartBulkLoad(block)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start bulkload; %w", err)
 	}
+	return &loggingBulkLoad{
+		nested:   bl,
+		writeLog: s.writeLog,
+	}, nil
 }
 
 func (s *LoggingStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
@@ -338,9 +375,26 @@ func (s *LoggingStateDb) GetShadowDB() state.StateDB {
 	return s.state.GetShadowDB()
 }
 
-func (s *loggingNonCommittableStateDb) Release() {
+func (s *loggingVmStateDb) CreateContract(addr common.Address) {
+	s.writeLog("CreateContract, %v", addr)
+	s.db.CreateContract(addr)
+}
+
+func (s *loggingVmStateDb) Selfdestruct6780(addr common.Address) {
+	s.writeLog("Selfdestruct6780, %v", addr)
+	s.db.Selfdestruct6780(addr)
+}
+
+func (s *loggingVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
+	res := s.db.GetStorageRoot(addr)
+	s.writeLog("GetStorageRoot, %v, %v", res, addr)
+	return res
+}
+
+func (s *loggingNonCommittableStateDb) Release() error {
 	s.writeLog("Release")
 	s.nonCommittableStateDB.Release()
+	return nil
 }
 
 type loggingBulkLoad struct {
@@ -352,7 +406,7 @@ func (l *loggingBulkLoad) CreateAccount(addr common.Address) {
 	l.nested.CreateAccount(addr)
 	l.writeLog("Bulk, CreateAccount, %v", addr)
 }
-func (l *loggingBulkLoad) SetBalance(addr common.Address, balance *big.Int) {
+func (l *loggingBulkLoad) SetBalance(addr common.Address, balance *uint256.Int) {
 	l.nested.SetBalance(addr, balance)
 	l.writeLog("Bulk, SetBalance, %v, %v", addr, balance)
 }

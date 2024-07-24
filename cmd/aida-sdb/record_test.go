@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
@@ -8,7 +24,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -21,15 +37,10 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	path := t.TempDir() + "test_trace"
-	cfg := &utils.Config{
-		First:            10,
-		Last:             11,
-		ChainID:          utils.MainnetChainID,
-		SkipPriming:      true,
-		TraceFile:        path,
-		SyncPeriodLength: 1,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 10, 11, false)
+	cfg.TraceFile = path
+	cfg.SyncPeriodLength = 1
 	provider.EXPECT().
 		Run(10, 12, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -72,23 +83,11 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	Env: &substate.Env{},
+	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.SubstateResult{
-		GasUsed: 1,
-	},
-}
-
-// testTx is a dummy substate used for testing validation.
-var testTx = &substate.Substate{
-	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:        &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
-		GasPrice: big.NewInt(12),
-	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }

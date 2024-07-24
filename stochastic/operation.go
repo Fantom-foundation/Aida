@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package stochastic
 
 import (
@@ -26,14 +42,20 @@ const (
 	GetCommittedStateID
 	GetNonceID
 	GetStateID
-	HasSuicidedID
+	HasSelfDestructedID
 	RevertToSnapshotID
 	SetCodeID
 	SetNonceID
 	SetStateID
 	SnapshotID
 	SubBalanceID
-	SuicideID
+	SelfDestructID
+	CreateContractID
+	GetStorageRootID
+	GetTransientStateID
+	SetTransientStateID
+	SelfDestruct6780ID
+	// Add new operations below this line
 
 	NumOps
 )
@@ -48,6 +70,7 @@ var opText = map[int]string{
 	BeginSyncPeriodID:   "BeginSyncPeriod",
 	BeginTransactionID:  "BeginTransaction",
 	CreateAccountID:     "CreateAccount",
+	CreateContractID:    "CreateContract",
 	EmptyID:             "Empty",
 	EndBlockID:          "EndBlock",
 	EndSyncPeriodID:     "EndSyncPeriod",
@@ -60,14 +83,18 @@ var opText = map[int]string{
 	GetCommittedStateID: "GetCommittedState",
 	GetNonceID:          "GetNonce",
 	GetStateID:          "GetState",
-	HasSuicidedID:       "HasSuicided",
+	GetStorageRootID:    "GetStorageRoot",
+	GetTransientStateID: "GetTransientState",
+	HasSelfDestructedID: "HasSelfDestructed",
 	RevertToSnapshotID:  "RevertToSnapshot",
+	SelfDestructID:      "SelfDestruct",
+	SelfDestruct6780ID:  "SelfDestruct6780",
 	SetCodeID:           "SetCode",
 	SetNonceID:          "SetNonce",
 	SetStateID:          "SetState",
 	SnapshotID:          "Snapshot",
 	SubBalanceID:        "SubBalance",
-	SuicideID:           "Suicide",
+	SetTransientStateID: "SetTransientState",
 }
 
 // opMnemo is a mnemonics table for operations.
@@ -77,6 +104,7 @@ var opMnemo = map[int]string{
 	BeginSyncPeriodID:   "BS",
 	BeginTransactionID:  "BT",
 	CreateAccountID:     "CA",
+	CreateContractID:    "CC",
 	EmptyID:             "EM",
 	EndBlockID:          "EB",
 	EndSyncPeriodID:     "ES",
@@ -89,14 +117,18 @@ var opMnemo = map[int]string{
 	GetCommittedStateID: "GM",
 	GetNonceID:          "GN",
 	GetStateID:          "GS",
-	HasSuicidedID:       "HS",
+	GetStorageRootID:    "GR",
+	GetTransientStateID: "GT",
+	HasSelfDestructedID: "HS",
 	RevertToSnapshotID:  "RS",
+	SelfDestructID:      "SU",
+	SelfDestruct6780ID:  "S6",
 	SetCodeID:           "SC",
 	SetNonceID:          "SO",
 	SetStateID:          "SS",
 	SnapshotID:          "SN",
 	SubBalanceID:        "SB",
-	SuicideID:           "SU",
+	SetTransientStateID: "ST",
 }
 
 // opNumArgs is an argument number table for operations.
@@ -106,6 +138,7 @@ var opNumArgs = map[int]int{
 	BeginSyncPeriodID:   0,
 	BeginTransactionID:  0,
 	CreateAccountID:     1,
+	CreateContractID:    1,
 	EmptyID:             1,
 	EndBlockID:          0,
 	EndSyncPeriodID:     0,
@@ -118,14 +151,18 @@ var opNumArgs = map[int]int{
 	GetCommittedStateID: 2,
 	GetNonceID:          1,
 	GetStateID:          2,
-	HasSuicidedID:       1,
+	GetStorageRootID:    1,
+	GetTransientStateID: 2,
+	HasSelfDestructedID: 1,
 	RevertToSnapshotID:  0,
+	SelfDestructID:      1,
+	SelfDestruct6780ID:  1,
 	SetCodeID:           1,
 	SetNonceID:          1,
 	SetStateID:          3,
 	SnapshotID:          0,
 	SubBalanceID:        1,
-	SuicideID:           1,
+	SetTransientStateID: 3,
 }
 
 // opId is an operation ID table.
@@ -135,6 +172,7 @@ var opId = map[string]int{
 	"BS": BeginSyncPeriodID,
 	"BT": BeginTransactionID,
 	"CA": CreateAccountID,
+	"CC": CreateContractID,
 	"EM": EmptyID,
 	"EB": EndBlockID,
 	"ES": EndSyncPeriodID,
@@ -147,14 +185,18 @@ var opId = map[string]int{
 	"GM": GetCommittedStateID,
 	"GN": GetNonceID,
 	"GS": GetStateID,
-	"HS": HasSuicidedID,
+	"GR": GetStorageRootID,
+	"GT": GetTransientStateID,
+	"HS": HasSelfDestructedID,
 	"RS": RevertToSnapshotID,
+	"SU": SelfDestructID,
+	"S6": SelfDestruct6780ID,
 	"SC": SetCodeID,
 	"SO": SetNonceID,
 	"SN": SnapshotID,
 	"SB": SubBalanceID,
 	"SS": SetStateID,
-	"SU": SuicideID,
+	"ST": SetTransientStateID,
 }
 
 // argMnemo is the argument-class mnemonics table.

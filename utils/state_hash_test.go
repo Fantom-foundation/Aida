@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utils
 
 import (
@@ -5,35 +21,35 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // TestStateHash_ZeroHasSameStateHashAsOne tests that the state hash of block 0 is the same as the state hash of block 1
 func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 	tmpDir := t.TempDir() + "/blockHashes"
-	db, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", false)
+	database, err := db.NewDefaultBaseDB(tmpDir)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
 	log := logger.NewLogger("info", "Test state hash")
 
-	err = StateHashScraper(nil, TestnetChainID, "", db, 0, 1, log)
+	err = StateHashScraper(nil, TestnetChainID, "", database, 0, 1, log)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
-	err = db.Close()
+	err = database.Close()
 	if err != nil {
 		t.Fatalf("error closing stateHash leveldb %s: %v", tmpDir, err)
 	}
 
-	db, err = rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", true)
+	database, err = db.NewReadOnlyBaseDB(tmpDir)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
-	defer db.Close()
+	defer database.Close()
 
-	shp := MakeStateHashProvider(db)
+	shp := MakeStateHashProvider(database)
 
 	hashZero, err := shp.GetStateHash(0)
 	if err != nil {
@@ -54,28 +70,28 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 // we are expecting that at least some storage has changed between block 0 and block 100
 func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 	tmpDir := t.TempDir() + "/blockHashes"
-	db, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", false)
+	database, err := db.NewDefaultBaseDB(tmpDir)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
 	log := logger.NewLogger("info", "Test state hash")
 
-	err = StateHashScraper(nil, TestnetChainID, "", db, 0, 100, log)
+	err = StateHashScraper(nil, TestnetChainID, "", database, 0, 100, log)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
-	err = db.Close()
+	err = database.Close()
 	if err != nil {
 		t.Fatalf("error closing stateHash leveldb %s: %v", tmpDir, err)
 	}
 
-	db, err = rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", true)
+	database, err = db.NewReadOnlyBaseDB(tmpDir)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
-	defer db.Close()
+	defer database.Close()
 
-	shp := MakeStateHashProvider(db)
+	shp := MakeStateHashProvider(database)
 
 	hashZero, err := shp.GetStateHash(0)
 	if err != nil {

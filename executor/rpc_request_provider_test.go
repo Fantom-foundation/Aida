@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package executor
 
 import (
@@ -6,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
@@ -18,7 +35,7 @@ func TestRPCRequestProvider_WorksWithValidResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -43,7 +60,7 @@ func TestRPCRequestProvider_WorksWithErrorResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -68,7 +85,7 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -100,7 +117,7 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -126,7 +143,7 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -143,6 +160,37 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 
 	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err != nil {
 		t.Fatal("test cannot fail")
+	}
+}
+
+func TestRPCRequestProvider_ReportsAboutRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	consumer := NewMockRPCReqConsumer(ctrl)
+	log := logger.NewMockLogger(ctrl)
+	i := rpc.NewMockIterator(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.RpcRecordingPath = "test_file"
+
+	provider := openRpcRecording(i, cfg, log, nil, []string{cfg.RpcRecordingPath})
+
+	defer provider.Close()
+
+	gomock.InOrder(
+		i.EXPECT().Next().Return(true),
+		i.EXPECT().Error().Return(nil),
+		i.EXPECT().Value().Return(validResp),
+		log.EXPECT().Noticef("Iterating file %v/%v path: %v", 1, 1, "test_file"),
+		log.EXPECT().Noticef("First block of recording: %v", 10),
+		consumer.EXPECT().Consume(10, gomock.Any(), validResp).Return(errors.New("err")),
+		log.EXPECT().Infof("Last iterated file: %v", "test_file"),
+
+		//i.EXPECT().Next().Return(false),
+		i.EXPECT().Close(),
+	)
+
+	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err == nil {
+		t.Fatal("run must fail")
 	}
 }
 

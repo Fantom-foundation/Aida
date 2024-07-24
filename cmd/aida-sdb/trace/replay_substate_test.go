@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package trace
 
 import (
@@ -11,7 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -136,7 +152,11 @@ func TestSdbReplaySubstate_TxPrimerIsAddedIfDbImplIsNotMemory(t *testing.T) {
 
 	processor := makeSubstateProcessor(cfg, context.NewReplay(), operationProvider)
 
-	db.EXPECT().StartBulkLoad(uint64(0)).Return(bulkLoad)
+	db.EXPECT().BeginBlock(uint64(0))
+	db.EXPECT().BeginTransaction(uint32(0))
+	db.EXPECT().EndTransaction()
+	db.EXPECT().EndBlock()
+	db.EXPECT().StartBulkLoad(uint64(1)).Return(bulkLoad, nil)
 	bulkLoad.EXPECT().Close()
 
 	if err := replaySubstate(cfg, substateProvider, processor, db, nil); err != nil {
@@ -160,12 +180,12 @@ var testOperationsB = []operation.Operation{
 
 // testTx is a dummy substate that will be processed without crashing.
 var testTx = &substate.Substate{
-	Env: &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	Env: &substate.Env{},
+	Message: &substate.Message{
 		Gas:      10000,
 		GasPrice: big.NewInt(0),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }

@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package rpc
 
 import (
@@ -15,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
-	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/status-im/keycard-go/hexutils"
@@ -32,8 +47,8 @@ type EvmExecutor struct {
 	rules     opera.EconomyRules
 }
 
-const maxGasLimit = 9995800   // used when request does not specify gas
-const globalGasCap = 50000000 // highest gas allowance used for estimateGas
+const maxGasLimit = 9995800     // used when request does not specify gas
+const globalGasCap = 50_000_000 // highest gas allowance used for estimateGas
 
 // newEvmExecutor creates EvmExecutor for executing requests into StateDB that demand usage of EVM
 func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64) *EvmExecutor {
@@ -41,7 +56,7 @@ func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *ut
 		args:      newTxArgs(params),
 		archive:   archive,
 		timestamp: timestamp,
-		chainCfg:  utils.GetChainConfig(cfg.ChainID),
+		chainCfg:  cfg.ChainCfg,
 		vmImpl:    cfg.VmImpl,
 		blockId:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),
@@ -96,7 +111,7 @@ func newTxArgs(params map[string]interface{}) ethapi.TransactionArgs {
 }
 
 // newEVM creates new instance of EVM with given parameters
-func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
+func (e *EvmExecutor) newEVM(msg *core.Message, hashErr *error) *vm.EVM {
 	var (
 		getHash  func(uint64) common.Hash
 		blockCtx vm.BlockContext
@@ -105,7 +120,9 @@ func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
 	)
 
 	getHash = func(_ uint64) common.Hash {
-		return e.archive.GetHash()
+		h, err := e.archive.GetHash()
+		*hashErr = err
+		return h
 	}
 
 	blockCtx = vm.BlockContext{
@@ -117,7 +134,7 @@ func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
 		GasLimit:    math.MaxUint64, // evmcore/dummy_block.go
 		GetHash:     getHash,
 		BaseFee:     e.rules.MinGasPrice, // big.NewInt(1e9)
-		Time:        new(big.Int).SetUint64(e.timestamp),
+		Time:        e.timestamp,
 	}
 
 	vmConfig = opera.DefaultVMConfig
@@ -132,11 +149,11 @@ func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
 // sendCall executes the call method in the EvmExecutor with given archive
 func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 	var (
-		gp     *evmcore.GasPool
-		result *evmcore.ExecutionResult
-		err    error
-		msg    eth.Message
-		evm    *vm.EVM
+		gp              *evmcore.GasPool
+		executionResult *evmcore.ExecutionResult
+		err             error
+		msg             *core.Message
+		evm             *vm.EVM
 	)
 
 	gp = new(evmcore.GasPool).AddGas(math.MaxUint64) // based in opera
@@ -145,18 +162,26 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 		return nil, err
 	}
 
-	evm = e.newEVM(msg)
+	var hashErr *error
+	evm = e.newEVM(msg, hashErr)
 
-	result, err = evmcore.ApplyMessage(evm, msg, gp)
+	executionResult, err = evmcore.ApplyMessage(evm, msg, gp)
+	if executionResult.Err != nil {
+		return nil, fmt.Errorf("execution returned err; %w", executionResult.Err)
+	}
+
+	if hashErr != nil {
+		return nil, fmt.Errorf("cannot get state hash; %w", *hashErr)
+	}
 
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
 		return nil, fmt.Errorf("execution aborted: timeout")
 	}
 	if err != nil {
-		return result, fmt.Errorf("err: %v (supplied gas %v)", err, e.args.Gas)
+		return executionResult, fmt.Errorf("err: %v (supplied gas %v)", err, e.args.Gas)
 	}
-	return result, nil
+	return executionResult, nil
 
 }
 
@@ -252,7 +277,7 @@ func (e *EvmExecutor) findHiLoCap() (uint64, uint64, uint64, error) {
 	// Recap the highest gas limit with account's available balance.
 	if feeCap.BitLen() != 0 {
 		balance := e.archive.GetBalance(*e.args.From) // from can't be nil
-		available := new(big.Int).Set(balance)
+		available := balance.ToBig()
 		if e.args.Value != nil {
 			if e.args.Value.ToInt().Cmp(available) >= 0 {
 				return 0, 0, 0, errors.New("insufficient funds for transfer")

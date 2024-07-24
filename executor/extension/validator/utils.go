@@ -1,16 +1,33 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package validator
 
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/holiman/uint256"
 )
 
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
@@ -52,8 +69,8 @@ func printIfDifferentBytes(label string, want, have []byte, log logger.Logger) b
 	return false
 }
 
-// printIfDifferentBigInt compares two values of big int type and reports differences if any.
-func printIfDifferentBigInt(label string, want, have *big.Int, log logger.Logger) bool {
+// printIfDifferentUint256 compares two values of big int type and reports differences if any.
+func printIfDifferentUint256(label string, want, have *uint256.Int, log logger.Logger) bool {
 	if want == nil && have == nil {
 		return false
 	}
@@ -101,7 +118,7 @@ func printAllocationDiffSummary(want, have txcontext.WorldState, log logger.Logg
 // PrintAccountDiffSummary compares attributes of two accounts and reports differences if any.
 func printAccountDiffSummary(label string, want, have txcontext.Account, log logger.Logger) {
 	printIfDifferent(fmt.Sprintf("%s.Nonce", label), want.GetNonce(), have.GetNonce(), log)
-	printIfDifferentBigInt(fmt.Sprintf("%s.Balance", label), want.GetBalance(), have.GetBalance(), log)
+	printIfDifferentUint256(fmt.Sprintf("%s.Balance", label), want.GetBalance(), have.GetBalance(), log)
 	printIfDifferentBytes(fmt.Sprintf("%s.Code", label), want.GetCode(), have.GetCode(), log)
 
 	printIfDifferent(fmt.Sprintf("len(%s.Storage)", label), want.GetStorageSize(), have.GetStorageSize(), log)
@@ -147,8 +164,8 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 				"    want %v\n",
 				addr.Hex(), balance, accBalance)
 			if updateOnFail {
-				db.SubBalance(addr, balance)
-				db.AddBalance(addr, accBalance)
+				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
+				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
 			}
 		}
 		if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {

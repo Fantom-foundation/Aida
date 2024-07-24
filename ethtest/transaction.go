@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package ethtest
 
 import (
@@ -9,10 +25,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// stTransaction indicates the executed transaction.
+// Only one value for Data, GasLimit and Value is valid for each transaction.
+// Any other value is shared among all transactions within one test file.
+// Correct index is marked in stJSON.stPost.Index...
 type stTransaction struct {
 	GasPrice             *BigInt             `json:"gasPrice"`
 	MaxFeePerGas         *BigInt             `json:"maxFeePerGas"`
@@ -24,9 +45,11 @@ type stTransaction struct {
 	GasLimit             []*BigInt           `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
+	BlobGasFeeCap        *BigInt             `json:"maxFeePerBlobGas"`
+	BlobHashes           []common.Hash       `json:"blobVersionHashes"`
 }
 
-func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Message, error) {
+func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
 	if len(tx.PrivateKey) > 0 {
@@ -46,19 +69,19 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Mess
 	}
 
 	// Get values specific to this post state.
-	if ps.indexes.Data > len(tx.Data) {
-		return nil, fmt.Errorf("tx data index %d out of bounds", ps.indexes.Data)
+	if ps.Indexes.Data > len(tx.Data) {
+		return nil, fmt.Errorf("tx data index %d out of bounds", ps.Indexes.Data)
 	}
-	if ps.indexes.Value > len(tx.Value) {
-		return nil, fmt.Errorf("tx value index %d out of bounds", ps.indexes.Value)
+	if ps.Indexes.Value > len(tx.Value) {
+		return nil, fmt.Errorf("tx value index %d out of bounds", ps.Indexes.Value)
 	}
-	if ps.indexes.Gas > len(tx.GasLimit) {
-		return nil, fmt.Errorf("tx gas limit index %d out of bounds", ps.indexes.Gas)
+	if ps.Indexes.Gas > len(tx.GasLimit) {
+		return nil, fmt.Errorf("tx gas limit index %d out of bounds", ps.Indexes.Gas)
 	}
-	dataHex := tx.Data[ps.indexes.Data]
-	valueHex := tx.Value[ps.indexes.Value]
-	gasLimit := tx.GasLimit[ps.indexes.Gas]
-	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
+	dataHex := tx.Data[ps.Indexes.Data]
+	valueHex := tx.Value[ps.Indexes.Value]
+	gasLimit := tx.GasLimit[ps.Indexes.Gas]
+
 	value := new(big.Int)
 	if valueHex != "0x" {
 		v, ok := math.ParseBig256(valueHex)
@@ -72,8 +95,8 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Mess
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 	var accessList types.AccessList
-	if tx.AccessLists != nil && tx.AccessLists[ps.indexes.Data] != nil {
-		accessList = *tx.AccessLists[ps.indexes.Data]
+	if tx.AccessLists != nil && tx.AccessLists[ps.Indexes.Data] != nil {
+		accessList = *tx.AccessLists[ps.Indexes.Data]
 	}
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	gasPrice := tx.GasPrice
@@ -94,7 +117,20 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Mess
 		return nil, fmt.Errorf("no gas price provided")
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce.Uint64(), value, gasLimit.Uint64(), gasPrice.Convert(),
-		tx.MaxFeePerGas.Convert(), tx.MaxPriorityFeePerGas.Convert(), data, accessList, false)
-	return &msg, nil
+	msg := &core.Message{
+		to,
+		from,
+		tx.Nonce.Uint64(),
+		value,
+		gasLimit.Uint64(),
+		gasPrice.Convert(),
+		tx.MaxFeePerGas.Convert(),
+		tx.MaxPriorityFeePerGas.Convert(),
+		data,
+		accessList,
+		tx.BlobGasFeeCap.Convert(),
+		tx.BlobHashes,
+		false,
+	}
+	return msg, nil
 }

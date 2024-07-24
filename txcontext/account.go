@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package txcontext
 
 import (
@@ -8,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 )
 
 // Account represents an interface for interacting with an Ethereum-like account.
@@ -16,7 +33,7 @@ type Account interface {
 	GetNonce() uint64
 
 	// GetBalance returns the current balance of the account.
-	GetBalance() *big.Int
+	GetBalance() *uint256.Int
 
 	HasStorageAt(key common.Hash) bool
 
@@ -43,13 +60,13 @@ func NewNilAccount() Account {
 }
 
 func NewAccount(code []byte, storage map[common.Hash]common.Hash, balance *big.Int, nonce uint64) Account {
-	return &account{Code: code, Storage: storage, Balance: balance, Nonce: nonce}
+	return &account{Code: code, Storage: storage, Balance: uint256.MustFromBig(balance), Nonce: nonce}
 }
 
 type account struct {
 	Code    []byte
 	Storage map[common.Hash]common.Hash
-	Balance *big.Int
+	Balance *uint256.Int
 	Nonce   uint64
 }
 
@@ -57,8 +74,8 @@ func (a *account) GetNonce() uint64 {
 	return a.Nonce
 }
 
-func (a *account) GetBalance() *big.Int {
-	return new(big.Int).Set(a.Balance)
+func (a *account) GetBalance() *uint256.Int {
+	return new(uint256.Int).Set(a.Balance)
 }
 
 func (a *account) HasStorageAt(key common.Hash) bool {

@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package blockprofile
 
 import (
@@ -103,11 +119,11 @@ func findTxAddresses(tx executor.State[txcontext.TxContext]) AddressSet {
 		addresses[addr] = struct{}{}
 	})
 	var zero common.Address
-	from := tx.Data.GetMessage().From()
+	from := tx.Data.GetMessage().From
 	if from != zero {
 		addresses[from] = struct{}{}
 	}
-	to := tx.Data.GetMessage().To()
+	to := tx.Data.GetMessage().To
 	if to != nil {
 		addresses[*to] = struct{}{}
 	}
@@ -156,7 +172,7 @@ func (ctx *Context) RecordTransaction(state executor.State[txcontext.TxContext],
 	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := state.Data.GetReceipt().GetGasUsed()
+	gasUsed := state.Data.GetResult().GetGasUsed()
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
@@ -262,8 +278,8 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 // getTransactionType reads a message and determines a transaction type.
 func getTransactionType(tx executor.State[txcontext.TxContext]) TxType {
 	msg := tx.Data.GetMessage()
-	to := msg.To()
-	from := msg.From()
+	to := msg.To
+	from := msg.From
 	alloc := tx.Data.GetInputState()
 
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")

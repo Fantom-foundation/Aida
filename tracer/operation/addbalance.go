@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package operation
 
 import (
@@ -5,19 +21,20 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 )
 
 // AddBalance data structure
 type AddBalance struct {
 	Contract common.Address
-	Amount   [16]byte // truncated amount to 16 bytes
+	Amount   [32]byte // truncated amount to 32 bytes
+	Reason   tracing.BalanceChangeReason
 }
 
 // GetId returns the add-balance operation identifier.
@@ -26,14 +43,12 @@ func (op *AddBalance) GetId() byte {
 }
 
 // NewAddBalance creates a new add-balance operation.
-func NewAddBalance(contract common.Address, amount *big.Int) *AddBalance {
-	// check if amount requires more than 256 bits (16 bytes)
-	if amount.BitLen() > 256 {
-		log.Fatalf("Amount exceeds 256 bit")
+func NewAddBalance(contract common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) *AddBalance {
+	// check if amount requires more than 32 bytes
+	if amount.ByteLen() > 32 {
+		log.Fatalf("Amount exceeds 32 bytes")
 	}
-	ret := &AddBalance{Contract: contract}
-	// copy amount to a 16-byte array with leading zeros
-	amount.FillBytes(ret.Amount[:])
+	ret := &AddBalance{Contract: contract, Amount: amount.Bytes32(), Reason: reason}
 	return ret
 }
 
@@ -54,13 +69,14 @@ func (op *AddBalance) Write(f io.Writer) error {
 func (op *AddBalance) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	// construct bit.Int from a byte array
-	amount := new(big.Int).SetBytes(op.Amount[:])
+	amount := new(uint256.Int).SetBytes(op.Amount[:])
 	start := time.Now()
-	db.AddBalance(contract, amount)
+	// ignore reason
+	db.AddBalance(contract, amount, op.Reason)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the add-balance operation.
 func (op *AddBalance) Debug(ctx *context.Context) {
-	fmt.Print(op.Contract, new(big.Int).SetBytes(op.Amount[:]))
+	fmt.Print(op.Contract, new(uint256.Int).SetBytes(op.Amount[:]), op.Reason)
 }

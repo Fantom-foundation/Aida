@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
@@ -11,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext/txgenerator"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
 )
@@ -21,14 +38,8 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
-	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		LogLevel:    "Critical",
-		SkipPriming: true,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	// Simulate the execution of four transactions in three blocks.
 	provider.EXPECT().
 		Run(2, 4, gomock.Any()).
@@ -53,29 +64,37 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		// Block 2
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		// Tx 2
+		db.EXPECT().BeginTransaction(uint32(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
 		// Block 3
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(3)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
 		// Block 4
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(4)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](4), gomock.Any(), nil),
 		db.EXPECT().EndBlock(),
 
@@ -91,19 +110,19 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
 	return txgenerator.NewTxContext(
 		testTxBlkEnv{blkNumber},
-		types.NewMessage(
-			common.Address{0x1},
-			&common.Address{0x2},
-			0,
-			big.NewInt(1),
-			21_000,
-			big.NewInt(1),
-			big.NewInt(1),
-			big.NewInt(1),
-			[]byte{},
-			types.AccessList{},
-			false,
-		),
+		&core.Message{
+			To:                &common.Address{0x2},
+			From:              common.Address{0x1},
+			Nonce:             0,
+			Value:             big.NewInt(1),
+			GasLimit:          21_000,
+			GasPrice:          big.NewInt(1),
+			GasFeeCap:         big.NewInt(1),
+			GasTipCap:         big.NewInt(1),
+			Data:              []byte{},
+			AccessList:        types.AccessList{},
+			SkipAccountChecks: false,
+		},
 	)
 }
 

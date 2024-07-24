@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package txgenerator
 
 import (
@@ -6,6 +22,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -27,19 +44,21 @@ func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.A
 			Env: normaTxBlockEnv{
 				blkNumber: blkNumber,
 			},
-			Message: types.NewMessage(
-				s,
-				tx.To(),
-				tx.Nonce(),
-				tx.Value(),
-				tx.Gas(),
-				tx.GasPrice(),
-				tx.GasFeeCap(),
-				tx.GasTipCap(),
-				tx.Data(),
-				tx.AccessList(),
-				false,
-			),
+			Message: &core.Message{
+				To:                tx.To(),
+				From:              s,
+				Nonce:             tx.Nonce(),
+				Value:             tx.Value(),
+				GasLimit:          tx.Gas(),
+				GasPrice:          tx.GasPrice(),
+				GasFeeCap:         tx.GasFeeCap(),
+				GasTipCap:         tx.GasTipCap(),
+				Data:              tx.Data(),
+				AccessList:        tx.AccessList(),
+				SkipAccountChecks: false,
+				BlobGasFeeCap:     tx.BlobGasFeeCap(),
+				BlobHashes:        tx.BlobHashes(),
+			},
 		},
 	}, nil
 }

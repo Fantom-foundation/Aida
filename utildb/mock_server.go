@@ -1,10 +1,28 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utildb
 
 import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
 // mock server is tool to test update command
@@ -31,13 +49,10 @@ func StartMockServer(baseDir string) error {
 
 	// Create a custom handler to serve files based on the URL path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		requestedPath := r.URL.Path
-		filePath := filepath.Join(baseDir, requestedPath[1:]) // Remove the leading "/" in the URL path
-
-		// Check if the file exists
-		_, err := os.Stat(filePath)
-		if err != nil {
-			http.Error(w, "File not found", http.StatusNotFound)
+		requestedPath := path.Clean(r.URL.Path)
+		filePath, err := filepath.Abs(filepath.Join(baseDir, requestedPath[1:])) // Remove the leading "/" in the URL path
+		if err != nil || !strings.HasPrefix(filePath, baseDir) {
+			http.Error(w, "Invalid file name", http.StatusBadRequest)
 			return
 		}
 

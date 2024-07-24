@@ -1,6 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package trace
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
@@ -12,6 +30,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,17 +40,21 @@ func ReplaySubstate(ctx *cli.Context) error {
 		return err
 	}
 
-	substateProvider, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
+	defer aidaDb.Close()
+
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
 
 	operationProvider, err := executor.OpenOperations(cfg)
 	if err != nil {
 		return err
 	}
 
-	defer substateProvider.Close()
+	defer substateIterator.Close()
 
 	rCtx := context.NewReplay()
 
@@ -41,7 +64,7 @@ func ReplaySubstate(ctx *cli.Context) error {
 		profiler.MakeReplayProfiler[txcontext.TxContext](cfg, rCtx),
 	}
 
-	return replaySubstate(cfg, substateProvider, processor, nil, extra)
+	return replaySubstate(cfg, substateIterator, processor, nil, extra)
 }
 
 func makeSubstateProcessor(cfg *utils.Config, rCtx *context.Replay, operationProvider executor.Provider[[]operation.Operation]) *substateProcessor {
@@ -98,5 +121,6 @@ func replaySubstate(
 		},
 		processor,
 		extensionList,
+		nil,
 	)
 }

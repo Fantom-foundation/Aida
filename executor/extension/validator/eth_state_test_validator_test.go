@@ -1,8 +1,22 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package validator
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
@@ -12,10 +26,11 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T) {
+func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = true
 
@@ -23,84 +38,28 @@ func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := ethtest.CreateTestTransaction(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
 
-	got := common.HexToHash("0x01")
-	want := data.GetStateHash()
-
-	expectedErr := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", "TestLabel", "TestNetwork", got.Hex(), want.Hex())
+	gomock.InOrder(
+		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x1")),
+		db.EXPECT().GetCode(common.HexToAddress("0x1")),
+	)
 
 	gomock.InOrder(
-		db.EXPECT().GetHash().Return(got),
-		log.EXPECT().Error(expectedErr),
+		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x2")),
+		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
 	ext := makeEthStateTestValidator(cfg, log)
-
-	err := ext.PostTransaction(st, ctx)
-	if err != nil {
-		t.Fatalf("post-transaction cannot return error; %v", err)
-	}
-}
-
-func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
-	cfg := &utils.Config{}
-	cfg.ContinueOnFailure = false
-
-	ctrl := gomock.NewController(t)
-	log := logger.NewMockLogger(ctrl)
-	db := state.NewMockStateDB(ctrl)
-
-	data := ethtest.CreateTestData(t)
-	ctx := new(executor.Context)
-	ctx.State = db
-	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
-
-	want := data.GetStateHash()
-
-	gomock.InOrder(
-		db.EXPECT().GetHash().Return(want),
-		log.EXPECT().Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", "TestLabel", "TestNetwork", 1, 1, want.Hex()),
-	)
-
-	ext := makeEthStateTestValidator(cfg, log)
-
-	err := ext.PostTransaction(st, ctx)
-	if err != nil {
-		t.Fatalf("post-transaction cannot return error; %v", err)
-	}
-}
-
-func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
-	cfg := &utils.Config{}
-	cfg.ContinueOnFailure = false
-
-	ctrl := gomock.NewController(t)
-	log := logger.NewMockLogger(ctrl)
-	db := state.NewMockStateDB(ctrl)
-
-	data := ethtest.CreateTestData(t)
-	ctx := new(executor.Context)
-	ctx.State = db
-	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
-
-	got := common.HexToHash("0x01")
-	want := data.GetStateHash()
-
-	db.EXPECT().GetHash().Return(got)
-
-	ext := makeEthStateTestValidator(cfg, log)
-
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PreTransaction(st, ctx)
 	if err == nil {
-		t.Fatalf("post-transaction must return error; %v", err)
-	}
-
-	expectedErr := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", "TestLabel", "TestNetwork", got.Hex(), want.Hex())
-	if strings.Compare(err.Error(), expectedErr.Error()) != 0 {
-		t.Fatalf("unexpected error\ngot:%v\nwant:%v", err.Error(), expectedErr.Error())
+		t.Fatal("pre-transaction must return error")
 	}
 }

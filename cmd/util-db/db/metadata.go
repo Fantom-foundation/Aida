@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package db
 
 import (
@@ -8,8 +24,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -58,25 +73,23 @@ func generateMetadata(ctx *cli.Context) error {
 		return argErr
 	}
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		return err
 	}
-	substate.SetSubstateDbBackend(aidaDb)
-	fb, lb, ok := utils.FindBlockRangeInSubstate()
+
+	defer base.Close()
+	sdb := db.MakeDefaultSubstateDBFromBaseDB(base)
+	fb, lb, ok := utils.FindBlockRangeInSubstate(sdb)
 	if !ok {
 		return errors.New("cannot find block range in substate")
 	}
 
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(base, "INFO")
 	md.FirstBlock = fb
 	md.LastBlock = lb
 	if err = md.SetFreshMetadata(cfg.ChainID); err != nil {
 		return err
-	}
-
-	if err = aidaDb.Close(); err != nil {
-		return fmt.Errorf("cannot close aida-db; %v", err)
 	}
 
 	return utildb.PrintMetadata(cfg.AidaDb)
@@ -115,16 +128,16 @@ func insertMetadata(ctx *cli.Context) error {
 	valArg := ctx.Args().Get(1)
 
 	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(aidaDbPath)
 	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+		return err
 	}
 
-	defer utildb.MustCloseDB(aidaDb)
+	defer base.Close()
 
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(base, "INFO")
 
-	switch substate.MetadataPrefix + keyArg {
+	switch db.MetadataPrefix + keyArg {
 	case utils.FirstBlockPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
@@ -158,11 +171,11 @@ func insertMetadata(ctx *cli.Context) error {
 			return err
 		}
 	case utils.TypePrefix:
-		num, err := strconv.Atoi(valArg)
+		num64, err := strconv.ParseUint(valArg, 10, 8)
 		if err != nil {
 			return err
 		}
-		if err = md.SetDbType(utils.AidaDbType(num)); err != nil {
+		if err = md.SetDbType(utils.AidaDbType(uint8(num64))); err != nil {
 			return err
 		}
 	case utils.ChainIDPrefix:
@@ -185,7 +198,7 @@ func insertMetadata(ctx *cli.Context) error {
 		if err = md.SetDbHash(hash); err != nil {
 			return err
 		}
-	case substate.UpdatesetIntervalKey:
+	case db.UpdatesetIntervalKey:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
@@ -193,7 +206,7 @@ func insertMetadata(ctx *cli.Context) error {
 		if err = md.SetUpdatesetInterval(val); err != nil {
 			return err
 		}
-	case substate.UpdatesetSizeKey:
+	case db.UpdatesetSizeKey:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
@@ -227,12 +240,13 @@ func removeMetadata(ctx *cli.Context) error {
 	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
 
 	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
+	base, err := db.NewDefaultBaseDB(aidaDbPath)
 	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+		return err
 	}
 
-	md := utils.NewAidaDbMetadata(aidaDb, "DEBUG")
+	defer base.Close()
+	md := utils.NewAidaDbMetadata(base, "DEBUG")
 	md.DeleteMetadata()
 
 	return nil

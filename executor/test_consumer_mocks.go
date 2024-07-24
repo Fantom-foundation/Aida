@@ -5,6 +5,7 @@
 //
 //	mockgen -source test_consumer.go -destination test_consumer_mocks.go -package executor
 //
+
 // Package executor is a generated GoMock package.
 package executor
 

@@ -1,14 +1,32 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package state
 
 //go:generate mockgen -source state.go -destination state_mocks.go -package state
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // VmStateDB is the basic StateDB interface required by the EVM and related
@@ -16,16 +34,18 @@ import (
 type VmStateDB interface {
 	// Account management.
 	CreateAccount(common.Address)
+	CreateContract(common.Address)
 	Exist(common.Address) bool
 	Empty(common.Address) bool
 
-	Suicide(common.Address) bool
-	HasSuicided(common.Address) bool
+	SelfDestruct(common.Address)
+	Selfdestruct6780(common.Address)
+	HasSelfDestructed(common.Address) bool
 
 	// Balance
-	GetBalance(common.Address) *big.Int
-	AddBalance(common.Address, *big.Int)
-	SubBalance(common.Address, *big.Int)
+	GetBalance(common.Address) *uint256.Int
+	AddBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
+	SubBalance(common.Address, *uint256.Int, tracing.BalanceChangeReason)
 
 	// Nonce
 	GetNonce(common.Address) uint64
@@ -35,6 +55,10 @@ type VmStateDB interface {
 	GetCommittedState(common.Address, common.Hash) common.Hash
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
+	GetStorageRoot(addr common.Address) common.Hash
+
+	SetTransientState(common.Address, common.Hash, common.Hash)
+	GetTransientState(common.Address, common.Hash) common.Hash
 
 	// Code handling.
 	GetCodeHash(common.Address) common.Hash
@@ -48,7 +72,7 @@ type VmStateDB interface {
 	GetRefund() uint64
 
 	// Access list
-	PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList)
+	Prepare(params.Rules, common.Address, common.Address, *common.Address, []common.Address, types.AccessList)
 	AddressInAccessList(addr common.Address) bool
 	SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool)
 	AddAddressToAccessList(addr common.Address)
@@ -56,7 +80,10 @@ type VmStateDB interface {
 
 	// Logging
 	AddLog(*types.Log)
-	GetLogs(common.Hash, common.Hash) []*types.Log
+	GetLogs(common.Hash, uint64, common.Hash) []*types.Log
+
+	// SetTxContext is geth utility function which set transaction index and transaction hash.
+	SetTxContext(common.Hash, int)
 
 	// Transaction handling
 	// There are 4 layers of concepts governing the visibility of state effects:
@@ -68,8 +95,8 @@ type VmStateDB interface {
 	Snapshot() int
 	RevertToSnapshot(int)
 
-	BeginTransaction(uint32)
-	EndTransaction()
+	BeginTransaction(uint32) error
+	EndTransaction() error
 
 	// ---- Artifacts from Geth dependency ----
 
@@ -77,9 +104,7 @@ type VmStateDB interface {
 	// and will be called accordingly by the tracer and EVM runner. However, implementations may
 	// chose to ignore those.
 
-	Prepare(common.Hash, int)
 	AddPreimage(common.Hash, []byte)
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----
 
@@ -98,12 +123,12 @@ type NonCommittableStateDB interface {
 	// GetHash obtains a cryptographic hash certifying the committed content of the
 	// represented state. It does not consider any temporary modifications conducted
 	// through the VmStateDB interface on the state.
-	GetHash() common.Hash
+	GetHash() (common.Hash, error)
 
 	// Release frees resources bound by this view. Release should be called on every
 	// instance once all operations have been completed. Once released, no further
 	// operations on the respective instance are allowed.
-	Release()
+	Release() error
 }
 
 // StateDB is an extension of the VmStateDB interface adding general DB management
@@ -113,8 +138,8 @@ type NonCommittableStateDB interface {
 type StateDB interface {
 	VmStateDB
 
-	BeginBlock(uint64)
-	EndBlock()
+	BeginBlock(uint64) error
+	EndBlock() error
 
 	BeginSyncPeriod(uint64)
 	EndSyncPeriod()
@@ -124,7 +149,7 @@ type StateDB interface {
 	// hash. State implementations are not required to implement any specific hash function
 	// function unless specifically declared to do so. For instance, Geth and Carmen S5 are
 	// expected to produce the same hashes for the same content.
-	GetHash() common.Hash
+	GetHash() (common.Hash, error)
 
 	Error() error
 
@@ -137,7 +162,7 @@ type StateDB interface {
 	// may be active at any time and no other concurrent operations on the StateDB are
 	// while it is alive. Data inserted during a bulk-load will appear as if it was inserted
 	// in a single block.
-	StartBulkLoad(block uint64) BulkLoad
+	StartBulkLoad(block uint64) (BulkLoad, error)
 
 	// GetArchiveState creates a state instance linked to a historic block state in an
 	// optionally present archive. The operation fails if there is no archive or the
@@ -160,7 +185,7 @@ type StateDB interface {
 
 	Finalise(bool)
 	IntermediateRoot(bool) common.Hash
-	Commit(bool) (common.Hash, error)
+	Commit(uint64, bool) (common.Hash, error)
 
 	// ---- Optional Development & Debugging Features ----
 
@@ -179,7 +204,7 @@ type StateDB interface {
 // instances before running evaluations.
 type BulkLoad interface {
 	CreateAccount(common.Address)
-	SetBalance(common.Address, *big.Int)
+	SetBalance(common.Address, *uint256.Int)
 	SetNonce(common.Address, uint64)
 	SetState(common.Address, common.Hash, common.Hash)
 	SetCode(common.Address, []byte)

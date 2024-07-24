@@ -1,9 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package validator
 
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -27,9 +42,8 @@ func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Ex
 
 type ethStateTestValidator struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg             *utils.Config
-	log             logger.Logger
-	overall, passed int
+	cfg *utils.Config
+	log logger.Logger
 }
 
 func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -42,29 +56,9 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 }
 
 func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	want := s.Data.GetStateHash()
-	got := ctx.State.GetHash()
-
-	// cast state.Data to stJSON
-	c := s.Data.(*ethtest.StJSON)
-
-	if got != want {
-		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())
-		if e.cfg.ContinueOnFailure {
-			e.log.Error(err)
-		} else {
-			return err
-		}
-	} else {
-		e.passed++
-		e.log.Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", c.TestLabel, c.UsedNetwork, s.Block, s.Transaction, got.Hex())
-	}
-
-	e.overall++
-	return nil
-}
-
-func (e *ethStateTestValidator) PostRun(executor.State[txcontext.TxContext], *executor.Context, error) error {
-	e.log.Noticef("%v/%v tests passed.", e.passed, e.overall)
+	// TODO: how to verify logs - no logs are created - look at eth_state_test_scope_event_emitter - block is +1
+	//blockHash := common.HexToHash(fmt.Sprintf("0x%016d", s.Block+1))
+	//txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", s.Block+1, s.Transaction))
+	//e.log.Debugf("%x", types.LogsBloom(ctx.State.GetLogs(txHash, uint64(s.Block+1), blockHash)))
 	return nil
 }

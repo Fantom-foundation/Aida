@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package substate
 
 import (
@@ -5,20 +21,16 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use NewSubstateEnv instead.
-func NewBlockEnvironment(env *substate.SubstateEnv) txcontext.BlockEnvironment {
+func NewBlockEnvironment(env *substate.Env) txcontext.BlockEnvironment {
 	return &blockEnvironment{env}
 }
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use substateEnv instead.
 type blockEnvironment struct {
-	*substate.SubstateEnv
+	*substate.Env
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
@@ -33,7 +45,7 @@ func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
 }
 
 func (e *blockEnvironment) GetCoinbase() common.Address {
-	return e.Coinbase
+	return common.Address(e.Coinbase)
 }
 
 func (e *blockEnvironment) GetDifficulty() *big.Int {

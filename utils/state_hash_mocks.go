@@ -5,6 +5,7 @@
 //
 //	mockgen -source state_hash.go -destination state_hash_mocks.go -package utils
 //
+
 // Package utils is a generated GoMock package.
 package utils
 

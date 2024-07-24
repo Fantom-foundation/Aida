@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package validator
 
 import (
@@ -33,7 +49,7 @@ type liveDbTxValidator struct {
 	*stateDbValidator
 }
 
-// PreTransaction validates InputAlloc in given substate
+// PreTransaction validates InputSubstate in given substate
 func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	return v.runPreTxValidation("live-db-validator", ctx.State, state, ctx.ErrorInput)
 }
@@ -131,7 +147,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 	return nil
 }
 
-func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Receipt, errOutput chan error) error {
+func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Result, errOutput chan error) error {
 	if v.target.WorldState {
 		if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), v.log); err != nil {
 			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
@@ -143,7 +159,7 @@ func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, 
 
 	// TODO remove state.Transaction < 99999 after patch aida-db
 	if v.target.Receipt && state.Transaction < 99999 {
-		if err := v.validateReceipt(res, state.Data.GetReceipt()); err != nil {
+		if err := v.validateReceipt(res.GetReceipt(), state.Data.GetResult().GetReceipt()); err != nil {
 			err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 			if v.isErrFatal(err, errOutput) {
 				return err

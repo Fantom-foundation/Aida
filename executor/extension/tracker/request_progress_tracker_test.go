@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package tracker
 
 import (
@@ -55,26 +71,44 @@ func TestRpcProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ext.PreRun(executor.State[*rpc.RequestAndResults]{}, ctx)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 
 }
@@ -113,12 +147,6 @@ var validReq = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	StateDB: &rpc.StateDBData{
-		Result:      new(big.Int),
-		Error:       nil,
-		IsRecovered: false,
-		GasUsed:     10,
-	},
 	Response: &rpc.Response{
 		Version:   "2.0",
 		ID:        json.RawMessage{1},
@@ -135,12 +163,6 @@ var errReq = &rpc.RequestAndResults{
 		Method:     "eth_getBalance",
 		Namespace:  "eth",
 		MethodBase: "getBalance",
-	},
-	StateDB: &rpc.StateDBData{
-		Result:      nil,
-		Error:       errors.New("test error"),
-		IsRecovered: false,
-		GasUsed:     11,
 	},
 	Error: &rpc.ErrorResponse{
 		Version:   "2.0",

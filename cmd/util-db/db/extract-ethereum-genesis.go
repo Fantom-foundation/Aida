@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package db
 
 import (
@@ -8,22 +24,24 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Fantom-foundation/Substate/db"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
+	"github.com/Fantom-foundation/Substate/updateset"
 	"github.com/urfave/cli/v2"
 )
 
 var ExtractEthereumGenesisCommand = cli.Command{
 	Action: extractEthereumGenesis,
 	Name:   "extract-ethereum-genesis",
-	Usage:  "Extracts substateAlloc from json into first updateset",
+	Usage:  "Extracts WorldState from json into first updateset",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.UpdateDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Extracts substateAlloc from ethereum genesis.json into first updateset.`}
+Extracts WorldState from ethereum genesis.json into first updateset.`}
 
 func extractEthereumGenesis(ctx *cli.Context) error {
 	// process arguments and flags
@@ -42,20 +60,19 @@ func extractEthereumGenesis(ctx *cli.Context) error {
 		return err
 	}
 
-	udb, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
 	defer udb.Close()
 
 	log.Noticef("PutUpdateSet(0, %v, []common.Address{})", ws)
-	udb.PutUpdateSet(0, &ws, []common.Address{})
 
-	return nil
+	return udb.PutUpdateSet(&updateset.UpdateSet{WorldState: ws, Block: 0}, make([]substatetypes.Address, 0))
 }
 
-// loadEthereumGenesisWorldState loads opera initial world state from worldstate-db as SubstateAlloc
-func loadEthereumGenesisWorldState(genesis string) (substate.SubstateAlloc, error) {
+// loadEthereumGenesisWorldState loads opera initial world state from worldstate-db as WorldState
+func loadEthereumGenesisWorldState(genesis string) (substate.WorldState, error) {
 	var jsData map[string]interface{}
 	// Read the content of the JSON file
 	jsonData, err := ioutil.ReadFile(genesis)
@@ -74,15 +91,15 @@ func loadEthereumGenesisWorldState(genesis string) (substate.SubstateAlloc, erro
 		return nil, fmt.Errorf("failed to get alloc field from genesis file")
 	}
 
-	ssAccounts := make(substate.SubstateAlloc)
+	ssAccounts := make(substate.WorldState)
 
 	// loop over all the accounts
 	for k, v := range alloc.(map[string]interface{}) {
 		// Convert the string key back to a common.Address
-		address := common.HexToAddress(k)
+		address := substatetypes.HexToAddress(k)
 
 		balance, _ := new(big.Int).SetString(v.(map[string]interface{})["balance"].(string), 10)
-		ssAccounts[address] = substate.NewSubstateAccount(0, balance, []byte{})
+		ssAccounts[address] = substate.NewAccount(0, balance, []byte{})
 	}
 
 	return ssAccounts, err

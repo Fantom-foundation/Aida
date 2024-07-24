@@ -5,6 +5,7 @@
 //
 //	mockgen -source reader.go -destination reader_mocks.go -package rpc
 //
+
 // Package rpc is a generated GoMock package.
 package rpc
 

@@ -5,12 +5,14 @@
 //
 //	mockgen -source executor.go -destination executor_mocks.go -package executor
 //
+
 // Package executor is a generated GoMock package.
 package executor
 
 import (
 	reflect "reflect"
 
+	db "github.com/Fantom-foundation/Substate/db"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -38,17 +40,17 @@ func (m *MockExecutor[T]) EXPECT() *MockExecutorMockRecorder[T] {
 }
 
 // Run mocks base method.
-func (m *MockExecutor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) error {
+func (m *MockExecutor[T]) Run(params Params, processor Processor[T], extensions []Extension[T], aidaDb db.BaseDB) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", params, processor, extensions)
+	ret := m.ctrl.Call(m, "Run", params, processor, extensions, aidaDb)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockExecutorMockRecorder[T]) Run(params, processor, extensions any) *gomock.Call {
+func (mr *MockExecutorMockRecorder[T]) Run(params, processor, extensions, aidaDb any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockExecutor[T])(nil).Run), params, processor, extensions)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockExecutor[T])(nil).Run), params, processor, extensions, aidaDb)
 }
 
 // MockProcessor is a mock of Processor interface.

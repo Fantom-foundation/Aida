@@ -1,9 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utils
 
 import (
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,7 +57,9 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		DeletionDb:             getFlagValue(ctx, DeletionDbFlag).(string),
 		DiagnosticServer:       getFlagValue(ctx, DiagnosticServerFlag).(int64),
 		ErrorLogging:           getFlagValue(ctx, ErrorLoggingFlag).(string),
+		Forks:                  getFlagValue(ctx, ForksFlag).([]string),
 		Genesis:                getFlagValue(ctx, GenesisFlag).(string),
+		EthTestType:            EthTestType(getFlagValue(ctx, EthTestTypeFlag).(int)),
 		IncludeStorage:         getFlagValue(ctx, IncludeStorageFlag).(bool),
 		KeepDb:                 getFlagValue(ctx, KeepDbFlag).(bool),
 		KeysNumber:             getFlagValue(ctx, KeysNumberFlag).(int64),
@@ -72,7 +89,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		ProfilingDbName:        getFlagValue(ctx, ProfilingDbNameFlag).(string),
 		RandomSeed:             getFlagValue(ctx, RandomSeedFlag).(int64),
 		RegisterRun:            getFlagValue(ctx, RegisterRunFlag).(string),
-		RpcRecordingFile:       getFlagValue(ctx, RpcRecordingFileFlag).(string),
+		RpcRecordingPath:       getFlagValue(ctx, RpcRecordingFileFlag).(string),
 		ShadowDb:               getFlagValue(ctx, ShadowDb).(bool),
 		ShadowImpl:             getFlagValue(ctx, ShadowDbImplementationFlag).(string),
 		ShadowVariant:          getFlagValue(ctx, ShadowDbVariantFlag).(string),
@@ -80,33 +97,31 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		SkipPriming:            getFlagValue(ctx, SkipPrimingFlag).(bool),
 		SkipStateHashScrapping: getFlagValue(ctx, SkipStateHashScrappingFlag).(bool),
 		SnapshotDepth:          getFlagValue(ctx, SnapshotDepthFlag).(int),
-		SourceTableName:        getFlagValue(ctx, SourceTableNameFlag).(string),
-		SrcDbReadonly:          false,
 		StateDbSrc:             getFlagValue(ctx, StateDbSrcFlag).(string),
-		StateValidationMode:    EqualityCheck,
-		SubstateDb:             getFlagValue(ctx, substate.SubstateDbFlag).(string),
-		SyncPeriodLength:       getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
-		TargetBlock:            getFlagValue(ctx, TargetBlockFlag).(uint64),
-		TargetDb:               getFlagValue(ctx, TargetDbFlag).(string),
-		TargetEpoch:            getFlagValue(ctx, TargetEpochFlag).(uint64),
-		Trace:                  getFlagValue(ctx, TraceFlag).(bool),
-		TraceDirectory:         getFlagValue(ctx, TraceDirectoryFlag).(string),
-		TraceFile:              getFlagValue(ctx, TraceFileFlag).(string),
-		TrackProgress:          getFlagValue(ctx, TrackProgressFlag).(bool),
-		TransactionLength:      getFlagValue(ctx, TransactionLengthFlag).(uint64),
-		TrieRootHash:           getFlagValue(ctx, TrieRootHashFlag).(string),
-		UpdateBufferSize:       getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
-		UpdateDb:               getFlagValue(ctx, UpdateDbFlag).(string),
-		UpdateOnFailure:        getFlagValue(ctx, UpdateOnFailure).(bool),
-		UpdateType:             getFlagValue(ctx, UpdateTypeFlag).(string),
-		Validate:               getFlagValue(ctx, ValidateFlag).(bool),
-		ValidateStateHashes:    getFlagValue(ctx, ValidateStateHashesFlag).(bool),
-		ValidateTxState:        getFlagValue(ctx, ValidateTxStateFlag).(bool),
-		ValuesNumber:           getFlagValue(ctx, ValuesNumberFlag).(int64),
-		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
-		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
-		WorldStateDb:           getFlagValue(ctx, WorldStateFlag).(string),
-		TxGeneratorType:        getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
+		StateDbSrcDirectAccess: getFlagValue(ctx, StateDbSrcOverwriteFlag).(bool),
+		StateDbSrcReadOnly:     false,
+		// TODO re-enable equality check once supported in Carmen
+		StateValidationMode: SubsetCheck,
+		SubstateDb:          getFlagValue(ctx, AidaDbFlag).(string),
+		SyncPeriodLength:    getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
+		TargetDb:            getFlagValue(ctx, TargetDbFlag).(string),
+		TargetEpoch:         getFlagValue(ctx, TargetEpochFlag).(uint64),
+		Trace:               getFlagValue(ctx, TraceFlag).(bool),
+		TraceDirectory:      getFlagValue(ctx, TraceDirectoryFlag).(string),
+		TraceFile:           getFlagValue(ctx, TraceFileFlag).(string),
+		TrackProgress:       getFlagValue(ctx, TrackProgressFlag).(bool),
+		TransactionLength:   getFlagValue(ctx, TransactionLengthFlag).(uint64),
+		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
+		UpdateDb:            getFlagValue(ctx, UpdateDbFlag).(string),
+		UpdateOnFailure:     getFlagValue(ctx, UpdateOnFailure).(bool),
+		UpdateType:          getFlagValue(ctx, UpdateTypeFlag).(string),
+		Validate:            getFlagValue(ctx, ValidateFlag).(bool),
+		ValidateStateHashes: getFlagValue(ctx, ValidateStateHashesFlag).(bool),
+		ValidateTxState:     getFlagValue(ctx, ValidateTxStateFlag).(bool),
+		ValuesNumber:        getFlagValue(ctx, ValuesNumberFlag).(int64),
+		VmImpl:              getFlagValue(ctx, VmImplementation).(string),
+		Workers:             getFlagValue(ctx, WorkersFlag).(int),
+		TxGeneratorType:     getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
 	}
 
 	return cfg

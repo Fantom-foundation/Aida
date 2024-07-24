@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package statedb
 
 import (
@@ -140,6 +156,9 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 			i.log.Warningf("failed to obtain archive block height: %v", err)
 			return
 		}
+		if empty {
+			i.log.Warning("cannot run inquiry - archive is empty")
+		}
 		if !empty && uint64(tx.block) <= height {
 			break
 		}
@@ -150,12 +169,24 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	// Perform historic query.
-	archive, err := i.state.GetArchiveState(uint64(tx.block))
+	archive, err := i.getArchive(uint64(tx.block), uint32(tx.number))
 	if err != nil {
-		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", tx.block, err)
+		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
+		errCh <- err
 		return
 	}
-	defer archive.Release()
+
+	defer func() {
+		err = archive.EndTransaction()
+		if err != nil {
+			errCh <- fmt.Errorf("cannot end archive inquirer transaction; %w", err)
+		}
+		err = archive.Release()
+		if err != nil {
+			errCh <- fmt.Errorf("cannot release archive inside archive inquirer; %w", err)
+		}
+
+	}()
 
 	state := executor.State[txcontext.TxContext]{
 		Block:       tx.block,
@@ -167,6 +198,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 		ErrorInput: errCh,
 	}
 
+	// input validation
 	err = i.validator.PreTransaction(state, ctx)
 	if err != nil {
 		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
@@ -192,7 +224,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	i.transactionCounter.Add(1)
-	i.gasCounter.Add(tx.data.GetReceipt().GetGasUsed())
+	i.gasCounter.Add(tx.data.GetResult().GetGasUsed())
 	i.totalQueryTimeMilliseconds.Add(uint64(duration.Milliseconds()))
 }
 
@@ -228,6 +260,20 @@ func (i *archiveInquirer) runProgressReport() {
 			return
 		}
 	}
+}
+
+func (i *archiveInquirer) getArchive(blk uint64, tx uint32) (state.NonCommittableStateDB, error) {
+	archive, err := i.state.GetArchiveState(blk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain access to archive blk %d, tx %d: %w", blk, tx, err)
+	}
+
+	err = archive.BeginTransaction(tx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot begin transaction blk: %d, tx: %d; %w", blk, tx, err)
+	}
+
+	return archive, nil
 }
 
 type historicTransaction struct {

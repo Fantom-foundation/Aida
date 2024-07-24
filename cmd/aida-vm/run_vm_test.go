@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
@@ -11,8 +27,11 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
 
@@ -22,16 +41,9 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		Workers:           1,
-		ContinueOnFailure: true, // in this test we only check if txs are being processed, any error can be ignored
-		LogLevel:          "Critical",
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.ContinueOnFailure = true
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -54,104 +66,29 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		// Block 2
 		// Tx 1
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		// Tx 2
 		db.EXPECT().BeginTransaction(uint32(2)),
-		db.EXPECT().Prepare(gomock.Any(), 2),
+		db.EXPECT().SetTxContext(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(17),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(17),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		// Block 3
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(19),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(19),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
-		// Pseudo transaction do not use snapshots.
-		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
-		db.EXPECT().EndTransaction(),
-	)
-
-	run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
-}
-
-func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
-	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		Workers:           4,
-		ContinueOnFailure: true, // in this test we only check if txs are being processed, any error can be ignored
-		LogLevel:          "Critical",
-	}
-
-	// Simulate the execution of three transactions in two blocks.
-	provider.EXPECT().
-		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
-			// Block 2
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx)})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx)})
-			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx)})
-			// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx)})
-			return nil
-		})
-
-	// The expectation is that all of those transactions are properly opened,
-	// prepared, executed, and closed. Since we are running parallel mode with
-	// multiple workers, tx order does not have to preserved.
-
-	// Block 2 Tx 1
-	gomock.InOrder(
-		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
-		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(gomock.Any(), gomock.Any()),
-		db.EXPECT().EndTransaction(),
-	)
-
-	// Block 2 Tx 2
-	gomock.InOrder(
-		db.EXPECT().BeginTransaction(uint32(2)),
-		db.EXPECT().Prepare(gomock.Any(), 2),
-		db.EXPECT().Snapshot().Return(17),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(17),
-		db.EXPECT().GetLogs(gomock.Any(), gomock.Any()),
-		db.EXPECT().EndTransaction(),
-	)
-
-	// Block 3 Tx 1
-	gomock.InOrder(
-		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
-		db.EXPECT().Snapshot().Return(19),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(19),
-		db.EXPECT().GetLogs(gomock.Any(), gomock.Any()),
-		db.EXPECT().EndTransaction(),
-	)
-
-	// Block 4 Tx 1
-	gomock.InOrder(
-		// Pseudo transaction do not use snapshots.
+		// Pseudo Tx
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		db.EXPECT().EndTransaction(),
 	)
@@ -164,16 +101,9 @@ func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		Workers:           1,
-		ContinueOnFailure: true,
-		LogLevel:          "Critical",
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.ContinueOnFailure = true
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -227,16 +157,10 @@ func TestVm_AllTransactionsAreProcessedInOrder_Parallel(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
-	cfg := &utils.Config{
-		First:             2,
-		Last:              4,
-		ChainID:           utils.MainnetChainID,
-		SkipPriming:       true,
-		Workers:           4,
-		ContinueOnFailure: true,
-		LogLevel:          "Critical",
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg.ContinueOnFailure = true
+	cfg.Workers = 2
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -307,15 +231,8 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         1,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -325,24 +242,23 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	gomock.InOrder(
 		// we return correct expected data so tx does not fail
 		db.EXPECT().Exist(testingAddress).Return(true),
-		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		db.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		db.EXPECT().EndTransaction(),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
 	// run fails but not on validation
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
-		t.Errorf("run must fail")
+		t.Fatal("run must fail")
 	}
 
 	// we expected error with low gas, which means the validation passed
@@ -358,15 +274,9 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         4,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -376,18 +286,17 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	gomock.InOrder(
 		// we return correct expected data so tx does not fail
 		db.EXPECT().Exist(testingAddress).Return(true),
-		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		db.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		db.EXPECT().EndTransaction(),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
 	// run fails but not on validation
@@ -409,15 +318,8 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         1,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -425,11 +327,11 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		})
 
 	gomock.InOrder(
-
 		db.EXPECT().Exist(testingAddress).Return(false), // address does not exist
-		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		db.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
@@ -449,15 +351,9 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
-	cfg := &utils.Config{
-		First:           2,
-		Last:            4,
-		ChainID:         utils.MainnetChainID,
-		ValidateTxState: true,
-		SkipPriming:     true,
-		Workers:         4,
-	}
 
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg.Workers = 2
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -466,9 +362,10 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().Exist(testingAddress).Return(false), // address does not exist
-		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
+		db.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
@@ -486,24 +383,26 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	Env: &substate.Env{},
+	Message: &substate.Message{
 		Gas:      10000,
 		GasPrice: big.NewInt(0),
+		Value:    big.NewInt(1),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:        &substate.SubstateEnv{},
-	Message: &substate.SubstateMessage{
+	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	Env:           &substate.Env{},
+	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
+		Value:    big.NewInt(1),
 	},
-	Result: &substate.SubstateResult{
+	Result: &substate.Result{
 		GasUsed: 1,
 	},
 }

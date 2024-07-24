@@ -1,6 +1,23 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -11,6 +28,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,13 +39,16 @@ func RunVm(ctx *cli.Context) error {
 		return err
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return run(cfg, substateIterator, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
@@ -62,6 +83,7 @@ func run(
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
+		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
 	)
 	extensions = append(extensions, extra...)
 
@@ -75,5 +97,6 @@ func run(
 		},
 		processor,
 		extensions,
+		nil,
 	)
 }

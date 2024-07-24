@@ -1,14 +1,31 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package stochastic
 
 // TODO: Provide Mocking tests for proxy
 
 import (
-	"math/big"
-
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // EventProxy data structure for capturing StateDB events
@@ -37,25 +54,25 @@ func (p *EventProxy) CreateAccount(address common.Address) {
 }
 
 // SubBalance subtracts amount from a contract address.
-func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {
+func (p *EventProxy) SubBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	// register event
 	p.registry.RegisterAddressOp(SubBalanceID, &address)
 
 	// call real StateDB
-	p.db.SubBalance(address, amount)
+	p.db.SubBalance(address, amount, reason)
 }
 
 // AddBalance adds amount to a contract address.
-func (p *EventProxy) AddBalance(address common.Address, amount *big.Int) {
+func (p *EventProxy) AddBalance(address common.Address, amount *uint256.Int, reason tracing.BalanceChangeReason) {
 	// register event
 	p.registry.RegisterAddressOp(AddBalanceID, &address)
 
 	// call real StateDB
-	p.db.AddBalance(address, amount)
+	p.db.AddBalance(address, amount, reason)
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (p *EventProxy) GetBalance(address common.Address) *big.Int {
+func (p *EventProxy) GetBalance(address common.Address) *uint256.Int {
 	// register event
 	p.registry.RegisterAddressOp(GetBalanceID, &address)
 
@@ -161,23 +178,32 @@ func (p *EventProxy) SetState(address common.Address, key common.Hash, value com
 	// call real StateDB
 	p.db.SetState(address, key, value)
 }
-
-// Suicide an account.
-func (p *EventProxy) Suicide(address common.Address) bool {
-	// register event
-	p.registry.RegisterAddressOp(SuicideID, &address)
-
-	// call real StateDB
-	return p.db.Suicide(address)
+func (p *EventProxy) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
+	p.registry.RegisterValueOp(SetTransientStateID, &addr, &key, &value)
+	p.db.SetTransientState(addr, key, value)
 }
 
-// HasSuicided checks whether a contract has been suicided.
-func (p *EventProxy) HasSuicided(address common.Address) bool {
+func (p *EventProxy) GetTransientState(addr common.Address, key common.Hash) common.Hash {
+	p.registry.RegisterKeyOp(GetTransientStateID, &addr, &key)
+	return p.db.GetState(addr, key)
+}
+
+// SelfDestruct an account.
+func (p *EventProxy) SelfDestruct(address common.Address) {
 	// register event
-	p.registry.RegisterAddressOp(HasSuicidedID, &address)
+	p.registry.RegisterAddressOp(SelfDestructID, &address)
 
 	// call real StateDB
-	return p.db.HasSuicided(address)
+	p.db.SelfDestruct(address)
+}
+
+// HasSelfDestructed checks whether a contract has been suicided.
+func (p *EventProxy) HasSelfDestructed(address common.Address) bool {
+	// register event
+	p.registry.RegisterAddressOp(HasSelfDestructedID, &address)
+
+	// call real StateDB
+	return p.db.HasSelfDestructed(address)
 }
 
 // Exist checks whether the contract exists in the StateDB.
@@ -199,10 +225,10 @@ func (p *EventProxy) Empty(address common.Address) bool {
 	return p.db.Empty(address)
 }
 
-// PrepareAccessList handles the preparatory steps for executing a state transition.
-func (p *EventProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+// Prepare handles the preparatory steps for executing a state transition.
+func (p *EventProxy) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	// call real StateDB
-	p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+	p.db.Prepare(rules, sender, coinbase, dest, precompiles, txAccesses)
 }
 
 // AddAddressToAccessList adds an address to the access list.
@@ -271,9 +297,9 @@ func (p *EventProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (p *EventProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+func (p *EventProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	// call real StateDB
-	return p.db.GetLogs(hash, blockHash)
+	return p.db.GetLogs(hash, block, blockHash)
 }
 
 // AddPreimage adds a SHA3 preimage.
@@ -282,16 +308,10 @@ func (p *EventProxy) AddPreimage(address common.Hash, image []byte) {
 	p.db.AddPreimage(address, image)
 }
 
-// ForEachStorage performs a function over all storage locations in a contract.
-func (p *EventProxy) ForEachStorage(address common.Address, fn func(common.Hash, common.Hash) bool) error {
+// SetTxContext sets the current transaction hash and index.
+func (p *EventProxy) SetTxContext(thash common.Hash, ti int) {
 	// call real StateDB
-	return p.db.ForEachStorage(address, fn)
-}
-
-// Prepare sets the current transaction hash and index.
-func (p *EventProxy) Prepare(thash common.Hash, ti int) {
-	// call real StateDB
-	p.db.Prepare(thash, ti)
+	p.db.SetTxContext(thash, ti)
 }
 
 // Finalise the state in StateDB.
@@ -307,12 +327,12 @@ func (p *EventProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 }
 
 // Commit StateDB
-func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (p *EventProxy) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	// call real StateDB
-	return p.db.Commit(deleteEmptyObjects)
+	return p.db.Commit(block, deleteEmptyObjects)
 }
 
-func (p *EventProxy) GetHash() common.Hash {
+func (p *EventProxy) GetHash() (common.Hash, error) {
 	return p.db.GetHash()
 }
 
@@ -330,42 +350,48 @@ func (p *EventProxy) PrepareSubstate(substate txcontext.WorldState, block uint64
 	p.db.PrepareSubstate(substate, block)
 }
 
-func (p *EventProxy) BeginTransaction(number uint32) {
+func (p *EventProxy) BeginTransaction(number uint32) error {
 	// register event
 	p.registry.RegisterOp(BeginTransactionID)
 
 	// call real StateDB
-	p.db.BeginTransaction(number)
+	if err := p.db.BeginTransaction(number); err != nil {
+		return err
+	}
 
 	// clear all snapshots
 	p.snapshots = []int{}
+	return nil
 }
 
-func (p *EventProxy) EndTransaction() {
+func (p *EventProxy) EndTransaction() error {
 	// register event
 	p.registry.RegisterOp(EndTransactionID)
 
 	// call real StateDB
-	p.db.EndTransaction()
+	if err := p.db.EndTransaction(); err != nil {
+		return err
+	}
 
 	// clear all snapshots
 	p.snapshots = []int{}
+	return nil
 }
 
-func (p *EventProxy) BeginBlock(number uint64) {
+func (p *EventProxy) BeginBlock(number uint64) error {
 	// register event
 	p.registry.RegisterOp(BeginBlockID)
 
 	// call real StateDB
-	p.db.BeginBlock(number)
+	return p.db.BeginBlock(number)
 }
 
-func (p *EventProxy) EndBlock() {
+func (p *EventProxy) EndBlock() error {
 	// register event
 	p.registry.RegisterOp(EndBlockID)
 
 	// call real StateDB
-	p.db.EndBlock()
+	return p.db.EndBlock()
 }
 
 func (p *EventProxy) BeginSyncPeriod(number uint64) {
@@ -388,7 +414,7 @@ func (p *EventProxy) Close() error {
 	return p.db.Close()
 }
 
-func (p *EventProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (p *EventProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("StartBulkLoad not supported by EventProxy")
 }
 
@@ -406,4 +432,19 @@ func (p *EventProxy) GetArchiveBlockHeight() (uint64, bool, error) {
 
 func (p *EventProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
+}
+
+func (p *EventProxy) CreateContract(addr common.Address) {
+	p.registry.RegisterOp(CreateContractID)
+	p.db.CreateContract(addr)
+}
+
+func (p *EventProxy) Selfdestruct6780(addr common.Address) {
+	p.registry.RegisterOp(SelfDestruct6780ID)
+	p.db.Selfdestruct6780(addr)
+}
+
+func (p *EventProxy) GetStorageRoot(addr common.Address) common.Hash {
+	p.registry.RegisterOp(CreateContractID)
+	return p.db.GetStorageRoot(addr)
 }

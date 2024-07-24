@@ -1,9 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package utils
 
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"math/rand"
@@ -11,10 +26,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	_ "github.com/Fantom-foundation/Tosca/go/vm"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
+	_ "github.com/Fantom-foundation/Tosca/go/geth_adapter"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -22,7 +38,14 @@ import (
 
 type ArgumentMode int
 type ChainID int
-type ChainIDs []ChainID
+type ChainIDs map[ChainID]string
+type EthTestType int
+
+const (
+	Unknown EthTestType = iota
+	StateTests
+	BlockTests
+)
 
 // An enums of argument modes used by trace subcommands
 const (
@@ -38,9 +61,13 @@ const (
 	EthereumChainID ChainID = 1
 	MainnetChainID  ChainID = 250
 	TestnetChainID  ChainID = 4002
+	// EthTestsChainID is a mock ChainID which is necessary for setting
+	// the chain rules to allow any block number for any fork.
+	EthTestsChainID ChainID = 1337
 )
 
-var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID, EthereumChainID}
+var RealChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum"}
+var AllowedChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum", EthTestsChainID: "eth-tests"}
 
 const (
 	AidaDbRepositoryMainnetUrl  = "https://aida.repository.fantom.network"
@@ -62,6 +89,8 @@ const (
 	SubsetCheck   ValidationMode = iota // confirms whether a substate is contained in stateDB.
 	EqualityCheck                       // confirms whether a substate and StateDB are identical.
 )
+
+const ethTestCmdName = "ethereum-test"
 
 // A map of key blocks on Fantom chain
 var KeywordBlocks = map[ChainID]map[string]uint64{
@@ -100,6 +129,10 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
+
+	// EthTest must always set its fork blocks to 0 because each test has random block number
+	// and if that block number is not greater than the config, the test won't get executed
+	EthTestsChainID: {},
 }
 
 // special transaction number for pseudo transactions
@@ -116,22 +149,23 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	AidaDb                 string         // directory to profiling database containing substate, update, delete accounts data
-	ArchiveMaxQueryAge     int            // the maximum age for archive queries (in blocks)
-	ArchiveMode            bool           // enable archive mode
-	ArchiveQueryRate       int            // the queries per second send to the archive
-	ArchiveVariant         string         // selects the implementation variant of the archive
-	ArgPath                string         // path to file or directory given as argument
-	BalanceRange           int64          // balance range for stochastic simulation/replay
-	BasicBlockProfiling    bool           // enable profiling of basic block
-	BlockLength            uint64         // length of a block in number of transactions
-	CPUProfile             string         // pprof cpu profile output file name
-	CPUProfilePerInterval  bool           // a different CPU profile is taken per 100k block interval
-	Cache                  int            // Cache for StateDb or Priming
-	CarmenSchema           int            // the current DB schema ID to use in Carmen
-	CarmenStateCacheSize   int            // the number of values cached in the Carmen StateDB (0 for default value)
-	CarmenNodeCacheSize    int            // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
-	ChainID                ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
+	AidaDb                 string  // directory to profiling database containing substate, update, delete accounts data
+	ArchiveMaxQueryAge     int     // the maximum age for archive queries (in blocks)
+	ArchiveMode            bool    // enable archive mode
+	ArchiveQueryRate       int     // the queries per second send to the archive
+	ArchiveVariant         string  // selects the implementation variant of the archive
+	ArgPath                string  // path to file or directory given as argument
+	BalanceRange           int64   // balance range for stochastic simulation/replay
+	BasicBlockProfiling    bool    // enable profiling of basic block
+	BlockLength            uint64  // length of a block in number of transactions
+	CPUProfile             string  // pprof cpu profile output file name
+	CPUProfilePerInterval  bool    // a different CPU profile is taken per 100k block interval
+	Cache                  int     // Cache for StateDb or Priming
+	CarmenSchema           int     // the current DB schema ID to use in Carmen
+	CarmenStateCacheSize   int     // the number of values cached in the Carmen StateDB (0 for default value)
+	CarmenNodeCacheSize    int     // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
+	ChainID                ChainID // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChainCfg               *params.ChainConfig
 	ChannelBufferSize      int            // set a buffer size for profiling channel
 	CompactDb              bool           // compact database after merging
 	ContinueOnFailure      bool           // continue validation when an error detected
@@ -149,6 +183,7 @@ type Config struct {
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	ErrorLogging           string         // if defined, error logging to file is enabled
 	Genesis                string         // genesis file
+	EthTestType            EthTestType    // which geth test are we running
 	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
 	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
 	KeepDb                 bool           // set to true if db is kept after run
@@ -180,7 +215,7 @@ type Config struct {
 	ProfilingDbName        string         // set a database name for storing micro-profiling results
 	RandomSeed             int64          // set random seed for stochastic testing
 	RegisterRun            string         // register run to the provided connection string
-	RpcRecordingFile       string         // path to source file with recorded RPC requests
+	RpcRecordingPath       string         // path to source file (or dir with files) with recorded RPC requests
 	ShadowDb               bool           // defines we want to open an existing db as shadow
 	ShadowImpl             string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant          string         // database variant of the shadow DB to be used
@@ -188,13 +223,12 @@ type Config struct {
 	SkipPriming            bool           // skip priming of the state DB
 	SkipStateHashScrapping bool           // if enabled, then state-hashes are not loaded from rpc
 	SnapshotDepth          int            // depth of snapshot history
-	SourceTableName        string         // represents the name of a source DB table
-	SrcDbReadonly          bool           // if false, make a copy the source statedb
 	StateDbSrc             string         // directory to load an existing State DB data
+	StateDbSrcDirectAccess bool           // if true, read and write directly from the source database
+	StateDbSrcReadOnly     bool           // if true, source database is not modified
 	StateValidationMode    ValidationMode // state validation mode
 	SubstateDb             string         // substate directory
 	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
-	TargetBlock            uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	TargetDb               string         // represents the path of a target DB
 	TargetEpoch            uint64         // represents the ID of target epoch to be reached by autogen patch generator
 	Trace                  bool           // trace flag
@@ -202,7 +236,6 @@ type Config struct {
 	TraceFile              string         // name of trace file
 	TrackProgress          bool           // enables track progress logging
 	TransactionLength      uint64         // determines indirectly the length of a transaction
-	TrieRootHash           string         // represents a hash of a state trie root to be decoded
 	UpdateBufferSize       uint64         // cache size in Bytes
 	UpdateDb               string         // update-set directory
 	UpdateOnFailure        bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
@@ -213,21 +246,40 @@ type Config struct {
 	ValuesNumber           int64          // number of values to generate
 	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
-	WorldStateDb           string         // path to worldstate
 	TxGeneratorType        []string       // type of the application used for transaction generation
+	Forks                  []string       // Which forks are going to get executed byz
 }
 
 type configContext struct {
 	cfg         *Config       // run configuration
 	log         logger.Logger // logger for printing logs in config functions
 	hasMetadata bool          // if true, Aida-db has a valid metadata table
+	ctx         *cli.Context  // command line context for accessing flags and command line arguments
 }
 
-func NewConfigContext(cfg *Config) *configContext {
+func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
 	return &configContext{
 		log:         logger.NewLogger(cfg.LogLevel, "Config"),
 		cfg:         cfg,
 		hasMetadata: false,
+		ctx:         ctx,
+	}
+}
+
+// NewTestConfig creates a new config for test purpose
+func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool) *Config {
+	chainCfg, err := GetChainConfig(chainId)
+	if err != nil {
+		t.Fatalf("cannot get chain cfg: %v", err)
+	}
+	return &Config{
+		First:           first,
+		Last:            last,
+		ChainCfg:        chainCfg,
+		LogLevel:        "Critical",
+		SkipPriming:     true,
+		Validate:        validate,
+		ValidateTxState: validate,
 	}
 }
 
@@ -239,7 +291,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cfg := createConfigFromFlags(ctx)
 
 	// create config context for sharing common arguments
-	cc := NewConfigContext(cfg)
+	cc := NewConfigContext(cfg, ctx)
 
 	// check if chainID is set correctly
 	err = cc.setChainId()
@@ -247,13 +299,21 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("cannot get chain id; %v", err)
 	}
 
+	err = cc.setChainConfig()
+	if err != nil {
+		return nil, fmt.Errorf("cannot set chain id: %w", err)
+	}
+
 	// set first Opera block according to chian id
-	cc.setFirstOperaBlock()
+	err = cc.setFirstOperaBlock()
+	if err != nil {
+		return nil, err
+	}
 
 	// set aida db repository url
 	err = cc.setAidaDbRepositoryUrl()
 	if err != nil {
-		return cfg, fmt.Errorf("unable to prepareUrl from chain id %v; %v", cfg.ChainID, err)
+		return cfg, fmt.Errorf("unable to prepare url from chain id %v; %v", cfg.ChainID, err)
 	}
 
 	// set numbers of first block, last block and path to profilingDB
@@ -272,47 +332,58 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	return cfg, nil
 }
 
-func (cc *configContext) setFirstOperaBlock() {
-	if !(cc.cfg.ChainID == MainnetChainID || cc.cfg.ChainID == TestnetChainID || cc.cfg.ChainID == EthereumChainID) {
-		log.Fatalf("unknown chain id %v", cc.cfg.ChainID)
+func (cc *configContext) setFirstOperaBlock() error {
+	if _, ok := AllowedChainIDs[cc.cfg.ChainID]; !ok {
+		return fmt.Errorf("unknown chain id %v", cc.cfg.ChainID)
 	}
 	FirstOperaBlock = KeywordBlocks[cc.cfg.ChainID]["opera"]
+	return nil
 }
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
 func (cc *configContext) setAidaDbRepositoryUrl() error {
-	if cc.cfg.ChainID == MainnetChainID {
+	switch cc.cfg.ChainID {
+	case MainnetChainID:
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
-	} else if cc.cfg.ChainID == TestnetChainID {
+	case TestnetChainID:
 		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
-	} else if cc.cfg.ChainID == EthereumChainID {
+	case EthereumChainID:
 		AidaDbRepositoryUrl = AidaDbRepositoryEthereumUrl
-	} else {
-		return fmt.Errorf("invalid chain id %d", cc.cfg.ChainID)
+	default:
+		cc.log.Warningf("%v chain-id does not have aida-db repository url set - setting to mainnet", cc.cfg)
+		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	}
+
 	return nil
 }
 
+func (cfg *Config) SetStateDbSrcReadOnly() {
+	cfg.StateDbSrcDirectAccess = true
+	cfg.StateDbSrcReadOnly = true
+}
+
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainId ChainID) *params.ChainConfig {
-	if !(chainId == MainnetChainID || chainId == TestnetChainID || chainId == EthereumChainID) {
-		log.Fatalf("unknown chain id %v", chainId)
+func GetChainConfig(chainId ChainID) (*params.ChainConfig, error) {
+	if _, ok := AllowedChainIDs[chainId]; !ok {
+		return nil, fmt.Errorf("unknown chain id %v\nallowed chain-ids: %v", chainId, AllowedChainIDs)
 	}
-	// use prepared Ethereum ChainConfig instead
-	if chainId == EthereumChainID {
+	switch chainId {
+	case EthereumChainID:
 		chainConfig := params.MainnetChainConfig
 		chainConfig.DAOForkSupport = false
-		return chainConfig
+		return chainConfig, nil
+	case EthTestsChainID:
+		return params.AllDevChainProtocolChanges, nil
+	default:
+		// Make a copy of the basic config before modifying it to avoid
+		// unexpected side-effects and synchronization issues in parallel runs.
+		chainConfig := *params.AllEthashProtocolChanges
+		chainConfig.ChainID = big.NewInt(int64(chainId))
+
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["berlin"])
+		chainConfig.LondonBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["london"])
+		return &chainConfig, nil
 	}
-
-	// Make a copy of of the basic config before modifying it to avoid
-	// unexpected side-effects and synchronization issues in parallel runs.
-	chainConfig := *params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainId))
-
-	chainConfig.BerlinBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["berlin"])
-	chainConfig.LondonBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["london"])
-	return &chainConfig
 }
 
 // directoryExists returns true if a directory exists
@@ -445,7 +516,7 @@ func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, error) {
 	}
 
 	// read meta data
-	aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true)
+	aidaDb, err := db.NewReadOnlyBaseDB(cc.cfg.AidaDb)
 	if err != nil {
 		cc.log.Warningf("Cannot open AidaDB; %v", err)
 		return defaultFirst, defaultLast, defaultLastPatch, nil
@@ -507,7 +578,7 @@ func (cc *configContext) setChainId() error {
 		cc.log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
-		if aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true); err == nil {
+		if aidaDb, err := db.OpenBaseDB(cc.cfg.AidaDb); err == nil {
 			md := NewAidaDbMetadata(aidaDb, cc.cfg.LogLevel)
 
 			cc.cfg.ChainID = md.GetChainID()
@@ -518,6 +589,10 @@ func (cc *configContext) setChainId() error {
 		}
 
 		if cc.cfg.ChainID == 0 {
+			if strings.EqualFold(cc.ctx.Command.Name, ethTestCmdName) {
+				cc.cfg.ChainID = EthTestsChainID
+				return nil
+			}
 			cc.log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cc.cfg.AidaDb)
 			cc.cfg.ChainID = MainnetChainID
 		} else {
@@ -620,8 +695,9 @@ func (cc *configContext) adjustMissingConfigValues() error {
 		log.Warning("Enable continue-on-failure mode because error logging is used.")
 	}
 
-	// --continue-on-failure implicitly enables transaction state validation
+	// --continue-on-failure implicitly enables transaction validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
+	cfg.ValidateStateHashes = cfg.Validate || cfg.ValidateStateHashes
 
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
@@ -690,4 +766,9 @@ func (cc *configContext) reportNewConfig() {
 	if cfg.DbLogging != "" {
 		log.Warning("Db logging enabled, reducing Tx throughput")
 	}
+}
+
+func (cc *configContext) setChainConfig() (err error) {
+	cc.cfg.ChainCfg, err = GetChainConfig(cc.cfg.ChainID)
+	return err
 }

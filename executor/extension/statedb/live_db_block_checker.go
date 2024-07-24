@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package statedb
 
 import (
@@ -62,9 +78,15 @@ func (c *liveDbBlockChecker[T]) PreRun(executor.State[T], *executor.Context) err
 		lastBlock = primeDbInfo.Block
 	}
 
-	// first block must be exactly +1 so data aligns correctly
-	if lastBlock+1 != c.cfg.First {
-		return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be last block of live-db + 1, in your case %v", lastBlock+1)
+	// ethereum doesn't support priming
+	if c.cfg.ChainID == 1 {
+		// first block must be exactly +1 so data aligns correctly
+		if lastBlock+1 != c.cfg.First {
+			return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be last block of live-db + 1, in your case %v", lastBlock+1)
+		}
+	} else if lastBlock >= c.cfg.First {
+		// user incorrectly tries to prime data into database even tho database is already advanced further
+		return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be higher than last block of live-db, in your case %v", lastBlock+1)
 	}
 
 	return nil

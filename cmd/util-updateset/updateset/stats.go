@@ -1,10 +1,26 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package updateset
 
 import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,18 +46,18 @@ func reportUpdateSetStats(ctx *cli.Context) error {
 		return argErr
 	}
 	// initialize updateDB
-	db, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	udb, err := db.NewDefaultUpdateDB(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer udb.Close()
 
-	iter := substate.NewUpdateSetIterator(db, cfg.First, cfg.Last)
+	iter := udb.NewUpdateSetIterator(cfg.First, cfg.Last)
 	defer iter.Release()
 
 	for iter.Next() {
 		update := iter.Value()
-		state := *update.UpdateSet
+		state := update.WorldState
 		fmt.Printf("%v,%v,", update.Block, len(state))
 		storage := 0
 		for account := range state {

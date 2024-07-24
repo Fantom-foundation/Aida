@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package db
 
 import (
@@ -9,7 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,7 +53,7 @@ func generateDbHashCmd(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -66,7 +82,7 @@ func validateCmd(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	aidaDb, err := db.NewDefaultBaseDB(cfg.AidaDb)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -144,7 +160,7 @@ var PrintDbHashCommand = cli.Command{
 func printDbHash(ctx *cli.Context) error {
 	var force = ctx.Bool(flags.ForceFlag.Name)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
+	aidaDb, err := db.NewReadOnlyBaseDB(ctx.String(utils.AidaDbFlag.Name))
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}

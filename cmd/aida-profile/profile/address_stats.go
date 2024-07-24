@@ -1,8 +1,23 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package profile
 
 import (
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -14,7 +29,7 @@ var GetAddressStatsCommand = cli.Command{
 	Usage:     "computes usage statistics of addresses",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 	},
@@ -34,11 +49,11 @@ Statistics on the usage of addresses are printed to the console.
 func getAddressStatsAction(ctx *cli.Context) error {
 	return getReferenceStatsAction(ctx, "address-stats", func(info *TransactionInfo) []common.Address {
 		addresses := []common.Address{}
-		for address := range info.st.InputAlloc {
-			addresses = append(addresses, address)
+		for address := range info.st.InputSubstate {
+			addresses = append(addresses, common.Address(address))
 		}
-		for address := range info.st.OutputAlloc {
-			addresses = append(addresses, address)
+		for address := range info.st.OutputSubstate {
+			addresses = append(addresses, common.Address(address))
 		}
 		return addresses
 	})

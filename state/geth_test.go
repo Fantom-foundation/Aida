@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package state
 
 import (
@@ -16,15 +32,27 @@ func fillDb(t *testing.T, directory string) (common.Hash, error) {
 		t.Fatalf("Failed to create DB: %v", err)
 	}
 
+	if err := db.BeginBlock(0); err != nil {
+		t.Fatalf("BeginBlock failed: %v", err)
+	}
+	if err := db.BeginTransaction(0); err != nil {
+		t.Fatalf("BeginTransaction failed: %v", err)
+	}
 	for i := 0; i < N; i++ {
 		address := common.Address{byte(i), byte(i >> 8)}
+		db.CreateAccount(address)
 		db.SetNonce(address, 12)
 		key := common.Hash{byte(i >> 8), byte(i)}
 		value := common.Hash{byte(15)}
 		db.SetState(address, key, value)
 	}
-
-	hash, err := db.Commit(true)
+	if err := db.EndTransaction(); err != nil {
+		t.Fatalf("EndTransaction failed: %v", err)
+	}
+	if err := db.EndBlock(); err != nil {
+		t.Fatalf("EndBlock failed: %v", err)
+	}
+	hash, err := db.GetHash()
 	if err != nil {
 		t.Fatalf("Failed to commit: %v", err)
 	}

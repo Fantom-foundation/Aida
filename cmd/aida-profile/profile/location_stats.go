@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package profile
 
 import (
@@ -5,7 +21,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +32,7 @@ var GetLocationStatsCommand = cli.Command{
 	Usage:     "computes usage statistics of accessed storage locations",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
@@ -66,17 +81,17 @@ func getLocationStatsAction(ctx *cli.Context) error {
 	var key_index Index[common.Hash]
 	return getReferenceStatsAction(ctx, "location-stats", func(info *TransactionInfo) []Location {
 		locations := []Location{}
-		for address, account := range info.st.InputAlloc {
-			address_id := address_index.Get(&address)
+		for address, account := range info.st.InputSubstate {
+			address_id := address_index.Get((*common.Address)(&address))
 			for key := range account.Storage {
-				key_id := key_index.Get(&key)
+				key_id := key_index.Get((*common.Hash)(&key))
 				locations = append(locations, Location{address_id, key_id})
 			}
 		}
-		for address, account := range info.st.OutputAlloc {
-			address_id := address_index.Get(&address)
+		for address, account := range info.st.OutputSubstate {
+			address_id := address_index.Get((*common.Address)(&address))
 			for key := range account.Storage {
-				key_id := key_index.Get(&key)
+				key_id := key_index.Get((*common.Hash)(&key))
 				locations = append(locations, Location{address_id, key_id})
 			}
 		}

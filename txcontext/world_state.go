@@ -1,3 +1,19 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package txcontext
 
 import (
@@ -39,6 +55,47 @@ type WorldState interface {
 
 type AccountHandler func(addr common.Address, acc Account)
 
+func NewWorldState(m map[common.Address]Account) WorldState {
+	return AidaWorldState(m)
+}
+
+type AidaWorldState map[common.Address]Account
+
+func (a AidaWorldState) String() string {
+	return WorldStateString(a)
+}
+
+func (a AidaWorldState) Has(addr common.Address) bool {
+	_, ok := a[addr]
+	return ok
+}
+
+func (a AidaWorldState) Equal(y WorldState) bool {
+	return WorldStateEqual(a, y)
+}
+
+func (a AidaWorldState) Get(addr common.Address) Account {
+	acc, ok := a[addr]
+	if !ok {
+		return nil
+	}
+
+	return acc
+}
+
+func (a AidaWorldState) ForEachAccount(h AccountHandler) {
+	for addr, acc := range a {
+		h(addr, acc)
+	}
+}
+
+func (a AidaWorldState) Len() int {
+	return len(a)
+}
+
+func (a AidaWorldState) Delete(addr common.Address) {
+	delete(a, addr)
+}
 func WorldStateEqual(x, y WorldState) (isEqual bool) {
 	if x.Len() != y.Len() {
 		return false

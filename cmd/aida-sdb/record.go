@@ -1,6 +1,24 @@
+// Copyright 2024 Fantom Foundation
+// This file is part of Aida Testing Infrastructure for Sonic
+//
+// Aida is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Aida is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Aida. If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
@@ -9,7 +27,7 @@ import (
 	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,7 +41,7 @@ var RecordCommand = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&substate.WorkersFlag,
+		&utils.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -47,14 +65,16 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	substate.RecordReplay = true
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return record(cfg, substateDb, executor.MakeLiveDbTxProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return record(cfg, substateIterator, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func record(
@@ -69,6 +89,7 @@ func record(
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
+		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
 	}
 
 	extensions = append(extensions, extra...)
@@ -81,5 +102,6 @@ func record(
 		},
 		processor,
 		extensions,
+		nil,
 	)
 }
