@@ -7,7 +7,7 @@ toolchain go1.22.0
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240627085016-204b50159b28
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
-	github.com/Fantom-foundation/Substate v0.0.0-20240722133507-abdeac03b8fb
+	github.com/Fantom-foundation/Substate v0.0.0-20240726142153-97f4c87edb4a
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
