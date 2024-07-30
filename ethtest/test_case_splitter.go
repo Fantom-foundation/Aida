@@ -28,7 +28,7 @@ var usableForks = map[string]struct{}{
 	"Istanbul":     {},
 	"MuirGlacier":  {},
 	"TestNetwork":  {},
-	//"Prague":       {}, TODO: Do we enable?
+	//"Prague":       {}, TODO: enable once geth is updated to Prague
 }
 
 // NewTestCaseSplitter opens all JSON tests within path

@@ -25,6 +25,7 @@ func (s *stJSON) setPath(path string) {
 func (s *stJSON) CreateEnv(fork string) *stBlockEnvironment {
 	config, _, err := tests.GetChainConfig(fork)
 	if err != nil {
+		// todo remove panic
 		panic(err)
 	}
 
