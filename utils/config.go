@@ -373,6 +373,7 @@ func GetChainConfig(chainId ChainID) (*params.ChainConfig, error) {
 		chainConfig.DAOForkSupport = false
 		return chainConfig, nil
 	case EthTestsChainID:
+		// TODO: this is useless
 		return params.AllDevChainProtocolChanges, nil
 	default:
 		// Make a copy of the basic config before modifying it to avoid

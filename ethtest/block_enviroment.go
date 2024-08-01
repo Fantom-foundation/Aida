@@ -20,6 +20,9 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 type stBlockEnvironment struct {
@@ -30,6 +33,7 @@ type stBlockEnvironment struct {
 	Number      *BigInt        `json:"currentNumber"     gencodec:"required"`
 	Timestamp   *BigInt        `json:"currentTimestamp"  gencodec:"required"`
 	BaseFee     *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
+	genesis     core.Genesis
 }
 
 func (s *stBlockEnvironment) GetCoinbase() common.Address {
@@ -58,4 +62,13 @@ func (s *stBlockEnvironment) GetBlockHash(blockNumber uint64) (common.Hash, erro
 
 func (s *stBlockEnvironment) GetBaseFee() *big.Int {
 	return s.BaseFee.Convert()
+}
+
+func (s *stBlockEnvironment) GetBlockContext(*error) *vm.BlockContext {
+	ctx := core.NewEVMBlockContext(s.genesis.ToBlock().Header(), nil, &s.Coinbase)
+	return &ctx
+}
+
+func (s *stBlockEnvironment) GetChainConfig() *params.ChainConfig {
+	return s.genesis.Config
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )
@@ -96,8 +97,8 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
 
-	substate1 := makeValidSubstate()
-	substate2 := makeValidSubstate()
+	substate1 := makeValidSubstate(cfg.ChainCfg)
+	substate2 := makeValidSubstate(cfg.ChainCfg)
 
 	db.EXPECT().GetArchiveBlockHeight().AnyTimes().Return(uint64(14), false, nil)
 	db.EXPECT().GetArchiveState(uint64(12)).MinTimes(1).Return(archive, nil)
@@ -150,7 +151,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	}
 }
 
-func makeValidSubstate() txcontext.TxContext {
+func makeValidSubstate(chainCfg *params.ChainConfig) txcontext.TxContext {
 	// This Substate is a minimal data that can be successfully processed.
 	sub := &substate.Substate{
 		Env: &substate.Env{
@@ -165,7 +166,7 @@ func makeValidSubstate() txcontext.TxContext {
 			GasUsed: 1,
 		},
 	}
-	return substatecontext.NewTxContext(sub)
+	return substatecontext.NewTxContext(sub, chainCfg)
 }
 
 func TestCircularBuffer_EnforcesSize(t *testing.T) {

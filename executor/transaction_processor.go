@@ -19,7 +19,6 @@ package executor
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -29,7 +28,6 @@ import (
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/vm"
 )
@@ -156,9 +154,9 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
 	db.SetTxContext(txHash, tx)
-	blockCtx := prepareBlockCtx(inputEnv, &hashError)
+	blockCtx := inputEnv.GetBlockContext(&hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, inputEnv.GetChainConfig(), s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
@@ -198,30 +196,4 @@ func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateD
 		})
 	})
 	return newPseudoExecutionResult()
-}
-
-// prepareBlockCtx creates a block context for evm call from given BlockEnvironment.
-func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.BlockContext {
-	getHash := func(num uint64) common.Hash {
-		var h common.Hash
-		h, *hashError = inputEnv.GetBlockHash(num)
-		return h
-	}
-
-	blockCtx := &vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
-		Coinbase:    inputEnv.GetCoinbase(),
-		BlockNumber: new(big.Int).SetUint64(inputEnv.GetNumber()),
-		Time:        inputEnv.GetTimestamp(),
-		Difficulty:  inputEnv.GetDifficulty(),
-		GasLimit:    inputEnv.GetGasLimit(),
-		GetHash:     getHash,
-	}
-	// If currentBaseFee is defined, add it to the vmContext.
-	baseFee := inputEnv.GetBaseFee()
-	if baseFee != nil {
-		blockCtx.BaseFee = new(big.Int).Set(baseFee)
-	}
-	return blockCtx
 }

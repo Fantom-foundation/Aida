@@ -42,7 +42,7 @@ func OpenRpcRecording(cfg *utils.Config, ctx *cli.Context) (Provider[*rpc.Reques
 		return openRpcRecording(iter, cfg, log, ctx, []string{cfg.RpcRecordingPath}), nil
 	}
 
-	files, err := utils.GetDirectoryFiles("", cfg.RpcRecordingPath)
+	files, err := utils.GetDirectoryFiles("", []string{cfg.RpcRecordingPath})
 	if err != nil {
 		return nil, fmt.Errorf("cannot get files from dir %v; %w", cfg.RpcRecordingPath, err)
 	}

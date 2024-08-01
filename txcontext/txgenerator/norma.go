@@ -24,11 +24,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 // NewNormaTxContext creates a new transaction context for a norma transaction.
 // It expects a signed transaction if sender is nil.
-func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.Address) (txcontext.TxContext, error) {
+func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.Address, chainCfg *params.ChainConfig) (txcontext.TxContext, error) {
 	s := common.Address{}
 	if sender == nil {
 		addr, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
@@ -43,6 +45,7 @@ func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.A
 		txData: txData{
 			Env: normaTxBlockEnv{
 				blkNumber: blkNumber,
+				chainCfg:  chainCfg,
 			},
 			Message: &core.Message{
 				To:                tx.To(),
@@ -71,6 +74,15 @@ type normaTxData struct {
 // normaTxBlockEnv is a block environment for norma transactions.
 type normaTxBlockEnv struct {
 	blkNumber uint64
+	chainCfg  *params.ChainConfig
+}
+
+func (e normaTxBlockEnv) GetChainConfig() *params.ChainConfig {
+	return e.chainCfg
+}
+
+func (e normaTxBlockEnv) GetBlockContext(hashErr *error) *vm.BlockContext {
+	return txcontext.PrepareBlockCtx(e, hashErr)
 }
 
 // GetCoinbase returns the coinbase address.

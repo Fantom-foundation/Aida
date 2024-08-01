@@ -22,14 +22,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 )
 
-func NewTxContext(data *substate.Substate) txcontext.TxContext {
-	return &substateData{data}
+func NewTxContext(data *substate.Substate, chainCfg *params.ChainConfig) txcontext.TxContext {
+	return &substateData{data, chainCfg}
 }
 
 type substateData struct {
 	*substate.Substate
+	chainCfg *params.ChainConfig
 }
 
 func (t *substateData) GetStateHash() common.Hash {
@@ -45,7 +47,8 @@ func (t *substateData) GetOutputState() txcontext.WorldState {
 }
 
 func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
-	return NewBlockEnvironment(t.Env)
+	// todo finish
+	return NewBlockEnvironment(t.Env, t.chainCfg)
 }
 
 func (t *substateData) GetMessage() *core.Message {

@@ -10,6 +10,11 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+type Transaction struct {
+	Fork string
+	Ctx  txcontext.TxContext
+}
+
 var usableForks = map[string]struct{}{
 	"Cancun":       {},
 	"Shanghai":     {},
@@ -23,6 +28,7 @@ var usableForks = map[string]struct{}{
 	"Istanbul":     {},
 	"MuirGlacier":  {},
 	"TestNetwork":  {},
+	//"Prague":       {}, TODO: enable once geth is updated to Prague
 }
 
 // NewTestCaseSplitter opens all JSON tests within path
@@ -66,13 +72,12 @@ type TestCaseSplitter struct {
 // SplitStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
 // 2) tests cases. Each file contains 1..N enabledForks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
-func (s *TestCaseSplitter) SplitStateTests() (dividedTests []txcontext.TxContext) {
+func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 	var overall uint32
 
 	// Iterate all JSONs
 	for _, stJson := range s.jsons {
 		number := 0
-		env := &stJson.Env
 		baseFee := stJson.Env.BaseFee
 		if baseFee == nil {
 			// ethereum uses `0x10` for genesis baseFee. Therefore, it defaults to
@@ -80,7 +85,6 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []txcontext.TxContext
 			baseFee = &BigInt{*big.NewInt(0x0a)}
 		}
 
-		// TODO: each test requires its own block context and chain config
 		// Iterate all usable forks within one JSON file
 		for _, fork := range s.enabledForks {
 			posts := stJson.Post[fork]
@@ -94,7 +98,14 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []txcontext.TxContext
 					continue
 				}
 
-				dividedTests = append(dividedTests, newStateTestTxContest(stJson, env, msg, post.RootHash, fork, number))
+				if fork == "Paris" {
+					fork = "Merge"
+				}
+
+				dividedTests = append(dividedTests, Transaction{
+					fork,
+					newStateTestTxContest(stJson, msg, post.RootHash, fork, number),
+				})
 				overall++
 			}
 		}

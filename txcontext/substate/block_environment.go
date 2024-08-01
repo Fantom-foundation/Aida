@@ -23,14 +23,21 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
 )
 
-func NewBlockEnvironment(env *substate.Env) txcontext.BlockEnvironment {
-	return &blockEnvironment{env}
+func NewBlockEnvironment(env *substate.Env, chainCfg *params.ChainConfig) txcontext.BlockEnvironment {
+	return &blockEnvironment{env, chainCfg}
 }
 
 type blockEnvironment struct {
 	*substate.Env
+	chainCfg *params.ChainConfig
+}
+
+func (e *blockEnvironment) GetChainConfig() *params.ChainConfig {
+	return e.chainCfg
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
@@ -66,4 +73,8 @@ func (e *blockEnvironment) GetTimestamp() uint64 {
 
 func (e *blockEnvironment) GetBaseFee() *big.Int {
 	return e.BaseFee
+}
+
+func (e *blockEnvironment) GetBlockContext(hashErr *error) *vm.BlockContext {
+	return txcontext.PrepareBlockCtx(e, hashErr)
 }

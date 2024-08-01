@@ -216,7 +216,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
-	sub := substatecontext.NewTxContext(s)
+	sub := substatecontext.NewTxContext(s, cfg.ChainCfg)
 
 	for b := int(cfg.First); b < int(cfg.Last); b++ {
 		ext.PreBlock(executor.State[txcontext.TxContext]{Block: b, Data: sub}, ctx)
