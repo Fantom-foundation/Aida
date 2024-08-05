@@ -54,6 +54,16 @@ var (
 		Usage: "sets the balance range of the stochastic simulation",
 		Value: 1000000,
 	}
+	CarmenCheckpointInterval = cli.IntFlag{
+		Name:  "carmen-cp-interval",
+		Usage: "defines how often (in blocks) will Carmen create checkpoints",
+		Value: 0,
+	}
+	CarmenCheckpointPeriod = cli.IntFlag{
+		Name:  "carmen-cp-period",
+		Usage: "defines how often (in minutes) will Carmen create checkpoints",
+		Value: 0,
+	}
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
