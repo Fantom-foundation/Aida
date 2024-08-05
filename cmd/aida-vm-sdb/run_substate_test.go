@@ -105,9 +105,14 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
+	err = runSubstates(cfg, provider, db, processor, nil, nil)
 	if err != nil {
 		errors.Unwrap(err)
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
@@ -229,8 +234,13 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		// EndTransaction does not get called because execution fails
 	)
 
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// run fails but not on validation
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
+	err = runSubstates(cfg, provider, db, processor, nil, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -266,7 +276,12 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		// EndTransaction does not get called because validation fails
 	)
 
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil, nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
+	err = runSubstates(cfg, provider, db, processor, nil, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}

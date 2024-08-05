@@ -24,9 +24,11 @@ pipeline {
         stage('Validate commit') {
             steps {
                 script {
-                    def Committer = sh (script: "git --no-pager show -s --format='%an' ${GIT_COMMIT}", returnStdout: true).trim()
-                    build job: '/Utils/Validate-Commit', parameters: [
-                        string(name: 'GitCommitter', value: "${Committer}")
+                    def CHANGE_REPO = sh (script: "basename -s .git `git config --get remote.origin.url`", returnStdout: true).trim()
+                    build job: '/Utils/Validate-Git-Commit', parameters: [
+                        string(name: 'Repo', value: "${CHANGE_REPO}"),
+                        string(name: 'Branch', value: "${env.CHANGE_BRANCH}"),
+                        string(name: 'Commit', value: "${GIT_COMMIT}")
                     ]
                 }
             }
