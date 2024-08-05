@@ -23,47 +23,48 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-// HasSuicided data structure
-type HasSuicided struct {
+// GetStorageRoot data structure
+type GetStorageRoot struct {
 	Contract common.Address
 }
 
-// GetId returns the HasSuicided operation identifier.
-func (op *HasSuicided) GetId() byte {
-	return HasSuicidedID
+// GetId returns the get-storage-root operation identifier.
+func (op *GetStorageRoot) GetId() byte {
+	return GetStorageRootID
 }
 
-// NewHasSuicided creates a new HasSuicided operation.
-func NewHasSuicided(contract common.Address) *HasSuicided {
-	return &HasSuicided{Contract: contract}
+// NewGetStorageRoot creates a new get-storage-root operation.
+func NewGetStorageRoot(contract common.Address) *GetStorageRoot {
+	return &GetStorageRoot{Contract: contract}
 }
 
-// ReadHasSuicided reads a HasSuicided operation from a file.
-func ReadHasSuicided(f io.Reader) (Operation, error) {
-	data := new(HasSuicided)
+// ReadGetHash reads a get-storage-root operation from a file.
+func ReadGetStorageRoot(f io.Reader) (Operation, error) {
+	data := new(GetStorageRoot)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the HasSuicided operation to a file.
-func (op *HasSuicided) Write(f io.Writer) error {
+// Write the get-storage-root operation to a file.
+func (op *GetStorageRoot) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the HasSuicided operation.
-func (op *HasSuicided) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+// Execute the get-storage-root operation.
+func (op *GetStorageRoot) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.HasSelfDestructed(contract)
+	db.GetStorageRoot(contract)
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the HasSuicided operation.
-func (op *HasSuicided) Debug(ctx *context.Context) {
+// Debug prints a debug message for the get-storage-root operation.
+func (op *GetStorageRoot) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

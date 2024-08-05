@@ -18,59 +18,53 @@ package operation
 
 import (
 	"fmt"
-	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/tracing"
-	"github.com/holiman/uint256"
 )
 
-func initSubBalance(t *testing.T) (*context.Replay, *SubBalance, common.Address, *uint256.Int, tracing.BalanceChangeReason) {
-	rand.Seed(time.Now().UnixNano())
+func initSelfDestruct6780(t *testing.T) (*context.Replay, *SelfDestruct6780, common.Address) {
 	addr := getRandomAddress(t)
-	value := uint256.NewInt(uint64(rand.Int63n(100000)))
-	reason := tracing.BalanceChangeUnspecified
 	// create context context
 	ctx := context.NewReplay()
 	contract := ctx.EncodeContract(addr)
 
 	// create new operation
-	op := NewSubBalance(contract, value, reason)
+	op := NewSelfDestruct6780(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
 	// check id
-	if op.GetId() != SubBalanceID {
+	if op.GetId() != SelfDestruct6780ID {
 		t.Fatalf("wrong ID returned")
 	}
-	return ctx, op, addr, value, reason
+
+	return ctx, op, addr
 }
 
-// TestSubBalanceReadWrite writes a new SubBalance object into a buffer, reads from it,
+// TestSelfDestruct6780ReadWrite writes a new SelfDestruct6780 object into a buffer, reads from it,
 // and checks equality.
-func TestSubBalanceReadWrite(t *testing.T) {
-	_, op1, _, _, _ := initSubBalance(t)
-	testOperationReadWrite(t, op1, ReadSubBalance)
+func TestSelfDestruct6780ReadWrite(t *testing.T) {
+	_, op1, _ := initSelfDestruct6780(t)
+	testOperationReadWrite(t, op1, ReadSelfDestruct6780)
 }
 
-// TestSubBalanceDebug creates a new SubBalance object and checks its Debug message.
-func TestSubBalanceDebug(t *testing.T) {
-	ctx, op, addr, value, reason := initSubBalance(t)
-	testOperationDebug(t, ctx, op, fmt.Sprint(addr, value, reason))
+// TestSelfDestruct6780Debug creates a new SelfDestruct6780 object and checks its Debug message.
+func TestSelfDestruct6780Debug(t *testing.T) {
+	ctx, op, addr := initSelfDestruct6780(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
-// TestSubBalanceExecute
-func TestSubBalanceExecute(t *testing.T) {
-	ctx, op, addr, value, reason := initSubBalance(t)
+// TestSelfDestruct6780Execute
+func TestSelfDestruct6780Execute(t *testing.T) {
+	ctx, op, addr := initSelfDestruct6780(t)
 
 	// check execution
 	mock := NewMockStateDB()
 	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
-	expected := []Record{{SubBalanceID, []any{addr, value, reason}}}
+	expected := []Record{{SelfDestruct6780ID, []any{addr}}}
 	mock.compareRecordings(expected, t)
 }

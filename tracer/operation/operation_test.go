@@ -70,12 +70,16 @@ func (s *MockStateDB) Empty(addr common.Address) bool {
 }
 
 func (s *MockStateDB) SelfDestruct(addr common.Address) {
-	s.recording = append(s.recording, Record{SuicideID, []any{addr}})
+	s.recording = append(s.recording, Record{SelfDestructID, []any{addr}})
 }
 
 func (s *MockStateDB) HasSelfDestructed(addr common.Address) bool {
-	s.recording = append(s.recording, Record{HasSuicidedID, []any{addr}})
+	s.recording = append(s.recording, Record{HasSelfDestructedID, []any{addr}})
 	return false
+}
+
+func (s *MockStateDB) Selfdestruct6780(addr common.Address) {
+	s.recording = append(s.recording, Record{SelfDestruct6780ID, []any{addr}})
 }
 
 func (s *MockStateDB) GetBalance(addr common.Address) *uint256.Int {
@@ -218,7 +222,7 @@ func (s *MockStateDB) GetHash() (common.Hash, error) {
 }
 
 func (s *MockStateDB) SetTxContext(thash common.Hash, ti int) {
-	s.recording = append(s.recording, Record{PrepareID, []any{thash, ti}})
+	s.recording = append(s.recording, Record{SetTxContextID, []any{thash, ti}})
 }
 
 func (s *MockStateDB) AddRefund(gas uint64) {
@@ -235,7 +239,7 @@ func (s *MockStateDB) GetRefund() uint64 {
 }
 
 func (s *MockStateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.recording = append(s.recording, Record{PrepareAccessListID, []any{rules, sender, coinbase, dest, precompiles, txAccesses}})
+	s.recording = append(s.recording, Record{PrepareID, []any{rules, sender, coinbase, dest, precompiles, txAccesses}})
 }
 
 func (s *MockStateDB) AddressInAccessList(addr common.Address) bool {
@@ -265,7 +269,6 @@ func (s *MockStateDB) AddPreimage(hash common.Hash, preimage []byte) {
 }
 
 func (s *MockStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, common.Hash) bool) error {
-	s.recording = append(s.recording, Record{ForEachStorageID, []any{addr, cb}})
 	return nil
 }
 
@@ -284,15 +287,12 @@ func (s *MockStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 }
 
 func (s *MockStateDB) CreateContract(addr common.Address) {
-	panic("CreateContract not supported in mock")
-}
-
-func (s *MockStateDB) Selfdestruct6780(addr common.Address) {
-	panic("Selfdestruct6780 not supported in mock")
+	s.recording = append(s.recording, Record{CreateContractID, []any{addr}})
 }
 
 func (s *MockStateDB) GetStorageRoot(addr common.Address) common.Hash {
-	panic("GetStorageRoot not supported in mock")
+	s.recording = append(s.recording, Record{GetStorageRootID, []any{addr}})
+	return common.Hash{}
 }
 
 func (s *MockStateDB) Close() error {

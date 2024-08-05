@@ -21,7 +21,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Tosca/go/vm"
+	"github.com/Fantom-foundation/Tosca/go/tosca"
 	"go.uber.org/mock/gomock"
 )
 
@@ -33,8 +33,8 @@ func TestVirtualMachineStatisticsPrinter_WorksWithDefaultSetup(t *testing.T) {
 
 func TestVirtualMachineStatisticsPrinter_TriggersStatPrintingAtEndOfRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	interpreter := vm.NewMockProfilingInterpreter(ctrl)
-	vm.RegisterInterpreter("test-vm", interpreter)
+	interpreter := tosca.NewMockProfilingInterpreter(ctrl)
+	tosca.RegisterInterpreter("test-vm", interpreter)
 
 	interpreter.EXPECT().DumpProfile()
 

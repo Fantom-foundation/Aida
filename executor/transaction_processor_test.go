@@ -21,7 +21,9 @@ import (
 	"testing"
 
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Tosca/go/tosca"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -47,4 +49,43 @@ func TestPrepareBlockCtx(t *testing.T) {
 	if hashError != nil {
 		t.Fatalf("Hash error; %v", hashError)
 	}
+}
+
+func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) {
+	isAida := func(t *testing.T, p processor) {
+		if _, ok := p.(*aidaProcessor); !ok {
+			t.Fatalf("Expected aidaProcessor, got %T", p)
+		}
+	}
+	isTosca := func(t *testing.T, p processor) {
+		if _, ok := p.(*toscaProcessor); !ok {
+			t.Fatalf("Expected toscaProcessor, got %T", p)
+		}
+	}
+
+	tests := map[string]func(*testing.T, processor){
+		"":     isAida,
+		"aida": isAida,
+		"Aida": isAida,
+	}
+
+	for name := range tosca.GetAllRegisteredProcessorFactories() {
+		tests[name] = isTosca
+	}
+
+	for name, check := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := &utils.Config{
+				ChainID: utils.MainnetChainID,
+				EvmImpl: name,
+				VmImpl:  "geth",
+			}
+			p, err := MakeTxProcessor(cfg)
+			if err != nil {
+				t.Fatalf("Failed to create tx processor; %v", err)
+			}
+			check(t, p.processor)
+		})
+	}
+
 }

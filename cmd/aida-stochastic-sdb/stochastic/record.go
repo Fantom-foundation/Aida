@@ -72,7 +72,10 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	processor := executor.MakeLiveDbTxProcessor(cfg)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
 
 	// iterate through subsets in sequence
 	sdb, err := db.NewReadOnlySubstateDB(cfg.AidaDb)

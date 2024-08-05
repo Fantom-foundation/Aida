@@ -23,48 +23,47 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/Fantom-foundation/Aida/tracer/context"
+	"github.com/ethereum/go-ethereum/common"
 )
 
-// CreateAccount data structure
-type CreateAccount struct {
+// HasSelfDestructed data structure
+type HasSelfDestructed struct {
 	Contract common.Address
 }
 
-// GetId returns the create-account operation identifier.
-func (op *CreateAccount) GetId() byte {
-	return CreateAccountID
+// GetId returns the HasSelfDestructed operation identifier.
+func (op *HasSelfDestructed) GetId() byte {
+	return HasSelfDestructedID
 }
 
-// NewCreateAccount creates a new create-account operation.
-func NewCreateAccount(contract common.Address) *CreateAccount {
-	return &CreateAccount{Contract: contract}
+// NewHasSelfDestructed creates a new HasSelfDestructed operation.
+func NewHasSelfDestructed(contract common.Address) *HasSelfDestructed {
+	return &HasSelfDestructed{Contract: contract}
 }
 
-// ReadCreateAccount reads a create-account operation from a file.
-func ReadCreateAccount(f io.Reader) (Operation, error) {
-	data := new(CreateAccount)
+// ReadHasSelfDestructed reads a HasSelfDestructed operation from a file.
+func ReadHasSelfDestructed(f io.Reader) (Operation, error) {
+	data := new(HasSelfDestructed)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the create-account operation to file.
-func (op *CreateAccount) Write(f io.Writer) error {
+// Write the HasSelfDestructed operation to a file.
+func (op *HasSelfDestructed) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the create-account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+// Execute the HasSelfDestructed operation.
+func (op *HasSelfDestructed) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.CreateAccount(contract)
+	db.HasSelfDestructed(contract)
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the create-account operation.
-func (op *CreateAccount) Debug(ctx *context.Context) {
+// Debug prints a debug message for the HasSelfDestructed operation.
+func (op *HasSelfDestructed) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

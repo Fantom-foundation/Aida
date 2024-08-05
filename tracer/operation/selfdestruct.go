@@ -28,43 +28,43 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-// CreateAccount data structure
-type CreateAccount struct {
+// SelfDestruct data structure
+type SelfDestruct struct {
 	Contract common.Address
 }
 
-// GetId returns the create-account operation identifier.
-func (op *CreateAccount) GetId() byte {
-	return CreateAccountID
+// GetId returns the self-destruct operation identifier.
+func (op *SelfDestruct) GetId() byte {
+	return SelfDestructID
 }
 
-// NewCreateAccount creates a new create-account operation.
-func NewCreateAccount(contract common.Address) *CreateAccount {
-	return &CreateAccount{Contract: contract}
+// NewSelfDestruct creates a new self-destruct operation.
+func NewSelfDestruct(contract common.Address) *SelfDestruct {
+	return &SelfDestruct{Contract: contract}
 }
 
-// ReadCreateAccount reads a create-account operation from a file.
-func ReadCreateAccount(f io.Reader) (Operation, error) {
-	data := new(CreateAccount)
+// ReadSelfDestruct reads a self-destruct operation from a file.
+func ReadSelfDestruct(f io.Reader) (Operation, error) {
+	data := new(SelfDestruct)
 	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
-// Write the create-account operation to file.
-func (op *CreateAccount) Write(f io.Writer) error {
+// Write the self-destruct operation to a file.
+func (op *SelfDestruct) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the create-account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
+// Execute the self-destruct operation.
+func (op *SelfDestruct) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
-	db.CreateAccount(contract)
+	db.SelfDestruct(contract)
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the create-account operation.
-func (op *CreateAccount) Debug(ctx *context.Context) {
-	fmt.Print(op.Contract)
+// Debug prints a debug message for the self-destruct operation.
+func (op *SelfDestruct) Debug(ctx *context.Context) {
+	fmt.Print(ctx.DecodeContract(op.Contract))
 }

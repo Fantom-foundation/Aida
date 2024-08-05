@@ -182,6 +182,7 @@ type Config struct {
 	DeletionDb             string         // directory of deleted account database
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	ErrorLogging           string         // if defined, error logging to file is enabled
+	EvmImpl                string         // evm implementation (aida/opera/tosca)
 	Genesis                string         // genesis file
 	EthTestType            EthTestType    // which geth test are we running
 	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
@@ -244,7 +245,7 @@ type Config struct {
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ValidateTxState        bool           // validate stateDB before and after transaction
 	ValuesNumber           int64          // number of values to generate
-	VmImpl                 string         // vm implementation (geth/lfvm)
+	VmImpl                 string         // vm implementation (geth/lfvm/evmzero/evmone)
 	Workers                int            // number of worker threads
 	TxGeneratorType        []string       // type of the application used for transaction generation
 	Forks                  []string       // Which forks are going to get executed byz
@@ -273,6 +274,7 @@ func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate b
 		t.Fatalf("cannot get chain cfg: %v", err)
 	}
 	return &Config{
+		ChainID:         chainId,
 		First:           first,
 		Last:            last,
 		ChainCfg:        chainCfg,
@@ -741,6 +743,7 @@ func (cc *configContext) reportNewConfig() {
 	}
 	log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
 	log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
+	log.Noticef("Used EVM implementation: %v", cfg.EvmImpl)
 	log.Noticef("Used VM implementation: %v", cfg.VmImpl)
 	log.Infof("Aida DB directory: %v", cfg.AidaDb)
 
