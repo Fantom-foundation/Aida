@@ -93,7 +93,12 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
+	run(cfg, provider, db, processor, nil)
 }
 
 func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
@@ -255,8 +260,13 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Fatal("run must fail")
 	}
@@ -299,8 +309,13 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Fatal("run must fail")
 	}
@@ -334,7 +349,12 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
-	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
@@ -368,7 +388,12 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
-	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Fatal("validation must fail")
 	}

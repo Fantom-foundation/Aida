@@ -110,7 +110,9 @@ func printAllocationDiffSummary(want, have txcontext.WorldState, log logger.Logg
 
 	have.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		wantAcc := want.Get(addr)
-		printAccountDiffSummary(fmt.Sprintf("key=%v:", addr), wantAcc, acc, log)
+		if wantAcc != nil {
+			printAccountDiffSummary(fmt.Sprintf("key=%v:", addr), wantAcc, acc, log)
+		}
 	})
 
 }

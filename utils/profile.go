@@ -24,7 +24,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Tosca/go/vm"
+	"github.com/Fantom-foundation/Tosca/go/tosca"
 )
 
 func StartCPUProfile(cfg *Config) error {
@@ -75,7 +75,7 @@ func MemoryBreakdown(db state.StateDB, cfg *Config, log logger.Logger) {
 // PrintEvmStatistics prints EVM implementation specific statical information
 // to the console. Does nothing, if such information is not offered.
 func PrintEvmStatistics(cfg *Config) {
-	pvm, ok := vm.GetInterpreter(cfg.VmImpl).(vm.ProfilingInterpreter)
+	pvm, ok := tosca.GetInterpreter(cfg.VmImpl).(tosca.ProfilingInterpreter)
 	if pvm != nil && ok {
 		pvm.DumpProfile()
 	}

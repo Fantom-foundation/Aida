@@ -53,7 +53,12 @@ func RunSubstate(ctx *cli.Context) error {
 	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
 	defer substateIterator.Close()
 
-	return runSubstates(cfg, substateIterator, nil, executor.MakeLiveDbTxProcessor(cfg), nil, aidaDb)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return runSubstates(cfg, substateIterator, nil, processor, nil, aidaDb)
 }
 
 func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxContext], stateDb state.StateDB, processor executor.Processor[txcontext.TxContext], extra []executor.Extension[txcontext.TxContext], aidaDb db.BaseDB) error {
@@ -73,6 +78,11 @@ func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxCont
 		)
 	}
 
+	archiveInquirer, err := statedb.MakeArchiveInquirer(cfg)
+	if err != nil {
+		return err
+	}
+
 	extensionList = append(extensionList, extra...)
 
 	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
@@ -89,7 +99,7 @@ func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxCont
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		statedb.MakeStateDbPrepper(),
-		statedb.MakeArchiveInquirer(cfg),
+		archiveInquirer,
 		validator.MakeStateHashValidator[txcontext.TxContext](cfg),
 		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
 		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
