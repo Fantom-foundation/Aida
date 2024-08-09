@@ -73,6 +73,10 @@ type normaTxBlockEnv struct {
 	blkNumber uint64
 }
 
+func (e normaTxBlockEnv) GetBlobBaseFee() *big.Int {
+	return big.NewInt(0)
+}
+
 // GetCoinbase returns the coinbase address.
 func (e normaTxBlockEnv) GetCoinbase() common.Address {
 	return common.HexToAddress("0x1")

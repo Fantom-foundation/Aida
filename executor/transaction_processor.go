@@ -34,11 +34,11 @@ import (
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 
 	_ "github.com/Fantom-foundation/Tosca/go/processor/floria"
@@ -129,18 +129,13 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 	vmCfg.InterpreterImpl = cfg.VmImpl
 	vmCfg.Tracer = nil
 
-	chainCfg, err := utils.GetChainConfig(cfg.ChainID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get chain config: %w", err)
-	}
-
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
 	case "", "aida":
 		processor = &aidaProcessor{
-			vmCfg:    vmCfg,
-			chainCfg: chainCfg,
-			log:      logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
+			vmCfg: vmCfg,
+			cfg:   cfg,
+			log:   logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
 		}
 	default:
 		interpreter := tosca.GetInterpreter(cfg.VmImpl)
@@ -158,7 +153,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 
 		processor = &toscaProcessor{
 			processor: evm,
-			chainCfg:  chainCfg,
+			cfg:       cfg,
 			log:       logger.NewLogger(cfg.LogLevel, fmt.Sprintf("ToscaProcessor-%s-%s", cfg.EvmImpl, cfg.VmImpl)),
 		}
 	}
@@ -202,9 +197,9 @@ type processor interface {
 }
 
 type aidaProcessor struct {
-	vmCfg    vm.Config
-	chainCfg *params.ChainConfig
-	log      logger.Logger
+	vmCfg vm.Config
+	cfg   *utils.Config
+	log   logger.Logger
 }
 
 // processRegularTx executes VM on a chosen storage system.
@@ -222,8 +217,8 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.chainCfg, s.vmCfg)
+	txCtx := core.NewEVMTxContext(msg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
@@ -288,12 +283,16 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	if baseFee != nil {
 		blockCtx.BaseFee = new(big.Int).Set(baseFee)
 	}
+	blobBaseFee := inputEnv.GetBlobBaseFee()
+	if blobBaseFee != nil {
+		blockCtx.BlobBaseFee = eip4844.CalcBlobFee(blobBaseFee.Uint64())
+	}
 	return blockCtx
 }
 
 type toscaProcessor struct {
 	processor tosca.Processor
-	chainCfg  *params.ChainConfig
+	cfg       *utils.Config
 	log       logger.Logger
 }
 
@@ -306,10 +305,10 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 	message := st.GetMessage()
 
 	revision := tosca.R07_Istanbul
-	if block >= int(t.chainCfg.BerlinBlock.Uint64()) {
+	if block >= int(t.cfg.ChainCfg.BerlinBlock.Uint64()) {
 		revision = tosca.R09_Berlin
 	}
-	if block >= int(t.chainCfg.LondonBlock.Uint64()) {
+	if block >= int(t.cfg.ChainCfg.LondonBlock.Uint64()) {
 		revision = tosca.R10_London
 	}
 
@@ -318,7 +317,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		Timestamp:   int64(blockEnvironment.GetTimestamp()),
 		GasLimit:    tosca.Gas(blockEnvironment.GetGasLimit()),
 		Coinbase:    tosca.Address(blockEnvironment.GetCoinbase()),
-		ChainID:     tosca.Word(bigToValue(t.chainCfg.ChainID)),
+		ChainID:     tosca.Word(bigToValue(t.cfg.ChainCfg.ChainID)),
 		PrevRandao:  tosca.Hash(bigToValue(blockEnvironment.GetDifficulty())),
 		BaseFee:     bigToValue(blockEnvironment.GetBaseFee()),
 		BlobBaseFee: tosca.Value{}, // = 0, since blobs are not supported by Fantom yet
