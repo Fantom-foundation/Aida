@@ -39,7 +39,10 @@ pipeline {
                 stage('Check formatting') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh 'diff=`${GOROOT}/bin/gofmt -s -d .`; echo "$diff"; test -z "$diff"'
+                            sh '''diff=`find . \\( -path ./carmen -o -path ./tosca \\) -prune -o -name '*.go' -exec gofmt -s -l {} \\;`
+                                  echo $diff
+                                  test -z $diff
+                               '''
                         }
                     }
                 }
