@@ -17,14 +17,16 @@
 package stochastic
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/stochastic"
-	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
@@ -62,39 +64,43 @@ func RecordStochastic(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	aidaDb, err := db.NewReadOnlyBaseDB(cfg.AidaDb)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open aida-db; %w", err)
 	}
-	defer substateDb.Close()
+	defer aidaDb.Close()
 
-	return record(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
+	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	defer substateIterator.Close()
+
+	return record(cfg, substateIterator, nil, executor.MakeLiveDbTxProcessor(cfg), nil, aidaDb)
 }
 
 func record(
 	cfg *utils.Config,
-	provider executor.Provider[*substate.Substate],
+	provider executor.Provider[txcontext.TxContext],
 	db state.StateDB,
-	processor executor.Processor[*substate.Substate],
-	extra []executor.Extension[*substate.Substate],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
+	aidaDb db.BaseDB,
 ) error {
-	var extensions = []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
-		tracker.MakeProgressTracker(cfg, 0),
+	var extensions = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
+		tracker.MakeBlockProgressTracker(cfg, 0),
 	}
 
 	if db == nil {
 		extensions = append(extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			statedb.MakeEventProxyPrepper[*substate.Substate](cfg),
+			statedb.MakeEventProxyPrepper[txcontext.TxContext](cfg),
 		)
-
 	}
 
-	extensions = append(
-		extensions,
-		validator.MakeLiveDbValidator(cfg),
+	extensions = append(extensions,
+		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
+		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	)
 
 	extensions = append(extensions, extra...)
@@ -107,5 +113,6 @@ func record(
 		},
 		processor,
 		extensions,
+		aidaDb,
 	)
 }

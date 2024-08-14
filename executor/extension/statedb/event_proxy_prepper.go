@@ -34,7 +34,6 @@ type eventProxyPrepper[T any] struct {
 
 func (p *eventProxyPrepper[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	p.eventRegistry = stochastic.NewEventRegistry()
-	p.eventRegistry.RegisterOp(stochastic.BeginSyncPeriodID)
 
 	if p.cfg.Output == "" {
 		p.cfg.Output = "./events.json"
@@ -45,22 +44,6 @@ func (p *eventProxyPrepper[T]) PreRun(_ executor.State[T], ctx *executor.Context
 		ctx.State = stochastic.NewEventProxy(ctx.State, p.eventRegistry)
 	}
 
-	return nil
-}
-
-// PreBlock writes BeginBlock operation and End/BeginSyncPeriod if necessary
-func (p *eventProxyPrepper[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
-	// calculate the syncPeriod for given block
-	newSyncPeriod := uint64(state.Block) / p.cfg.SyncPeriodLength
-
-	// loop because multiple periods could have been empty
-	for p.syncPeriod < newSyncPeriod {
-		p.eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
-		p.syncPeriod++
-		p.eventRegistry.RegisterOp(stochastic.BeginSyncPeriodID)
-	}
-
-	p.eventRegistry.RegisterOp(stochastic.BeginBlockID)
 	return nil
 }
 
@@ -75,16 +58,8 @@ func (p *eventProxyPrepper[T]) PreTransaction(_ executor.State[T], ctx *executor
 	return nil
 }
 
-// PostBlock writes EndBlock operation.
-func (p *eventProxyPrepper[T]) PostBlock(executor.State[T], *executor.Context) error {
-	p.eventRegistry.RegisterOp(stochastic.EndBlockID)
-	return nil
-}
-
 // PostRun writes events into a JSON file.
 func (p *eventProxyPrepper[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
-
 	p.log.Noticef("Writing events into %v...", p.cfg.Output)
 
 	f, err := os.Create(p.cfg.Output)
