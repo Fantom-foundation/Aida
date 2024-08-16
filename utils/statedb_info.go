@@ -43,6 +43,7 @@ type StateDbInfo struct {
 	RootHash       common.Hash `json:"rootHash"`       // root hash of the last block height
 	GitCommit      string      `json:"gitCommit"`      // Aida git version when creating stateDB
 	CreateTime     string      `json:"createTimeUTC"`  // time of creation in utc timezone
+	HasFinished    bool        `json:"HasFinished"`    // True if run has finished without interrupting
 }
 
 // copyFile copies a single file from src to dst
@@ -108,7 +109,7 @@ func CopyDir(src string, dst string) error {
 
 // WriteStateDbInfo writes stateDB implementation info and block height to a file
 // for a compatibility check when reloading
-func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.Hash) error {
+func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.Hash, hasFinished bool) error {
 	dbinfo := &StateDbInfo{
 		Impl:           cfg.DbImpl,
 		Variant:        cfg.DbVariant,
@@ -119,6 +120,7 @@ func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.H
 		RootHash:       root,
 		GitCommit:      GitCommit,
 		CreateTime:     time.Now().UTC().Format(time.UnixDate),
+		HasFinished:    hasFinished,
 	}
 	filename := filepath.Join(directory, PathToDbInfo)
 	jsonByte, err := json.MarshalIndent(dbinfo, "", "  ")

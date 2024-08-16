@@ -304,7 +304,7 @@ func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
 
 			cfg.StateDbSrc = sDbDir
 			// Call for json creation and writing into it
-			err = utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, rootHash)
+			err = utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, rootHash, true)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}

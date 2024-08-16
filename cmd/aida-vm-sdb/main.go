@@ -52,6 +52,8 @@ var RunSubstateCmd = cli.Command{
 		&utils.AidaDbFlag,
 
 		// StateDb
+		&utils.CarmenCheckpointInterval,
+		&utils.CarmenCheckpointPeriod,
 		&utils.CarmenSchemaFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,

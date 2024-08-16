@@ -528,3 +528,51 @@ func TestStateDbManager_StateDbBlockNumberDecrements(t *testing.T) {
 		t.Fatalf("failed to create stateDb; %v", err)
 	}
 }
+
+func TestStateDbManager_PreRunCreatesZeroStateDbInfo(t *testing.T) {
+	cfg := &utils.Config{}
+
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "carmen"
+	cfg.ChainID = utils.MainnetChainID
+
+	ext := MakeStateDbManager[any](cfg, "")
+
+	state := executor.State[any]{
+		Block: 10,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	_, err := os.Stat(ctx.StateDbPath)
+	if err != nil {
+		t.Fatalf("failed to create stateDb; %v", err)
+	}
+
+	info, err := utils.ReadStateDbInfo(filepath.Join(ctx.StateDbPath, utils.PathToDbInfo))
+	if err != nil {
+		t.Fatalf("cannot read state-db info: %v", err)
+	}
+
+	// Make sure state-db info was written correctly
+	if info.Impl != "carmen" {
+		t.Fatalf("incorrect impl\n got: %v, want: %v", info.Impl, "carmen")
+	}
+
+	if info.HasFinished {
+		t.Errorf("has finished must be false")
+	}
+
+	if info.Block != 0 {
+		t.Errorf("block number must be zero, got: %v", info.Block)
+	}
+
+	if info.RootHash != (common.Hash{}) {
+		t.Errorf("root hash must be zero, got: %v", info.RootHash)
+	}
+}

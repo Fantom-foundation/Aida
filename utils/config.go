@@ -161,6 +161,8 @@ type Config struct {
 	CPUProfile             string  // pprof cpu profile output file name
 	CPUProfilePerInterval  bool    // a different CPU profile is taken per 100k block interval
 	Cache                  int     // Cache for StateDb or Priming
+	CarmenCheckpointInterval int     // how often (in blocks) will Carmen create checkpoints
+	CarmenCheckpointPeriod   int     // how often (in minutes) will Carmen create checkpoints
 	CarmenSchema           int     // the current DB schema ID to use in Carmen
 	CarmenStateCacheSize   int     // the number of values cached in the Carmen StateDB (0 for default value)
 	CarmenNodeCacheSize    int     // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
@@ -182,7 +184,6 @@ type Config struct {
 	DeletionDb             string         // directory of deleted account database
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	ErrorLogging           string         // if defined, error logging to file is enabled
-	EvmImpl                string         // evm implementation (aida/opera/tosca)
 	Genesis                string         // genesis file
 	EthTestType            EthTestType    // which geth test are we running
 	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
@@ -245,7 +246,7 @@ type Config struct {
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ValidateTxState        bool           // validate stateDB before and after transaction
 	ValuesNumber           int64          // number of values to generate
-	VmImpl                 string         // vm implementation (geth/lfvm/evmzero/evmone)
+	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
 	TxGeneratorType        []string       // type of the application used for transaction generation
 	Forks                  []string       // Which forks are going to get executed byz

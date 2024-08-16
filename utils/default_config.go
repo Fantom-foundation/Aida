@@ -40,6 +40,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		CPUProfilePerInterval:  getFlagValue(ctx, CpuProfilePerIntervalFlag).(bool),
 		Cache:                  getFlagValue(ctx, CacheFlag).(int),
 		CarmenSchema:           getFlagValue(ctx, CarmenSchemaFlag).(int),
+		CarmenCheckpointInterval: getFlagValue(ctx, CarmenCheckpointInterval).(int),
+		CarmenCheckpointPeriod:   getFlagValue(ctx, CarmenCheckpointPeriod).(int),
 		ChainID:                ChainID(getFlagValue(ctx, ChainIDFlag).(int)),
 		ChannelBufferSize:      getFlagValue(ctx, ChannelBufferSizeFlag).(int),
 		CompactDb:              getFlagValue(ctx, CompactDbFlag).(bool),
