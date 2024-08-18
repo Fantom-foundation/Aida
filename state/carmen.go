@@ -83,6 +83,8 @@ func MakeCarmenStateDB(
 		properties.SetInteger(carmen.ArchiveCache, archiveCacheSize)
 	}
 
+	fmt.Printf("check point intervali size: %v\n", checkpointInterval)
+
 	if checkpointInterval > 0 {
 		properties.SetInteger(carmen.CheckpointInterval, checkpointInterval)
 	}
