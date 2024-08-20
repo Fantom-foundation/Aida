@@ -6,12 +6,12 @@ github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4 h1:vtziTKo
 github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4/go.mod h1:NLvaNtS7elcJ9Q/Ypz7ZzA2DuQqd+UC+Bccue2EVRWk=
 github.com/Fantom-foundation/Substate v0.0.0-20240606095437-0d28864f0a7a h1:xnFmk1o0faM8qksrUDNkkt3HL0y4MoXbdNjs/67TdRs=
 github.com/Fantom-foundation/Substate v0.0.0-20240606095437-0d28864f0a7a/go.mod h1:8dW0EnFHo0PegzvTFLUa5oxUgKvhLudPR0Ro3fUV7ag=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf h1:+on3LIdi54bude/KdPl94K+homdttL1T9EB1dlOZY1M=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf/go.mod h1:9e69ZhWA6jYhPsMVjFzfIeptd/Fnelk7Eo+QrMyJXJM=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240820102831-244fd01a1fae h1:3Mwx0fw2Gm/xTg3tHFOVaRevsHC/yX3/C5zu0QDDUA8=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240820102831-244fd01a1fae/go.mod h1:wsmzPh053TvId6XgrEp6EknPvnEg8dner0KjJPwieJI=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00 h1:yw5QaA7u4t2/j7VIGrMt640Kuhsx6pEIHM3bj10glWc=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00/go.mod h1:Ogv5etzSmM2rQ4eN3OfmyitwWaaPjd4EIDiW/NAbYGk=
-github.com/Fantom-foundation/sonic v1.2.1-d.0.20240712083820-ad04853efc8c h1:GVn/dgV9ZtZNKiDGuHYqnZgOp6W0iQR0uai0yhPXE2M=
-github.com/Fantom-foundation/sonic v1.2.1-d.0.20240712083820-ad04853efc8c/go.mod h1:aiklnLAD4Qe6Ekcz+DWVhY0PO2P92B5q6KAuOcO4KS0=
+github.com/Fantom-foundation/sonic v1.2.1-e.0.20240819094406-1f1745f8de78 h1:ZkacnqMgJsiSm72YuV/RZE9UxJnwuDbkXZBtUeRzfqc=
+github.com/Fantom-foundation/sonic v1.2.1-e.0.20240819094406-1f1745f8de78/go.mod h1:UJC23Ox+h8HoKWs8YUo+3rYmI2PQKyQTI0cnP73ANak=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=

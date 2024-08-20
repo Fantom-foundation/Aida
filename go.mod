@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.22.0
 
 require (
-	github.com/Fantom-foundation/Carmen/go v0.0.0-20240710073916-102aeea2a9ce
+	github.com/Fantom-foundation/Carmen/go v0.0.0-20240801115916-95f776fc98c8
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
 	github.com/Fantom-foundation/Substate v0.0.0-20240606095437-0d28864f0a7a
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
@@ -103,8 +103,8 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 
-replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240607093315-d7d9138e5fdf
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20240820102831-244fd01a1fae
 
-replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.2.1-d.0.20240712083820-ad04853efc8c
+replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.2.1-e.0.20240819094406-1f1745f8de78
 
 replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
