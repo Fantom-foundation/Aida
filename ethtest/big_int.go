@@ -37,6 +37,8 @@ func (i *BigInt) Convert() *big.Int {
 	return &i.Int
 }
 
+///asdasdas
+
 func (i *BigInt) UnmarshalJSON(b []byte) error {
 	var val string
 	err := json.Unmarshal(b, &val)
