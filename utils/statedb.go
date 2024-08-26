@@ -222,7 +222,7 @@ func makeStateDBVariant(
 	case "carmen":
 		// Disable archive if not enabled.
 		if !cfg.ArchiveMode {
-			cfg.ArchiveVariant = "none"
+			archiveVariant = "none"
 		}
 		return state.MakeCarmenStateDB(
 			directory,
@@ -235,7 +235,7 @@ func makeStateDBVariant(
 			cfg.CarmenCheckpointPeriod,
 		)
 	}
-	return nil, fmt.Errorf("unknown Db implementation: %v", cfg.DbImpl)
+	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }
 
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
