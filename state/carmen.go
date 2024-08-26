@@ -83,10 +83,12 @@ func MakeCarmenStateDB(
 		properties.SetInteger(carmen.ArchiveCache, archiveCacheSize)
 	}
 
+	// How often will Carmen create checkpoints - in blocks
 	if checkpointInterval > 0 {
 		properties.SetInteger(carmen.CheckpointInterval, checkpointInterval)
 	}
 
+	// How often will Carmen create checkpoints - in minutes
 	if checkpointPeriod > 0 {
 		properties.SetInteger(carmen.CheckpointPeriod, checkpointPeriod)
 	}
