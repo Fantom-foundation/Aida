@@ -55,12 +55,12 @@ var (
 		Value: 1000000,
 	}
 	CarmenCheckpointInterval = cli.IntFlag{
-		Name:  "carmen-cp-interval",
+		Name:  "carmen-checkpoint-interval",
 		Usage: "defines how often (in blocks) will Carmen create checkpoints",
 		Value: 0,
 	}
 	CarmenCheckpointPeriod = cli.IntFlag{
-		Name:  "carmen-cp-period",
+		Name:  "carmen-checkpoint-period",
 		Usage: "defines how often (in minutes) will Carmen create checkpoints",
 		Value: 0,
 	}
