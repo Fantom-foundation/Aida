@@ -404,6 +404,11 @@ var (
 		Name:  "track-progress",
 		Usage: "enables track progress logging",
 	}
+	TrackerGranularityFlag = cli.IntFlag{
+		Name:  "tracker-granularity",
+		Usage: "chooses how often will tracker report achieved block",
+		Value: 100_000,
+	}
 	ValidateStateHashesFlag = cli.BoolFlag{
 		Name:  "validate-state-hash",
 		Usage: "enables state hash validation",

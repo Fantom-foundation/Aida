@@ -113,6 +113,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		TraceDirectory:      getFlagValue(ctx, TraceDirectoryFlag).(string),
 		TraceFile:           getFlagValue(ctx, TraceFileFlag).(string),
 		TrackProgress:       getFlagValue(ctx, TrackProgressFlag).(bool),
+		TrackerGranularity:  getFlagValue(ctx, TrackerGranularityFlag).(int),
 		TransactionLength:   getFlagValue(ctx, TransactionLengthFlag).(uint64),
 		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
 		UpdateDb:            getFlagValue(ctx, UpdateDbFlag).(string),

@@ -238,6 +238,7 @@ type Config struct {
 	TraceDirectory           string         // name of trace directory
 	TraceFile                string         // name of trace file
 	TrackProgress            bool           // enables track progress logging
+	TrackerGranularity       int            // defines how often will tracker report achieved block
 	TransactionLength        uint64         // determines indirectly the length of a transaction
 	UpdateBufferSize         uint64         // cache size in Bytes
 	UpdateDb                 string         // update-set directory
