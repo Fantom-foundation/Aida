@@ -33,6 +33,10 @@ type stBlockEnvironment struct {
 	ExcessBlobGas *BigInt        `json:"currentExcessBlobGas" gencodec:"optional"`
 }
 
+func (s *stBlockEnvironment) GetCoinbase() common.Address {
+	return s.Coinbase
+}
+
 func (s *stBlockEnvironment) GetBlobBaseFee() *big.Int {
 	return s.ExcessBlobGas.Convert()
 }
