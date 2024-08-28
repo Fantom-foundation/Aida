@@ -6,8 +6,8 @@ github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec h1:1Qb69m
 github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec/go.mod h1:CD8UlnlLDiqb36L110uqiP2iSflVjx9g/3U9hCI4q2U=
 github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4 h1:vtziTKoK6I+sVmoaCsu5Nxt8DzL8c/p0sgG+/xNnRb4=
 github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4/go.mod h1:NLvaNtS7elcJ9Q/Ypz7ZzA2DuQqd+UC+Bccue2EVRWk=
-github.com/Fantom-foundation/Substate v0.0.0-20240730083849-de88d0f81a0e h1:o81coljIT9C1lp+DGWX2QO53GsiiwnGMed4mqYNJAfY=
-github.com/Fantom-foundation/Substate v0.0.0-20240730083849-de88d0f81a0e/go.mod h1:8dW0EnFHo0PegzvTFLUa5oxUgKvhLudPR0Ro3fUV7ag=
+github.com/Fantom-foundation/Substate v0.0.0-20240823083426-23958ddac462 h1:T6VwK39liiuY1NYA3m4k9ScNvD8gG16KCvFDQcVPhXg=
+github.com/Fantom-foundation/Substate v0.0.0-20240823083426-23958ddac462/go.mod h1:8dW0EnFHo0PegzvTFLUa5oxUgKvhLudPR0Ro3fUV7ag=
 github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240529085303-2400937cc3b1 h1:iVbLlmFYPlK31O8psS9H+Y+uop0AC1jqCoRErauaHj0=
 github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240529085303-2400937cc3b1/go.mod h1:6LG3apXyp0InsMXGq9YmzUiV7H0BOuUHrcu3oQY9boE=
 github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240320160249-81827a18147c h1:g35kQNkq/VGiFak0joC4hcL/TZIi1KQZkatIlLZnOy0=
