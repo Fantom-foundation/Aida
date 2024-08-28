@@ -17,6 +17,7 @@
 package utils
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,6 +39,11 @@ func GetDirectorySize(path string) (int64, error) {
 	var size int64
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
+			// Carmen can have files which are present at the call of this func but are not present when walk happens.
+			// Hence, we ignore this error and file and continue with the rest of the files.
+			if errors.Is(err, os.ErrExist) {
+				return nil
+			}
 			return err
 		}
 		if !info.IsDir() {
