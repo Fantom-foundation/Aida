@@ -41,7 +41,7 @@ func GetDirectorySize(path string) (int64, error) {
 		if err != nil {
 			// Carmen can have files which are present at the call of this func but are not present when walk happens.
 			// Hence, we ignore this error and file and continue with the rest of the files.
-			if errors.Is(err, os.ErrExist) {
+			if errors.Is(err, os.ErrNotExist) {
 				return nil
 			}
 			return err
