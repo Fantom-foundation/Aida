@@ -112,7 +112,7 @@ func (db *offTheChainDB) PointCache() *utils.PointCache {
 
 // Witness retrieves the current state witness being collected.
 func (db *offTheChainDB) Witness() *stateless.Witness {
-	panic("Witness not implemented")
+	return nil
 }
 
 // NewOffTheChainStateDB returns an empty in-memory *state.StateDB without disk caches

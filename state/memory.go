@@ -409,7 +409,7 @@ func (db *inMemoryStateDB) PointCache() *utils.PointCache {
 
 // Witness retrieves the current state witness being collected.
 func (db *inMemoryStateDB) Witness() *stateless.Witness {
-	panic("Witness not implemented")
+	return nil
 }
 
 func (s *inMemoryStateDB) Error() error {

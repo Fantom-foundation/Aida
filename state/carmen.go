@@ -331,7 +331,7 @@ func (s *carmenStateDB) PointCache() *utils.PointCache {
 }
 
 func (s *carmenStateDB) Witness() *stateless.Witness {
-	panic("Witness not implemented")
+	return nil
 }
 
 func (s *carmenStateDB) Finalise(bool) {

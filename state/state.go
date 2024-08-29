@@ -87,7 +87,7 @@ type VmStateDB interface {
 	// PointCache returns the point cache used in computations
 	PointCache() *utils.PointCache
 
-	// witness proof
+	// Witness retrieves the current state witness.
 	Witness() *stateless.Witness
 
 	// SetTxContext is geth utility function which set transaction index and transaction hash.
