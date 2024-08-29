@@ -169,6 +169,11 @@ func (env testTxBlkEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
 	// we don't have real block hashes, so we just use the block number
 	return common.BigToHash(big.NewInt(int64(blockNumber))), nil
 }
+
 func (env testTxBlkEnv) GetBaseFee() *big.Int {
+	return big.NewInt(0)
+}
+
+func (env testTxBlkEnv) GetBlobBaseFee() *big.Int {
 	return big.NewInt(0)
 }

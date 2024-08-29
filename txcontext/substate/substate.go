@@ -61,20 +61,26 @@ func (t *substateData) GetMessage() *core.Message {
 		}
 		list = append(list, types.AccessTuple{Address: common.Address(tuple.Address), StorageKeys: keys})
 	}
+
+	var blobHashes []common.Hash
+	for _, hash := range t.Message.BlobHashes {
+		blobHashes = append(blobHashes, common.Hash(hash))
+	}
+
 	return &core.Message{
-		(*common.Address)(t.Message.To),
-		common.Address(t.Message.From),
-		t.Message.Nonce,
-		t.Message.Value,
-		t.Message.Gas,
-		t.Message.GasPrice,
-		t.Message.GasFeeCap,
-		t.Message.GasTipCap,
-		t.Message.Data,
-		list,
-		nil,             //TODO support BlobGasFeeCap
-		[]common.Hash{}, //TODO support BlobHashes
-		!t.Message.CheckNonce,
+		To:                (*common.Address)(t.Message.To),
+		From:              common.Address(t.Message.From),
+		Nonce:             t.Message.Nonce,
+		Value:             t.Message.Value,
+		GasLimit:          t.Message.Gas,
+		GasPrice:          t.Message.GasPrice,
+		GasFeeCap:         t.Message.GasFeeCap,
+		GasTipCap:         t.Message.GasTipCap,
+		Data:              t.Message.Data,
+		AccessList:        list,
+		BlobGasFeeCap:     t.Message.BlobGasFeeCap,
+		BlobHashes:        blobHashes,
+		SkipAccountChecks: !t.Message.CheckNonce,
 	}
 }
 

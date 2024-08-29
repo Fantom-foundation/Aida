@@ -75,6 +75,10 @@ func (e *blockEnvironment) GetBaseFee() *big.Int {
 	return e.BaseFee
 }
 
+func (e *blockEnvironment) GetBlobBaseFee() *big.Int {
+	return e.BlobBaseFee
+}
+
 func (e *blockEnvironment) GetBlockContext(hashErr *error) *vm.BlockContext {
 	return txcontext.PrepareBlockCtx(e, hashErr)
 }

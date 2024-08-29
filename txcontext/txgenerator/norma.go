@@ -90,6 +90,11 @@ func (e normaTxBlockEnv) GetCoinbase() common.Address {
 	return common.HexToAddress("0x1")
 }
 
+// GetBlobBaseFee is not used in Norma Tx-Generator.
+func (e normaTxBlockEnv) GetBlobBaseFee() *big.Int {
+	return big.NewInt(0)
+}
+
 // GetDifficulty returns the current difficulty level.
 func (e normaTxBlockEnv) GetDifficulty() *big.Int {
 	return big.NewInt(1)

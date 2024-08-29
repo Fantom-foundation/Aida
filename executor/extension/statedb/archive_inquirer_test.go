@@ -38,7 +38,10 @@ import (
 
 func TestArchiveInquirer_DisabledIfNoQueryRateIsGiven(t *testing.T) {
 	config := utils.Config{}
-	ext := MakeArchiveInquirer(&config)
+	ext, err := MakeArchiveInquirer(&config)
+	if err != nil {
+		t.Fatalf("failed to create inquirer: %v", err)
+	}
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("inquirer should not be active by default")
 	}
@@ -50,8 +53,10 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	cfg := utils.Config{}
 	cfg.ChainID = utils.MainnetChainID
 	cfg.ArchiveQueryRate = 100
-	ext := makeArchiveInquirer(&cfg, log)
-
+	ext, err := makeArchiveInquirer(&cfg, log)
+	if err != nil {
+		t.Fatalf("failed to create inquirer: %v", err)
+	}
 	state := executor.State[txcontext.TxContext]{}
 	if err := ext.PreRun(state, nil); err == nil {
 		t.Errorf("expected an error, got nothing")
@@ -70,8 +75,10 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	cfg.ChainID = utils.MainnetChainID
 	cfg.ArchiveMode = true
 	cfg.ArchiveQueryRate = 100
-	ext := makeArchiveInquirer(&cfg, log)
-
+	ext, err := makeArchiveInquirer(&cfg, log)
+	if err != nil {
+		t.Fatalf("failed to create inquirer: %v", err)
+	}
 	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
 
@@ -124,7 +131,11 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	archive.EXPECT().Exist(gomock.Any()).AnyTimes()
 	archive.EXPECT().CreateContract(gomock.Any()).AnyTimes()
 
-	ext := makeArchiveInquirer(cfg, log)
+	ext, err := makeArchiveInquirer(cfg, log)
+	if err != nil {
+		t.Fatalf("failed to create inquirer: %v", err)
+	}
+
 	if err := ext.PreRun(state, &context); err != nil {
 		t.Errorf("failed PreRun, got %v", err)
 	}

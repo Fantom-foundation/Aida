@@ -48,11 +48,15 @@ type BlockEnvironment interface {
 	// GetBaseFee returns the base fee for transactions in the current block.
 	GetBaseFee() *big.Int
 
+	// GetBlobBaseFee retrieves the base fee for blob transactions.
+	GetBlobBaseFee() *big.Int
+
 	// GetBlockContext prepares a BlockContext. Any error produced by hashing should be passed to hashErr.
 	GetBlockContext(hashErr *error) *vm.BlockContext
 
 	GetChainConfig() *params.ChainConfig
 }
+
 
 // PrepareBlockCtx creates a block context for evm call from given BlockEnvironment.
 // This func servers as a dummy as most of GetBlockContext() implementations

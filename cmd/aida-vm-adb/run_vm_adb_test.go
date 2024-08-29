@@ -112,9 +112,14 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveBlockThree.EXPECT().Release(),
 	)
 
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	err = run(cfg, provider, db, processor, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return
@@ -208,9 +213,14 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		archiveBlockThree.EXPECT().Release(),
 	)
 
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	err = run(cfg, provider, db, processor, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return
@@ -416,8 +426,13 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		// end transaction is not called because we expect fail
 	)
 
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -463,8 +478,13 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -501,7 +521,12 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
@@ -540,7 +565,12 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeArchiveDbTxProcessor(cfg)
+	if err != nil {
+		t.Fatalf("failed to create processor: %v", err)
+	}
+
+	err = run(cfg, provider, db, processor, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
