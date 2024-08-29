@@ -44,4 +44,7 @@ type BlockEnvironment interface {
 
 	// GetBaseFee returns the base fee for transactions in the current block.
 	GetBaseFee() *big.Int
+
+	// GetBlobBaseFee retrieves the base fee for blob transactions.
+	GetBlobBaseFee() *big.Int
 }
