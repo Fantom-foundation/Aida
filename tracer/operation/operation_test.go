@@ -27,10 +27,12 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -277,6 +279,16 @@ func (s *MockStateDB) GetLogs(hash common.Hash, block uint64, blockHash common.H
 	return nil
 }
 
+func (s *MockStateDB) PointCache() *utils.PointCache {
+	// ignored
+	return nil
+}
+
+// Witness retrieves the current state witness.
+func (s *MockStateDB) Witness() *stateless.Witness {
+	// ignored
+	return nil
+}
 func (s *MockStateDB) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	// ignored
 }

@@ -25,9 +25,11 @@ import (
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -322,6 +324,16 @@ func (s *carmenStateDB) GetLogs(common.Hash, uint64, common.Hash) []*types.Log {
 
 	}
 	return res
+}
+
+func (s *carmenStateDB) PointCache() *utils.PointCache {
+	// this should not be relevant for revisions up to Cancun
+	panic("PointCache not implemented")
+}
+
+func (s *carmenStateDB) Witness() *stateless.Witness {
+	// this should not be relevant for revisions up to Cancun
+	return nil
 }
 
 func (s *carmenStateDB) Finalise(bool) {

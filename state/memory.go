@@ -25,9 +25,11 @@ import (
 	"github.com/Fantom-foundation/Substate/substate"
 	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -399,6 +401,17 @@ func (db *inMemoryStateDB) GetLogs(txHash common.Hash, block uint64, blockHash c
 	// those need to be collected in the right order (inverse order
 	// snapshots).
 	return collectLogs(db.state)
+}
+
+func (db *inMemoryStateDB) PointCache() *utils.PointCache {
+	// this should not be relevant for revisions up to Cancun
+	panic("PointCache not implemented")
+}
+
+// Witness retrieves the current state witness being collected.
+func (db *inMemoryStateDB) Witness() *stateless.Witness {
+	// this should not be relevant for revisions up to Cancun
+	return nil
 }
 
 func (s *inMemoryStateDB) Error() error {
