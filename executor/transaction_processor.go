@@ -215,7 +215,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := inputEnv.GetBlockContext(&hashError)
-	txCtx := core.NewEVMTxContext(msg)
+	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, inputEnv.GetChainConfig(), s.vmCfg)
 	snapshot := db.Snapshot()
 
@@ -267,8 +267,8 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	}
 
 	blockCtx := &vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
+		CanTransfer: evmcore.CanTransfer,
+		Transfer:    evmcore.Transfer,
 		Coinbase:    inputEnv.GetCoinbase(),
 		BlockNumber: new(big.Int).SetUint64(inputEnv.GetNumber()),
 		Time:        inputEnv.GetTimestamp(),
