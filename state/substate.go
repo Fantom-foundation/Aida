@@ -25,10 +25,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/ethereum/go-ethereum/triedb"
 )
 
@@ -36,6 +38,8 @@ import (
 type offTheChainDB struct {
 	trie *triedb.Database
 	disk ethdb.Database
+	// State witness if cross validation is needed
+	witness *stateless.Witness
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
@@ -100,6 +104,15 @@ func (db *offTheChainDB) DiskDB() ethdb.KeyValueStore {
 // TrieDB retrieves any intermediate trie-node caching layer.
 func (db *offTheChainDB) TrieDB() *triedb.Database {
 	return db.trie
+}
+
+func (db *offTheChainDB) PointCache() *utils.PointCache {
+	panic("PointCache not implemented")
+}
+
+// Witness retrieves the current state witness being collected.
+func (db *offTheChainDB) Witness() *stateless.Witness {
+	panic("Witness not implemented")
 }
 
 // NewOffTheChainStateDB returns an empty in-memory *state.StateDB without disk caches

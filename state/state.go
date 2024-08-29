@@ -23,9 +23,11 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -81,6 +83,12 @@ type VmStateDB interface {
 	// Logging
 	AddLog(*types.Log)
 	GetLogs(common.Hash, uint64, common.Hash) []*types.Log
+
+	// PointCache returns the point cache used in computations
+	PointCache() *utils.PointCache
+
+	// witness proof
+	Witness() *stateless.Witness
 
 	// SetTxContext is geth utility function which set transaction index and transaction hash.
 	SetTxContext(common.Hash, int)

@@ -24,11 +24,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	geth "github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -348,6 +350,14 @@ func (s *gethStateDB) GetLogs(hash common.Hash, block uint64, blockHash common.H
 		return db.GetLogs(hash, block, blockHash)
 	}
 	return []*types.Log{}
+}
+
+func (s *gethStateDB) PointCache() *utils.PointCache {
+	return s.db.PointCache()
+}
+
+func (s *gethStateDB) Witness() *stateless.Witness {
+	return s.db.Witness()
 }
 
 func (s *gethStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
