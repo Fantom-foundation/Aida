@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"math/big"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 )
 
 func newBigInt(i int64) *BigInt {
@@ -36,9 +34,7 @@ func (i *BigInt) Convert() *big.Int {
 	if i == nil {
 		return new(big.Int)
 	}
-	// todo which should be used
-	//return &i.Int
-	return eip4844.CalcBlobFee(i.Uint64())
+	return &i.Int
 }
 
 func (i *BigInt) UnmarshalJSON(b []byte) error {

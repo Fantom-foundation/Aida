@@ -20,6 +20,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -34,7 +35,7 @@ type stBlockEnvironment struct {
 	Timestamp     *BigInt        `json:"currentTimestamp"  gencodec:"required"`
 	BaseFee       *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
 	ExcessBlobGas *BigInt        `json:"currentExcessBlobGas" gencodec:"optional"`
-	genesis     core.Genesis
+	genesis       core.Genesis
 }
 
 func (s *stBlockEnvironment) GetCoinbase() common.Address {
@@ -42,7 +43,7 @@ func (s *stBlockEnvironment) GetCoinbase() common.Address {
 }
 
 func (s *stBlockEnvironment) GetBlobBaseFee() *big.Int {
-	return s.ExcessBlobGas.Convert()
+	return eip4844.CalcBlobFee(s.ExcessBlobGas.Uint64())
 }
 
 func (s *stBlockEnvironment) GetDifficulty() *big.Int {
