@@ -1,8 +1,6 @@
 module github.com/Fantom-foundation/Aida
 
-go 1.22
-
-toolchain go1.22.0
+go 1.23
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240720214637-e2e21d535f38
