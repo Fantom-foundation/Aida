@@ -77,7 +77,6 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 
 	// Iterate all JSONs
 	for _, stJson := range s.jsons {
-		number := 0
 		baseFee := stJson.Env.BaseFee
 		if baseFee == nil {
 			// ethereum uses `0x10` for genesis baseFee. Therefore, it defaults to
@@ -87,14 +86,18 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 
 		// Iterate all usable forks within one JSON file
 		for _, fork := range s.enabledForks {
-			posts := stJson.Post[fork]
+			postNumber := 0
+			posts, ok := stJson.Post[fork]
+			if !ok {
+				continue
+			}
 			// Iterate all tests within one fork
 			for _, post := range posts {
-				number++
+				postNumber++
 				msg, err := stJson.Tx.toMessage(post, baseFee)
 				if err != nil {
-					s.log.Warningf("Path: %v, fork: %v, test number: %v\n"+
-						"cannot decode tx to message: %v", stJson.path, fork, number, err)
+					s.log.Warningf("Path: %v, fork: %v, test postNumber: %v\n"+
+						"cannot decode tx to message: %v", stJson.path, fork, postNumber, err)
 					continue
 				}
 
@@ -104,7 +107,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 
 				dividedTests = append(dividedTests, Transaction{
 					fork,
-					newStateTestTxContest(stJson, msg, post.RootHash, fork, number),
+					newStateTestTxContest(stJson, msg, post.RootHash, fork, postNumber),
 				})
 				overall++
 			}
