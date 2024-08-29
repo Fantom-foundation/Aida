@@ -308,7 +308,7 @@ func (s *loggingVmStateDb) PointCache() *utils.PointCache {
 // Witness retrieves the current state witness.
 func (s *loggingVmStateDb) Witness() *stateless.Witness {
 	res := s.db.Witness()
-	s.writeLog("Witness, %v", res)
+	s.writeLog("Witness, %s", res)
 	return res
 }
 

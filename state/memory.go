@@ -404,11 +404,13 @@ func (db *inMemoryStateDB) GetLogs(txHash common.Hash, block uint64, blockHash c
 }
 
 func (db *inMemoryStateDB) PointCache() *utils.PointCache {
+	// this should not be relevant for revisions up to Cancun
 	panic("PointCache not implemented")
 }
 
 // Witness retrieves the current state witness being collected.
 func (db *inMemoryStateDB) Witness() *stateless.Witness {
+	// this should not be relevant for revisions up to Cancun
 	return nil
 }
 

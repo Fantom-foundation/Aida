@@ -327,10 +327,12 @@ func (s *carmenStateDB) GetLogs(common.Hash, uint64, common.Hash) []*types.Log {
 }
 
 func (s *carmenStateDB) PointCache() *utils.PointCache {
+	// this should not be relevant for revisions up to Cancun
 	panic("PointCache not implemented")
 }
 
 func (s *carmenStateDB) Witness() *stateless.Witness {
+	// this should not be relevant for revisions up to Cancun
 	return nil
 }
 

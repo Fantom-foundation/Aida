@@ -107,11 +107,13 @@ func (db *offTheChainDB) TrieDB() *triedb.Database {
 }
 
 func (db *offTheChainDB) PointCache() *utils.PointCache {
+	// this should not be relevant for revisions up to Cancun
 	panic("PointCache not implemented")
 }
 
 // Witness retrieves the current state witness being collected.
 func (db *offTheChainDB) Witness() *stateless.Witness {
+	// this should not be relevant for revisions up to Cancun
 	return nil
 }
 
