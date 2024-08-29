@@ -23,17 +23,22 @@ import (
 )
 
 type stBlockEnvironment struct {
-	blockNumber uint64
-	Coinbase    common.Address `json:"currentCoinbase"   gencodec:"required"`
-	Difficulty  *BigInt        `json:"currentDifficulty" gencodec:"required"`
-	GasLimit    *BigInt        `json:"currentGasLimit"   gencodec:"required"`
-	Number      *BigInt        `json:"currentNumber"     gencodec:"required"`
-	Timestamp   *BigInt        `json:"currentTimestamp"  gencodec:"required"`
-	BaseFee     *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
+	blockNumber   uint64
+	Coinbase      common.Address `json:"currentCoinbase"   gencodec:"required"`
+	Difficulty    *BigInt        `json:"currentDifficulty" gencodec:"required"`
+	GasLimit      *BigInt        `json:"currentGasLimit"   gencodec:"required"`
+	Number        *BigInt        `json:"currentNumber"     gencodec:"required"`
+	Timestamp     *BigInt        `json:"currentTimestamp"  gencodec:"required"`
+	BaseFee       *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
+	ExcessBlobGas *BigInt        `json:"currentExcessBlobGas" gencodec:"optional"`
 }
 
 func (s *stBlockEnvironment) GetCoinbase() common.Address {
 	return s.Coinbase
+}
+
+func (s *stBlockEnvironment) GetBlobBaseFee() *big.Int {
+	return s.ExcessBlobGas.Convert()
 }
 
 func (s *stBlockEnvironment) GetDifficulty() *big.Int {
