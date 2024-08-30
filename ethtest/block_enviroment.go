@@ -29,7 +29,8 @@ import (
 type stBlockEnvironment struct {
 	blockNumber   uint64
 	Coinbase      common.Address `json:"currentCoinbase"   gencodec:"required"`
-	Difficulty    *BigInt        `json:"currentDifficulty" gencodec:"required"`
+	Random        *BigInt        `json:"currentRandom"        gencodec:"optional"`
+	Difficulty    *BigInt        `json:"currentDifficulty" gencodec:"optional"`
 	GasLimit      *BigInt        `json:"currentGasLimit"   gencodec:"required"`
 	Number        *BigInt        `json:"currentNumber"     gencodec:"required"`
 	Timestamp     *BigInt        `json:"currentTimestamp"  gencodec:"required"`
@@ -72,6 +73,11 @@ func (s *stBlockEnvironment) GetBaseFee() *big.Int {
 
 func (s *stBlockEnvironment) GetBlockContext(*error) *vm.BlockContext {
 	ctx := core.NewEVMBlockContext(s.genesis.ToBlock().Header(), nil, &s.Coinbase)
+	if s.genesis.Config.IsLondon(new(big.Int)) && s.Random != nil {
+		rnd := common.BigToHash(s.Random.Convert())
+		ctx.Random = &rnd
+		ctx.Difficulty = big.NewInt(0)
+	}
 	return &ctx
 }
 
