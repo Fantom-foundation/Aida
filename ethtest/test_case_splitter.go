@@ -107,7 +107,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 
 				dividedTests = append(dividedTests, Transaction{
 					fork,
-					newStateTestTxContest(stJson, msg, post.RootHash, fork, postNumber),
+					newStateTestTxContest(stJson, msg, post, fork, postNumber),
 				})
 				overall++
 			}

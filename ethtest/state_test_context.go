@@ -25,20 +25,21 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func newStateTestTxContest(stJson *stJSON, msg *core.Message, rootHash common.Hash, fork string, postNumber int) txcontext.TxContext {
-	return &stateTestContext{
-		fork:        fork,
-		path:        stJson.path,
-		postNumber:  postNumber,
-		description: stJson.description,
-		env:         stJson.CreateEnv(fork),
-		inputState:  stJson.Pre,
-		msg:         msg,
-		rootHash:    rootHash,
+func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, fork string, postNumber int) txcontext.TxContext {
+	return &StateTestContext{
+		fork:          fork,
+		path:          stJson.path,
+		postNumber:    postNumber,
+		description:   stJson.description,
+		env:           stJson.CreateEnv(fork),
+		inputState:    stJson.Pre,
+		msg:           msg,
+		rootHash:      post.RootHash,
+		ExpectedError: post.ExpectException,
 	}
 }
 
-type stateTestContext struct {
+type StateTestContext struct {
 	txcontext.NilTxContext
 	fork, path, description string
 	postNumber              int
@@ -46,29 +47,30 @@ type stateTestContext struct {
 	inputState              types.GenesisAlloc
 	msg                     *core.Message
 	rootHash                common.Hash
+	ExpectedError           string
 }
 
-func (s *stateTestContext) GetStateHash() common.Hash {
+func (s *StateTestContext) GetStateHash() common.Hash {
 	return s.rootHash
 }
 
-func (s *stateTestContext) GetOutputState() txcontext.WorldState {
+func (s *StateTestContext) GetOutputState() txcontext.WorldState {
 	// we dont execute pseudo transactions here
 	return nil
 }
 
-func (s *stateTestContext) GetInputState() txcontext.WorldState {
+func (s *StateTestContext) GetInputState() txcontext.WorldState {
 	return NewWorldState(s.inputState)
 }
 
-func (s *stateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
+func (s *StateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return s.env
 }
 
-func (s *stateTestContext) GetMessage() *core.Message {
+func (s *StateTestContext) GetMessage() *core.Message {
 	return s.msg
 }
 
-func (s *stateTestContext) String() string {
+func (s *StateTestContext) String() string {
 	return fmt.Sprintf("Test path: %v\nDescription: %v\nFork: %v\nPost number: %v", s.path, s.description, s.fork, s.postNumber)
 }

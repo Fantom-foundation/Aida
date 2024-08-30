@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	statetest "github.com/Fantom-foundation/Aida/ethtest"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -62,6 +63,20 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
 	if err == nil {
+		return nil
+	}
+
+	if err == nil && state.Data.(*statetest.StateTestContext).ExpectedError == "" {
+		return nil
+	}
+	if err == nil && state.Data.(*statetest.StateTestContext).ExpectedError != "" {
+		return fmt.Errorf("expected error %q, got no error", state.Data.(*statetest.StateTestContext).ExpectedError)
+	}
+	if err != nil && state.Data.(*statetest.StateTestContext).ExpectedError == "" {
+		return fmt.Errorf("unexpected error: %w", err)
+	}
+	if err != nil && state.Data.(*statetest.StateTestContext).ExpectedError != "" {
+		// TODO check error string
 		return nil
 	}
 
