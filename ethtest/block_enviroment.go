@@ -44,7 +44,11 @@ func (s *stBlockEnvironment) GetCoinbase() common.Address {
 }
 
 func (s *stBlockEnvironment) GetBlobBaseFee() *big.Int {
-	return eip4844.CalcBlobFee(s.ExcessBlobGas.Uint64())
+	if s.genesis.Config.IsCancun(new(big.Int), s.genesis.ToBlock().Time()) && s.ExcessBlobGas != nil {
+		return eip4844.CalcBlobFee(s.ExcessBlobGas.Uint64())
+	}
+
+	return nil
 }
 
 func (s *stBlockEnvironment) GetDifficulty() *big.Int {
@@ -101,8 +105,4 @@ func (s *stBlockEnvironment) GetRandom() *common.Hash {
 
 func (s *stBlockEnvironment) GetChainConfig() *params.ChainConfig {
 	return s.genesis.Config
-}
-
-func vmTestBlockHash(n uint64) common.Hash {
-	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
