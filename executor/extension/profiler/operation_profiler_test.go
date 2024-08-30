@@ -350,6 +350,8 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.EndSyncPeriod() },
 		func() { db.AddLog(nil) },
 		func() { db.GetLogs(mockHash, uint64(0), mockHash) },
+		func() { db.PointCache() },
+		func() { db.Witness() },
 		func() { db.AddPreimage(mockHash, []byte{0}) },
 		func() { db.SetTxContext(mockHash, 0) },
 		func() { db.Finalise(false) },
@@ -402,6 +404,8 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().EndSyncPeriod().AnyTimes()
 	m.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	m.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().PointCache().AnyTimes()
+	m.EXPECT().Witness().AnyTimes()
 	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().SetTxContext(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().Finalise(gomock.Any()).AnyTimes()
@@ -453,6 +457,8 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().EndSyncPeriod()
 	m.EXPECT().AddLog(gomock.Any())
 	m.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().PointCache()
+	m.EXPECT().Witness()
 	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any())
 	m.EXPECT().SetTxContext(gomock.Any(), gomock.Any())
 	m.EXPECT().Finalise(gomock.Any())

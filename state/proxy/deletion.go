@@ -21,9 +21,11 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -227,6 +229,16 @@ func (r *DeletionProxy) AddLog(log *types.Log) {
 // GetLogs retrieves log entries.
 func (r *DeletionProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	return r.db.GetLogs(hash, block, blockHash)
+}
+
+// PointCache returns the point cache used in computations.
+func (r *DeletionProxy) PointCache() *utils.PointCache {
+	return r.db.PointCache()
+}
+
+// Witness retrieves the current state witness.
+func (r *DeletionProxy) Witness() *stateless.Witness {
+	return r.db.Witness()
 }
 
 // AddPreimage adds a SHA3 preimage.
