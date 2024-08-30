@@ -24,7 +24,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	statetest "github.com/Fantom-foundation/Aida/ethtest"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -66,20 +65,6 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 		return nil
 	}
 
-	if err == nil && state.Data.(*statetest.StateTestContext).ExpectedError == "" {
-		return nil
-	}
-	if err == nil && state.Data.(*statetest.StateTestContext).ExpectedError != "" {
-		return fmt.Errorf("expected error %q, got no error", state.Data.(*statetest.StateTestContext).ExpectedError)
-	}
-	if err != nil && state.Data.(*statetest.StateTestContext).ExpectedError == "" {
-		return fmt.Errorf("unexpected error: %w", err)
-	}
-	if err != nil && state.Data.(*statetest.StateTestContext).ExpectedError != "" {
-		// TODO check error string
-		return nil
-	}
-
 	if !p.isErrFatal() {
 		ctx.ErrorInput <- fmt.Errorf("live-db processor failed; %v", err)
 		return nil
@@ -116,6 +101,27 @@ func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Co
 	}
 
 	return err
+}
+
+// MakeEthTestProcessor creates an executor.Processor which processes transaction created from ethereum test package.
+func MakeEthTestProcessor(cfg *utils.Config) (*EthTestProcessor, error) {
+	processor, err := MakeTxProcessor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &EthTestProcessor{processor}, nil
+}
+
+type EthTestProcessor struct {
+	*TxProcessor
+}
+
+// Process transaction inside state into given LIVE StateDb
+func (p *EthTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+	// We ignore error in this case, because some tests require the processor to fail,
+	// ethStateTestValidator decides whether error is fatal.
+	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+	return nil
 }
 
 type TxProcessor struct {
@@ -229,7 +235,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
 	db.SetTxContext(txHash, tx)
-	blockCtx := inputEnv.GetBlockContext(&hashError)
+	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, inputEnv.GetChainConfig(), s.vmCfg)
 	snapshot := db.Snapshot()

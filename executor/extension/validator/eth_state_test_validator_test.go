@@ -17,6 +17,9 @@
 package validator
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
@@ -62,4 +65,58 @@ func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("pre-transaction must return error")
 	}
+}
+
+func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.ContinueOnFailure = true
+	ext := makeEthStateTestValidator(cfg, nil)
+
+	tests := []struct {
+		name      string
+		expect    txcontext.Result
+		get       txcontext.TxContext
+		wantError error
+	}{
+		{
+			name:      "expectNoErrorGetNoError",
+			expect:    ethtest.CreateNoErrorTestTransaction(t).GetResult(),
+			get:       ethtest.CreateNoErrorTestTransaction(t),
+			wantError: nil,
+		},
+		{
+			name:      "expectErrorGetError",
+			expect:    ethtest.CreateErrorTestTransaction(t).GetResult(),
+			get:       ethtest.CreateErrorTestTransaction(t),
+			wantError: nil,
+		},
+		{
+			name:      "expectErrorGetNoError",
+			expect:    ethtest.CreateNoErrorTestTransaction(t).GetResult(),
+			get:       ethtest.CreateErrorTestTransaction(t),
+			wantError: fmt.Errorf("expected error %w, got no error", errors.New("err")),
+		},
+		{
+			name:      "expectNoErrorGetError",
+			expect:    ethtest.CreateErrorTestTransaction(t).GetResult(),
+			get:       ethtest.CreateNoErrorTestTransaction(t),
+			wantError: fmt.Errorf("unexpected error: %w", errors.New("err")),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := &executor.Context{ExecutionResult: test.expect}
+			st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: test.get}
+
+			err := ext.PostTransaction(st, ctx)
+			if err == nil && test.wantError == nil {
+				return
+			}
+			if !strings.EqualFold(err.Error(), test.wantError.Error()) {
+				t.Errorf("unexpected error;\ngot: %v\nwant: %v", err, test.wantError)
+			}
+		})
+	}
+
 }

@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"go.uber.org/mock/gomock"
 )
@@ -133,13 +132,13 @@ type testTxBlkEnv struct {
 	blkNumber uint64
 }
 
+func (env testTxBlkEnv) GetRandom() *common.Hash {
+	return nil
+}
+
 func (env testTxBlkEnv) GetChainConfig() *params.ChainConfig {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (env testTxBlkEnv) GetBlockContext(hashErr *error) *vm.BlockContext {
-	return txcontext.PrepareBlockCtx(env, hashErr)
 }
 
 func (env testTxBlkEnv) GetCoinbase() common.Address {

@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -77,12 +76,13 @@ type normaTxBlockEnv struct {
 	chainCfg  *params.ChainConfig
 }
 
-func (e normaTxBlockEnv) GetChainConfig() *params.ChainConfig {
-	return e.chainCfg
+// GetRandom is not used in Norma Tx-Generator.
+func (e normaTxBlockEnv) GetRandom() *common.Hash {
+	return nil
 }
 
-func (e normaTxBlockEnv) GetBlockContext(hashErr *error) *vm.BlockContext {
-	return txcontext.PrepareBlockCtx(e, hashErr)
+func (e normaTxBlockEnv) GetChainConfig() *params.ChainConfig {
+	return e.chainCfg
 }
 
 // GetCoinbase returns the coinbase address.

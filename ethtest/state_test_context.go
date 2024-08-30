@@ -25,21 +25,25 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, fork string, postNumber int) txcontext.TxContext {
-	return &StateTestContext{
+func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, fork string, postNumber int) (txcontext.TxContext, error) {
+	env, err := stJson.CreateEnv(fork)
+	if err != nil {
+		return nil, err
+	}
+	return &stateTestContext{
 		fork:          fork,
 		path:          stJson.path,
 		postNumber:    postNumber,
 		description:   stJson.description,
-		env:           stJson.CreateEnv(fork),
+		env:           env,
 		inputState:    stJson.Pre,
 		msg:           msg,
 		rootHash:      post.RootHash,
 		ExpectedError: post.ExpectException,
-	}
+	}, nil
 }
 
-type StateTestContext struct {
+type stateTestContext struct {
 	txcontext.NilTxContext
 	fork, path, description string
 	postNumber              int
@@ -50,27 +54,31 @@ type StateTestContext struct {
 	ExpectedError           string
 }
 
-func (s *StateTestContext) GetStateHash() common.Hash {
+func (s *stateTestContext) GetStateHash() common.Hash {
 	return s.rootHash
 }
 
-func (s *StateTestContext) GetOutputState() txcontext.WorldState {
+func (s *stateTestContext) GetOutputState() txcontext.WorldState {
 	// we dont execute pseudo transactions here
 	return nil
 }
 
-func (s *StateTestContext) GetInputState() txcontext.WorldState {
+func (s *stateTestContext) GetInputState() txcontext.WorldState {
 	return NewWorldState(s.inputState)
 }
 
-func (s *StateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
+func (s *stateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return s.env
 }
 
-func (s *StateTestContext) GetMessage() *core.Message {
+func (s *stateTestContext) GetMessage() *core.Message {
 	return s.msg
 }
 
-func (s *StateTestContext) String() string {
+func (s *stateTestContext) GetResult() txcontext.Result {
+	return stateTestResult{s.ExpectedError}
+}
+
+func (s *stateTestContext) String() string {
 	return fmt.Sprintf("Test path: %v\nDescription: %v\nFork: %v\nPost number: %v", s.path, s.description, s.fork, s.postNumber)
 }

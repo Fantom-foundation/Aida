@@ -36,7 +36,7 @@ var (
 
 func CreateTestTransaction(*testing.T) txcontext.TxContext {
 	to := common.HexToAddress("0x10")
-	return &StateTestContext{
+	return &stateTestContext{
 		env: &stBlockEnvironment{
 			blockNumber: 1,
 			Coinbase:    common.Address{},
@@ -135,5 +135,17 @@ func CreateTestStJson(*testing.T) *stJSON {
 				},
 			},
 		},
+	}
+}
+
+func CreateErrorTestTransaction(*testing.T) txcontext.TxContext {
+	return &stateTestContext{
+		ExpectedError: "err",
+	}
+}
+
+func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
+	return &stateTestContext{
+		ExpectedError: "",
 	}
 }

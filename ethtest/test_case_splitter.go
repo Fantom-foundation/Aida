@@ -72,7 +72,7 @@ type TestCaseSplitter struct {
 // SplitStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
 // 2) tests cases. Each file contains 1..N enabledForks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
-func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
+func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err error) {
 	var overall uint32
 
 	// Iterate all JSONs
@@ -104,10 +104,13 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 				if fork == "Paris" {
 					fork = "Merge"
 				}
-
+				ctx, err := newStateTestTxContest(stJson, msg, post, fork, postNumber)
+				if err != nil {
+					return nil, err
+				}
 				dividedTests = append(dividedTests, Transaction{
 					fork,
-					newStateTestTxContest(stJson, msg, post, fork, postNumber),
+					ctx,
 				})
 				overall++
 			}
@@ -116,5 +119,5 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction) {
 
 	s.log.Noticef("Found %v runnable state tests...", overall)
 
-	return dividedTests
+	return dividedTests, err
 }

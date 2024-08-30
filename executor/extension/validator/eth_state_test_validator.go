@@ -55,10 +55,27 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	// TODO: how to verify logs - no logs are created - look at eth_state_test_scope_event_emitter - block is +1
 	//blockHash := common.HexToHash(fmt.Sprintf("0x%016d", s.Block+1))
 	//txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", s.Block+1, s.Transaction))
 	//e.log.Debugf("%x", types.LogsBloom(ctx.State.GetLogs(txHash, uint64(s.Block+1), blockHash)))
+
+	_, want := ctx.ExecutionResult.GetRawResult()
+	_, got := state.Data.GetResult().GetRawResult()
+	if want == nil && got == nil {
+		return nil
+	}
+	if want == nil && got != nil {
+		return fmt.Errorf("expected error %w, got no error", got)
+	}
+	if want != nil && got == nil {
+		return fmt.Errorf("unexpected error: %w", want)
+	}
+	if want != nil && got != nil {
+		// TODO check error string - requires somewhat complex string parsing
+		return nil
+	}
+
 	return nil
 }

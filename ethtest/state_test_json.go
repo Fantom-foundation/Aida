@@ -1,6 +1,8 @@
 package ethtest
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -27,11 +29,10 @@ func (s *stJSON) setDescription(desc string) {
 	s.description = desc
 }
 
-func (s *stJSON) CreateEnv(fork string) *stBlockEnvironment {
+func (s *stJSON) CreateEnv(fork string) (*stBlockEnvironment, error) {
 	config, _, err := tests.GetChainConfig(fork)
 	if err != nil {
-		// todo remove panic
-		panic(err)
+		return nil, fmt.Errorf("cannot get chain config: %w", err)
 	}
 
 	// Create copy as each tx needs its own env
@@ -46,7 +47,7 @@ func (s *stJSON) CreateEnv(fork string) *stBlockEnvironment {
 		Alloc:      s.Pre,
 	}
 
-	return &env
+	return &env, nil
 }
 
 // stPost indicates data for each transaction.

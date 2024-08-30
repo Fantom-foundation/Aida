@@ -89,7 +89,7 @@ func RunEthereumTest(ctx *cli.Context) error {
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
 
-	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {
 		return err
 	}
