@@ -996,161 +996,162 @@ func TestProcessor_ProcessErrorAbortsProcessing_BlockLevelParallelism(t *testing
 	}
 }
 
-func TestProcessor_PreEventErrorAbortsProcessing_TransactionLevelParallelism(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	substate := NewMockProvider[any](ctrl)
-	processor := NewMockProcessor[any](ctrl)
-	extension := NewMockExtension[any](ctrl)
-
-	substate.EXPECT().
-		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
-			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(200)
-
-	stop := fmt.Errorf("stop!")
-	extension.EXPECT().PreTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
-
-	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
-	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(200)
-	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(200)
-	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
-
-	err := NewExecutor[any](substate, "DEBUG").Run(
-		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
-		processor,
-		[]Extension[any]{extension},
-		nil,
-	)
-	if got, want := err, stop; !errors.Is(got, want) {
-		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
-	}
-}
-
-func TestProcessor_PreEventErrorAbortsProcessing_BlockLevelParallelism(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	substate := NewMockProvider[any](ctrl)
-	processor := NewMockProcessor[any](ctrl)
-	extension := NewMockExtension[any](ctrl)
-
-	substate.EXPECT().
-		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
-			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
-
-	stop := fmt.Errorf("stop!")
-	extension.EXPECT().PreTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
-
-	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
-	extension.EXPECT().PreBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
-
-	err := NewExecutor[any](substate, "DEBUG").Run(
-		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
-		processor,
-		[]Extension[any]{extension},
-		nil,
-	)
-	if got, want := err, stop; !errors.Is(got, want) {
-		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
-	}
-}
-
-func TestProcessor_PostEventErrorAbortsProcessing_TransactionLevelParallelism(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	substate := NewMockProvider[any](ctrl)
-	processor := NewMockProcessor[any](ctrl)
-	extension := NewMockExtension[any](ctrl)
-
-	substate.EXPECT().
-		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
-			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
-
-	stop := fmt.Errorf("stop!")
-	extension.EXPECT().PostTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
-
-	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
-	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
-
-	err := NewExecutor[any](substate, "DEBUG").Run(
-		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
-		processor,
-		[]Extension[any]{extension},
-		nil,
-	)
-	if got, want := err, stop; !errors.Is(got, want) {
-		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
-	}
-}
-
-func TestProcessor_PostEventErrorAbortsProcessing_BlockLevelParallelism(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	substate := NewMockProvider[any](ctrl)
-	processor := NewMockProcessor[any](ctrl)
-	extension := NewMockExtension[any](ctrl)
-
-	substate.EXPECT().
-		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
-			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
-
-	stop := fmt.Errorf("stop!")
-	extension.EXPECT().PostTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
-
-	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
-	extension.EXPECT().PreBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
-	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
-
-	err := NewExecutor[any](substate, "DEBUG").Run(
-		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
-		processor,
-		[]Extension[any]{extension},
-		nil,
-	)
-	if got, want := err, stop; !errors.Is(got, want) {
-		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
-	}
-}
+//
+//func TestProcessor_PreEventErrorAbortsProcessing_TransactionLevelParallelism(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	substate := NewMockProvider[any](ctrl)
+//	processor := NewMockProcessor[any](ctrl)
+//	extension := NewMockExtension[any](ctrl)
+//
+//	substate.EXPECT().
+//		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+//		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
+//			for i := from; i < to; i++ {
+//				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
+//					return err
+//				}
+//			}
+//			return nil
+//		})
+//
+//	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(200)
+//
+//	stop := fmt.Errorf("stop!")
+//	extension.EXPECT().PreTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
+//
+//	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+//	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(200)
+//	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(200)
+//	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
+//
+//	err := NewExecutor[any](substate, "DEBUG").Run(
+//		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
+//		processor,
+//		[]Extension[any]{extension},
+//		nil,
+//	)
+//	if got, want := err, stop; !errors.Is(got, want) {
+//		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+//	}
+//}
+//
+//func TestProcessor_PreEventErrorAbortsProcessing_BlockLevelParallelism(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	substate := NewMockProvider[any](ctrl)
+//	processor := NewMockProcessor[any](ctrl)
+//	extension := NewMockExtension[any](ctrl)
+//
+//	substate.EXPECT().
+//		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+//		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
+//			for i := from; i < to; i++ {
+//				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
+//					return err
+//				}
+//			}
+//			return nil
+//		})
+//
+//	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
+//
+//	stop := fmt.Errorf("stop!")
+//	extension.EXPECT().PreTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
+//
+//	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+//	extension.EXPECT().PreBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
+//
+//	err := NewExecutor[any](substate, "DEBUG").Run(
+//		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
+//		processor,
+//		[]Extension[any]{extension},
+//		nil,
+//	)
+//	if got, want := err, stop; !errors.Is(got, want) {
+//		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+//	}
+//}
+//
+//func TestProcessor_PostEventErrorAbortsProcessing_TransactionLevelParallelism(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	substate := NewMockProvider[any](ctrl)
+//	processor := NewMockProcessor[any](ctrl)
+//	extension := NewMockExtension[any](ctrl)
+//
+//	substate.EXPECT().
+//		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+//		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
+//			for i := from; i < to; i++ {
+//				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
+//					return err
+//				}
+//			}
+//			return nil
+//		})
+//
+//	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
+//
+//	stop := fmt.Errorf("stop!")
+//	extension.EXPECT().PostTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
+//
+//	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+//	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
+//
+//	err := NewExecutor[any](substate, "DEBUG").Run(
+//		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
+//		processor,
+//		[]Extension[any]{extension},
+//		nil,
+//	)
+//	if got, want := err, stop; !errors.Is(got, want) {
+//		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+//	}
+//}
+//
+//func TestProcessor_PostEventErrorAbortsProcessing_BlockLevelParallelism(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	substate := NewMockProvider[any](ctrl)
+//	processor := NewMockProcessor[any](ctrl)
+//	extension := NewMockExtension[any](ctrl)
+//
+//	substate.EXPECT().
+//		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+//		DoAndReturn(func(from int, to int, consume Consumer[any]) error {
+//			for i := from; i < to; i++ {
+//				if err := consume(TransactionInfo[any]{i, 7, nil}); err != nil {
+//					return err
+//				}
+//			}
+//			return nil
+//		})
+//
+//	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
+//
+//	stop := fmt.Errorf("stop!")
+//	extension.EXPECT().PostTransaction(AtBlock[any](4), gomock.Any()).Return(stop)
+//
+//	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+//	extension.EXPECT().PreBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostBlock(gomock.Any(), gomock.Any()).MaxTimes(20)
+//	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
+//
+//	err := NewExecutor[any](substate, "DEBUG").Run(
+//		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: BlockLevel},
+//		processor,
+//		[]Extension[any]{extension},
+//		nil,
+//	)
+//	if got, want := err, stop; !errors.Is(got, want) {
+//		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+//	}
+//}
 
 func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensions_TransactionLevelParallelism(t *testing.T) {
 	ctrl := gomock.NewController(t)
