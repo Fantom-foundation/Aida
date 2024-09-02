@@ -36,7 +36,7 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 			cfg.StateDbSrc = t.TempDir()
 
 			// Call for json creation and writing into it
-			err := WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, common.Hash{})
+			err := WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, common.Hash{}, true)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
@@ -72,6 +72,9 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 			}
 			if dbInfo.GitCommit != GitCommit {
 				t.Fatalf("failed to write GitCommit into DB info json file correctly; Is: %s; Should be: %s", dbInfo.GitCommit, GitCommit)
+			}
+			if !dbInfo.HasFinished {
+				t.Fatalf("failed to write HasFinished into DB info json file correctly; Is: %v; Should be: %v", dbInfo.HasFinished, !dbInfo.HasFinished)
 			}
 		})
 	}

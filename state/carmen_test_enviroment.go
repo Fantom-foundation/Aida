@@ -106,7 +106,7 @@ func GetRandom(t *testing.T, lower int, upper int) uint64 {
 }
 
 func MakeCarmenDbTestContext(dir string, variant string, schema int, archive string) (StateDB, error) {
-	db, err := MakeCarmenStateDB(dir, variant, schema, archive)
+	db, err := MakeDefaultCarmenStateDB(dir, variant, schema, archive)
 	if err != nil {
 		return nil, err
 	}

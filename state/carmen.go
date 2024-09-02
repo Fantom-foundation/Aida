@@ -33,11 +33,20 @@ import (
 	"github.com/holiman/uint256"
 )
 
-func MakeCarmenStateDB(dir string, variant string, schema int, archive string) (StateDB, error) {
-	return MakeCarmenStateDBWithCacheSize(dir, variant, schema, archive, 0, 0)
+func MakeDefaultCarmenStateDB(dir string, variant string, schema int, archive string) (StateDB, error) {
+	return MakeCarmenStateDB(dir, variant, schema, archive, 0, 0, 0, 0)
 }
 
-func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, archive string, liveDbCacheSize, archiveCacheSize int) (StateDB, error) {
+func MakeCarmenStateDB(
+	dir string,
+	variant string,
+	schema int,
+	archive string,
+	liveDbCacheSize,
+	archiveCacheSize,
+	checkpointInterval,
+	checkpointPeriod int,
+) (StateDB, error) {
 	var archiveType carmen.Archive
 
 	switch strings.ToLower(archive) {
@@ -74,6 +83,16 @@ func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, arch
 
 	if archiveCacheSize > 0 {
 		properties.SetInteger(carmen.ArchiveCache, archiveCacheSize)
+	}
+
+	// How often will Carmen create checkpoints - in blocks
+	if checkpointInterval > 0 {
+		properties.SetInteger(carmen.CheckpointInterval, checkpointInterval)
+	}
+
+	// How often will Carmen create checkpoints - in minutes
+	if checkpointPeriod > 0 {
+		properties.SetInteger(carmen.CheckpointPeriod, checkpointPeriod)
 	}
 
 	db, err := carmen.OpenDatabase(dir, cfg, properties)

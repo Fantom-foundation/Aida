@@ -31,7 +31,7 @@ import (
 )
 
 func makeTestShadowDBWithCarmenTestContext(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
-	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
+	csDB, err := state.MakeDefaultCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
 	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
@@ -57,7 +57,7 @@ func makeTestShadowDBWithCarmenTestContext(t *testing.T, ctc state.CarmenStateTe
 }
 
 func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
-	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
+	csDB, err := state.MakeDefaultCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
 	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
@@ -702,7 +702,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 func TestShadowState_GetShadowDB(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
 		t.Run(ctc.String(), func(t *testing.T) {
-			csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
+			csDB, err := state.MakeDefaultCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Schema, ctc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}

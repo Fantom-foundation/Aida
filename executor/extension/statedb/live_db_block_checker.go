@@ -85,6 +85,11 @@ func (c *liveDbBlockChecker[T]) PreRun(executor.State[T], *executor.Context) err
 			return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be last block of live-db + 1, in your case %v", lastBlock+1)
 		}
 	} else if lastBlock >= c.cfg.First {
+		// Ignore if run was not finished - db might have been healed so block alignment would not work
+		if !primeDbInfo.HasFinished {
+			return nil
+		}
+
 		// user incorrectly tries to prime data into database even tho database is already advanced further
 		return fmt.Errorf("if using existing live-db with vm-sdb first block needs to be higher than last block of live-db, in your case %v", lastBlock+1)
 	}
