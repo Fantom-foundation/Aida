@@ -79,7 +79,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {
 		t.Fatalf("failed to create processor: %v", err)
 	}
@@ -208,10 +208,14 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().EndTransaction(),
+		db.EXPECT().EndBlock(),
+		db.EXPECT().GetHash(),
+		db.EXPECT().Error(),
 		// EndTransaction is not called because execution fails
 	)
 
-	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {
 		t.Fatalf("failed to create processor: %v", err)
 	}
@@ -261,7 +265,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 	db.EXPECT().BeginBlock(uint64(2))
 	db.EXPECT().BeginTransaction(uint32(1))
 
-	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {
 		t.Fatalf("failed to create processor: %v", err)
 	}

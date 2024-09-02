@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -34,7 +35,11 @@ var (
 	data4 = hex.EncodeToString([]byte{0x4})
 )
 
-func CreateTestTransaction(*testing.T) txcontext.TxContext {
+func CreateTestTransaction(t *testing.T) txcontext.TxContext {
+	chainCfg, err := utils.GetChainConfig(1337)
+	if err != nil {
+		t.Fatalf("cannot get chain config: %v", err)
+	}
 	to := common.HexToAddress("0x10")
 	return &stateTestContext{
 		env: &stBlockEnvironment{
@@ -45,6 +50,9 @@ func CreateTestTransaction(*testing.T) txcontext.TxContext {
 			Number:      newBigInt(1),
 			Timestamp:   newBigInt(1),
 			BaseFee:     newBigInt(1),
+			genesis: core.Genesis{
+				Config: chainCfg,
+			},
 		},
 		inputState: types.GenesisAlloc{
 			common.HexToAddress("0x1"): core.GenesisAccount{
