@@ -120,6 +120,7 @@ type EthTestProcessor struct {
 func (p *EthTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	// We ignore error in this case, because some tests require the processor to fail,
 	// ethStateTestValidator decides whether error is fatal.
+	// todo check the other error
 	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
 	return nil
 }
