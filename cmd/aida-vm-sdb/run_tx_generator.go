@@ -76,7 +76,7 @@ func runTransactions(
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
-		tracker.MakeBlockProgressTracker(cfg, 100),
+		tracker.MakeBlockProgressTracker(cfg, cfg.TrackerGranularity),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		validator.MakeShadowDbValidator(cfg),

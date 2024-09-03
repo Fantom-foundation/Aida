@@ -25,9 +25,11 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -293,6 +295,20 @@ func (s *loggingVmStateDb) AddLog(entry *types.Log) {
 func (s *loggingVmStateDb) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	res := s.db.GetLogs(hash, block, blockHash)
 	s.writeLog("GetLogs, %v, %v, %v, %v", hash, block, blockHash, res)
+	return res
+}
+
+// PointCache returns the point cache used in computations.
+func (s *loggingVmStateDb) PointCache() *utils.PointCache {
+	res := s.db.PointCache()
+	s.writeLog("PointCache, %v", res)
+	return res
+}
+
+// Witness retrieves the current state witness.
+func (s *loggingVmStateDb) Witness() *stateless.Witness {
+	res := s.db.Witness()
+	s.writeLog("Witness, %s", res)
 	return res
 }
 

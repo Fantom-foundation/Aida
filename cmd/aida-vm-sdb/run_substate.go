@@ -94,7 +94,7 @@ func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxCont
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
-		tracker.MakeBlockProgressTracker(cfg, 100_000),
+		tracker.MakeBlockProgressTracker(cfg, cfg.TrackerGranularity),
 		primer.MakeStateDbPrimer[txcontext.TxContext](cfg),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),

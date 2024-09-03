@@ -103,7 +103,7 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().Close(),
 	)
 
-	if err := runTransactions(cfg, provider, db, "dummyPath", processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
+	if err := runTransactions(cfg, provider, db, t.TempDir(), processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }

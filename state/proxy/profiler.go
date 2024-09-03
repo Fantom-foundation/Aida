@@ -26,9 +26,11 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -366,6 +368,24 @@ func (p *ProfilerProxy) GetLogs(hash common.Hash, block uint64, blockHash common
 		logs = p.db.GetLogs(hash, block, blockHash)
 	})
 	return logs
+}
+
+// PointCache returns the point cache used in computations.
+func (p *ProfilerProxy) PointCache() *utils.PointCache {
+	var res *utils.PointCache
+	p.do(operation.PointCacheID, func() {
+		res = p.db.PointCache()
+	})
+	return res
+}
+
+// Witness retrieves the current state witness.
+func (p *ProfilerProxy) Witness() *stateless.Witness {
+	var res *stateless.Witness
+	p.do(operation.WitnessID, func() {
+		res = p.db.Witness()
+	})
+	return res
 }
 
 // AddPreimage adds a SHA3 preimage.

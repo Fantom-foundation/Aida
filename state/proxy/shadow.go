@@ -26,9 +26,11 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -327,6 +329,39 @@ func (s *shadowVmStateDb) GetLogs(hash common.Hash, block uint64, blockHash comm
 		s.err = fmt.Errorf("%v diverged from shadow DB", getOpcodeString("GetLogs", hash, blockHash))
 	}
 	return logsP
+}
+
+func (s *shadowVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
+	primeRoot := s.prime.GetStorageRoot(addr)
+	shadowRoot := s.shadow.GetStorageRoot(addr)
+
+	if shadowRoot != (common.Hash{}) {
+		return shadowRoot
+	}
+
+	return primeRoot
+}
+
+func (s *shadowVmStateDb) CreateContract(addr common.Address) {
+	s.run("CreateContract", func(s state.VmStateDB) error {
+		s.CreateContract(addr)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) Selfdestruct6780(addr common.Address) {
+	s.run("Selfdestruct6780", func(s state.VmStateDB) error {
+		s.Selfdestruct6780(addr)
+		return nil
+	})
+}
+
+func (s *shadowVmStateDb) PointCache() *utils.PointCache {
+	return s.prime.PointCache()
+}
+
+func (s *shadowVmStateDb) Witness() *stateless.Witness {
+	return s.prime.Witness()
 }
 
 func (s *shadowStateDb) Finalise(deleteEmptyObjects bool) {
@@ -697,29 +732,4 @@ func (s *shadowVmStateDb) logIssue(opName string, prime, shadow any, args ...any
 		"\tPrimary: %v \n"+
 		"\tShadow: %v", getOpcodeString(opName, args), prime, shadow)
 
-}
-
-func (s *shadowVmStateDb) CreateContract(addr common.Address) {
-	s.run("CreateContract", func(s state.VmStateDB) error {
-		s.CreateContract(addr)
-		return nil
-	})
-}
-
-func (s *shadowVmStateDb) Selfdestruct6780(addr common.Address) {
-	s.run("Selfdestruct6780", func(s state.VmStateDB) error {
-		s.Selfdestruct6780(addr)
-		return nil
-	})
-}
-
-func (s *shadowVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
-	primeRoot := s.prime.GetStorageRoot(addr)
-	shadowRoot := s.shadow.GetStorageRoot(addr)
-
-	if shadowRoot != (common.Hash{}) {
-		return shadowRoot
-	}
-
-	return primeRoot
 }
