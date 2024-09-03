@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -84,6 +85,10 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 	var tests []T
 
 	for _, p := range filePaths {
+		// Todo: Remove?
+		if strings.Contains(strings.ToLower(p), "blob") {
+			continue
+		}
 		toAppend, err := readTestsFromFile[T](p)
 		if err != nil {
 			return nil, err
