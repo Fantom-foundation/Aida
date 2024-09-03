@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/ethereum/go-ethereum/core"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -31,7 +32,6 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/tracing"
@@ -224,7 +224,7 @@ type aidaProcessor struct {
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
-		gasPool   = new(evmcore.GasPool)
+		gasPool   = new(core.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		inputEnv  = st.GetBlockEnvironment()
 		msg       = st.GetMessage()
@@ -236,12 +236,12 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
+	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, inputEnv.GetChainConfig(), s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gasPool)
+	msgResult, err := core.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
@@ -288,8 +288,8 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	}
 
 	blockCtx := &vm.BlockContext{
-		CanTransfer: evmcore.CanTransfer,
-		Transfer:    evmcore.Transfer,
+		CanTransfer: core.CanTransfer,
+		Transfer:    core.Transfer,
 		Coinbase:    inputEnv.GetCoinbase(),
 		BlockNumber: new(big.Int).SetUint64(inputEnv.GetNumber()),
 		Time:        inputEnv.GetTimestamp(),
@@ -305,7 +305,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 
 	blobBaseFee := inputEnv.GetBlobBaseFee()
 	if blobBaseFee != nil {
-		blockCtx.BlobBaseFee = new(big.Int).Set(blobBaseFee) // todo maybe use eip4844.CalcBlobGas()
+		blockCtx.BlobBaseFee = new(big.Int).Set(blobBaseFee)
 	}
 	return blockCtx
 }
@@ -405,7 +405,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		err = fmt.Errorf("transaction failed")
 	}
 
-	result := &evmcore.ExecutionResult{
+	result := &core.ExecutionResult{
 		UsedGas:    uint64(receipt.GasUsed),
 		Err:        err,
 		ReturnData: receipt.Output,
