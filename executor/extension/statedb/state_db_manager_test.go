@@ -153,7 +153,7 @@ func TestStateDbManager_KeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	}
 }
 
-func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
+func TestStateDbManager_StateDbInfoExistenceAndReadable(t *testing.T) {
 	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
@@ -186,6 +186,161 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	_, err := os.Stat(filename)
 	if err != nil {
 		t.Fatalf("failed to find %v of stateDbInfo; %v", utils.PathToDbInfo, err)
+	}
+
+	_, err = utils.ReadStateDbInfo(filename)
+	if err != nil {
+		t.Fatal("failed to read statedb_info.json")
+	}
+
+}
+
+func TestStateDbManager_OverrideArchiveMode(t *testing.T) {
+
+	state := executor.State[any]{
+		Block: 0,
+	}
+	tmpDir := t.TempDir()
+	cfg := &utils.Config{}
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "carmen"
+	cfg.DbVariant = "go-file"
+	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
+	cfg.ArchiveMode = false
+
+	ext := MakeStateDbManager[any](cfg, "")
+	ctx := &executor.Context{}
+
+	// First, create a live src db
+	if err := ext.PreRun(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	if err := ext.PostRun(state, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	expectedName := fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, state.Block)
+	DbPath := filepath.Join(cfg.DbTmp, expectedName)
+
+	filename := filepath.Join(DbPath, utils.PathToDbInfo)
+
+	if _, err := os.Stat(filename); err != nil {
+		t.Fatalf("failed to find %v of stateDbInfo; %v", utils.PathToDbInfo, err)
+	}
+
+	stateDbInfo, err := utils.ReadStateDbInfo(filename)
+	if err != nil {
+		t.Fatal("failed to read statedb_info.json")
+	}
+	// confirm that StateDB info file records ArchiveMode disable
+	if stateDbInfo.ArchiveMode != false {
+		t.Fatal("wrong archive mode in statedb_info.json. Expect ArchiveMode disable")
+	}
+
+	testcases := []struct {
+		name                string
+		readOnlyTool        bool
+		expectedArchiveMode bool
+	}{
+		{"RunReadWriteToolFromLiveSrcDb_ExpectArchiveModeFromFlag", false, true},
+		{"RunReadOnlyToolFromLiveSrcDb_ExpectArchiveModeFromStateDbInfo", true, false},
+	}
+
+	for _, test := range testcases {
+		t.Run(test.name, func(t *testing.T) {
+			// Second, read from the src db and run in archive mode
+			cfg := &utils.Config{}
+			cfg.DbTmp = tmpDir
+			cfg.DbImpl = "carmen"
+			cfg.ChainID = utils.MainnetChainID
+			cfg.ArchiveMode = true
+			cfg.StateDbSrc = DbPath
+			if test.readOnlyTool {
+				cfg.SetStateDbSrcReadOnly()
+			}
+			ext = MakeStateDbManager[any](cfg, "")
+			ctx = &executor.Context{}
+
+			if err := ext.PreRun(state, ctx); err != nil {
+				t.Fatalf("failed to to run pre-run: %v", err)
+			}
+
+			if cfg.ArchiveMode != test.expectedArchiveMode {
+				t.Fatalf("Wrong archive mode.\ngot: %v\nwant: %v", cfg.ArchiveMode, test.expectedArchiveMode)
+			}
+
+			if err := ext.PostRun(state, ctx, nil); err != nil {
+				t.Fatalf("failed to to run post-run: %v", err)
+			}
+		})
+	}
+}
+
+func TestStateDbManager_OverrideArchiveVariant(t *testing.T) {
+	state := executor.State[any]{
+		Block: 0,
+	}
+	tmpDir := t.TempDir()
+	cfg := &utils.Config{}
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "carmen"
+	cfg.DbVariant = "go-file"
+	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
+	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "ldb"
+
+	ext := MakeStateDbManager[any](cfg, "")
+	ctx := &executor.Context{}
+
+	// First, create a live src db
+	if err := ext.PreRun(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	if err := ext.PostRun(state, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	expectedName := fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, state.Block)
+	dbPath := filepath.Join(cfg.DbTmp, expectedName)
+
+	filename := filepath.Join(dbPath, utils.PathToDbInfo)
+
+	if _, err := os.Stat(filename); err != nil {
+		t.Fatalf("failed to find %v of stateDbInfo; %v", utils.PathToDbInfo, err)
+	}
+
+	stateDbInfo, err := utils.ReadStateDbInfo(filename)
+	if err != nil {
+		t.Fatal("failed to read statedb_info.json")
+	}
+
+	// Second, read from the src db and run in archive mode with different archive variant
+	cfg = &utils.Config{}
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "carmen"
+	cfg.ChainID = utils.MainnetChainID
+	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "s5"
+	cfg.StateDbSrc = dbPath
+
+	ext = MakeStateDbManager[any](cfg, "")
+	ctx = &executor.Context{}
+
+	if err := ext.PreRun(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	// must use the same db variant as in src db
+	if cfg.ArchiveVariant != stateDbInfo.ArchiveVariant {
+		t.Fatalf("Wrong archive variant.\ngot: %v\nwant: %v", cfg.ArchiveVariant, stateDbInfo.ArchiveVariant)
+	}
+
+	if err := ext.PostRun(state, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
 	}
 }
 

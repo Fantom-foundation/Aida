@@ -107,9 +107,21 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
 	}
 
-	// do we have an archive inside loaded StateDb?
-	cfg.ArchiveMode = stateDbInfo.ArchiveMode
-	cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+	// If the state db is in read-only mode, set archive config as in statedb_info
+	if cfg.StateDbSrcReadOnly {
+		cfg.ArchiveMode = stateDbInfo.ArchiveMode
+		cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+	// If new blocks will be written to statedb, use the archive config from cli flags.
+	// Loaded state db with an archive may continue to be processed in a live-db mode or vice versa.
+	} else {
+		// if source db already has an archive, the archive variant must not change.
+		if cfg.ArchiveMode && stateDbInfo.ArchiveMode {
+			if cfg.ArchiveVariant != stateDbInfo.ArchiveVariant{
+			    cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+			    log.Warning("Cannot change archive variant. Now using %s instead.", stateDbInfo.ArchiveVariant)
+			}
+		}
+	}
 	cfg.DbImpl = stateDbInfo.Impl
 	cfg.DbVariant = stateDbInfo.Variant
 	cfg.CarmenSchema = stateDbInfo.Schema
