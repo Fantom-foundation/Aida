@@ -70,9 +70,9 @@ var RealChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet"
 var AllowedChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum", EthTestsChainID: "eth-tests"}
 
 const (
-	AidaDbRepositoryMainnetUrl  = "https://aida.repository.fantom.network"
-	AidaDbRepositoryTestnetUrl  = "https://aida.testnet.repository.fantom.network"
-	AidaDbRepositoryEthereumUrl = "https://aida.ethereum.repository.fantom.network"
+	AidaDbRepositoryMainnetUrl  = "https://storage.googleapis.com/aida-repository-public/mainnet/aida-patches"
+	AidaDbRepositoryTestnetUrl  = "https://storage.googleapis.com/aida-repository-public/testnet/aida-patches"
+	AidaDbRepositoryEthereumUrl = "https://storage.googleapis.com/aida-repository-public/ethereum/aida-patches"
 )
 
 const maxLastBlock = math.MaxUint64 - 1 // we decrease the value by one because params are always +1
