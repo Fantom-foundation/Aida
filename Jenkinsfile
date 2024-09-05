@@ -14,7 +14,7 @@ pipeline {
         VM = '--vm-impl lfvm'
         AIDADB = '--aida-db=/mnt/aida-db-central/aida-db'
         TMPDB = '--db-tmp=/mnt/tmp-disk'
-        DBSRC = '--db-src=/mnt/tmp-disk/state_db_carmen_go-file_${TOBLOCK}'
+        DBSRC = '/mnt/tmp-disk/state_db_carmen_go-file_${TOBLOCK}'
         TRACEDIR = 'tracefiles'
         FROMBLOCK = 'opera'
         TOBLOCK = '4600000'
@@ -133,6 +133,7 @@ pipeline {
 
                 stage('aida-vm-sdb keep-db') {
                     steps {
+                        sh "rm -rf ${DBSRC}"
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
                             sh "build/aida-vm-sdb substate ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --db-impl carmen --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
@@ -143,7 +144,7 @@ pipeline {
                 stage('aida-vm-sdb db-src') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${DBSRC} ${AIDADB} --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure 4600001 4610000"
+                            sh "build/aida-vm-sdb substate ${VM} --db-src ${DBSRC} ${AIDADB} --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure 4600001 4610000"
                         }
                         sh "rm -rf *.dat"
                     }
@@ -152,7 +153,7 @@ pipeline {
                 stage('aida-vm-adb validate-tx') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-adb ${AIDADB} ${DBSRC} --cpu-profile cpu-profile.dat --validate-tx ${FROMBLOCK} ${TOBLOCK}"
+                            sh "build/aida-vm-adb ${AIDADB} --db-src ${DBSRC} --cpu-profile cpu-profile.dat --validate-tx ${FROMBLOCK} ${TOBLOCK}"
                         }
                         sh "rm -rf *.dat"
                     }
