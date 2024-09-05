@@ -132,4 +132,6 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 
 replace github.com/Fantom-foundation/lachesis-base => github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240823114058-cda038e6d40b
 
-replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/sonic v1.2.1-b.0.20240903161021-f3f7aac6713f
+// Sonic client is integrated as a git-submodule to make version configuration easier
+// when running tests.
+replace github.com/Fantom-foundation/go-opera => ./sonic
