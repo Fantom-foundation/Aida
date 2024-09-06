@@ -16,7 +16,11 @@ import (
 func TestTestCaseSplitter_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
 	stJson := CreateTestStJson(t)
 	d := TestCaseSplitter{jsons: []*stJSON{stJson}, log: logger.NewLogger("info", "test-case-splitter-test")}
-	for _, testCase := range d.SplitStateTests() {
+	tests, err := d.SplitStateTests()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, testCase := range tests {
 		msg := testCase.Ctx.GetMessage()
 		if strings.Contains(fmt.Sprintf("%s", testCase), "Cancun") {
 			// Cancun fork contains data 1 and data 2 but since map is not ordered we cannot guarantee

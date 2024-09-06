@@ -31,7 +31,7 @@ func TestPrepareBlockCtx(t *testing.T) {
 	gaslimit := uint64(10000000)
 	blocknum := uint64(4600000)
 	basefee := big.NewInt(12345)
-	env := substatecontext.NewBlockEnvironment(&substate.Env{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee})
+	env := substatecontext.NewBlockEnvironment(&substate.Env{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee}, nil)
 
 	var hashError error
 	// BlockHashes are nil, expect an error
