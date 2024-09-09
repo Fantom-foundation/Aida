@@ -61,7 +61,7 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 		return nil, errors.New("please chose which testType do you want to read")
 	}
 
-	paths, err := utils.GetDirectoryFiles(".json", path)
+	paths, err := utils.GetFilesWithinDirectories(".json", []string{path})
 	if err != nil {
 		return nil, fmt.Errorf("cannot read files within directory %v; %v", path, err)
 	}
