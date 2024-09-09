@@ -23,24 +23,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 )
 
-func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, fork string, postNumber int) (txcontext.TxContext, error) {
-	env, err := stJson.CreateEnv(fork)
-	if err != nil {
-		return nil, err
-	}
+func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, chainCfg *params.ChainConfig, fork string, postNumber int) txcontext.TxContext {
 	return &stateTestContext{
 		fork:          fork,
 		path:          stJson.path,
 		postNumber:    postNumber,
 		description:   stJson.description,
-		env:           env,
+		env:           stJson.CreateEnv(chainCfg),
 		inputState:    stJson.Pre,
 		msg:           msg,
 		rootHash:      post.RootHash,
 		ExpectedError: post.ExpectException,
-	}, nil
+	}
 }
 
 type stateTestContext struct {

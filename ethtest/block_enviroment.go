@@ -21,7 +21,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -36,7 +35,7 @@ type stBlockEnvironment struct {
 	Timestamp     *BigInt        `json:"currentTimestamp"  gencodec:"required"`
 	BaseFee       *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
 	ExcessBlobGas *BigInt        `json:"currentExcessBlobGas" gencodec:"optional"`
-	genesis       core.Genesis
+	chainCfg      *params.ChainConfig
 }
 
 func (s *stBlockEnvironment) GetCoinbase() common.Address {
@@ -44,7 +43,7 @@ func (s *stBlockEnvironment) GetCoinbase() common.Address {
 }
 
 func (s *stBlockEnvironment) GetBlobBaseFee() *big.Int {
-	if s.genesis.Config.IsCancun(new(big.Int), s.genesis.ToBlock().Time()) && s.ExcessBlobGas != nil {
+	if s.chainCfg.IsCancun(new(big.Int), s.Timestamp.Uint64()) && s.ExcessBlobGas != nil {
 		return eip4844.CalcBlobFee(s.ExcessBlobGas.Uint64())
 	}
 
@@ -57,7 +56,7 @@ func (s *stBlockEnvironment) GetDifficulty() *big.Int {
 		difficulty = s.Difficulty.Convert()
 	}
 
-	if s.genesis.Config.IsLondon(new(big.Int)) && s.Random != nil {
+	if s.chainCfg.IsLondon(new(big.Int)) && s.Random != nil {
 		difficulty = big.NewInt(0)
 	}
 
@@ -82,7 +81,7 @@ func (s *stBlockEnvironment) GetBlockHash(blockNum uint64) (common.Hash, error) 
 
 func (s *stBlockEnvironment) GetBaseFee() *big.Int {
 	var baseFee *big.Int
-	if s.genesis.Config.IsLondon(new(big.Int)) {
+	if s.chainCfg.IsLondon(new(big.Int)) {
 		baseFee = s.BaseFee.Convert()
 		if s.BaseFee == nil {
 			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
@@ -96,7 +95,7 @@ func (s *stBlockEnvironment) GetBaseFee() *big.Int {
 }
 
 func (s *stBlockEnvironment) GetRandom() *common.Hash {
-	if s.genesis.Config.IsLondon(new(big.Int)) && s.Random != nil {
+	if s.chainCfg.IsLondon(new(big.Int)) && s.Random != nil {
 		random := common.BigToHash(s.Random.Convert())
 		return &random
 	}
@@ -104,5 +103,5 @@ func (s *stBlockEnvironment) GetRandom() *common.Hash {
 }
 
 func (s *stBlockEnvironment) GetChainConfig() *params.ChainConfig {
-	return s.genesis.Config
+	return s.chainCfg
 }

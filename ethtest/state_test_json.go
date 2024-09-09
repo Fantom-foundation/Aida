@@ -1,13 +1,10 @@
 package ethtest
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/tests"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 // stJSON serves as a 'middleman' into which are data unmarshalled from geth test files.
@@ -29,25 +26,11 @@ func (s *stJSON) setDescription(desc string) {
 	s.description = desc
 }
 
-func (s *stJSON) CreateEnv(fork string) (*stBlockEnvironment, error) {
-	config, _, err := tests.GetChainConfig(fork)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get chain config: %w", err)
-	}
-
+func (s *stJSON) CreateEnv(chainCfg *params.ChainConfig) *stBlockEnvironment {
 	// Create copy as each tx needs its own env
 	env := s.Env
-	env.genesis = core.Genesis{
-		Config:     config,
-		Coinbase:   env.Coinbase,
-		Difficulty: env.Difficulty.Convert(),
-		GasLimit:   env.GasLimit.Uint64(),
-		Number:     env.Number.Uint64(),
-		Timestamp:  env.Timestamp.Uint64(),
-		Alloc:      s.Pre,
-	}
-
-	return &env, nil
+	env.chainCfg = chainCfg
+	return &env
 }
 
 // stPost indicates data for each transaction.

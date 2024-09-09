@@ -9,13 +9,18 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/ethereum/go-ethereum/params"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/maps"
 )
 
 func TestTestCaseSplitter_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
 	stJson := CreateTestStJson(t)
-	d := TestCaseSplitter{jsons: []*stJSON{stJson}, log: logger.NewLogger("info", "test-case-splitter-test")}
+	d := TestCaseSplitter{
+		jsons:        []*stJSON{stJson},
+		log:          logger.NewLogger("info", "test-case-splitter-test"),
+		chainConfigs: make(map[string]*params.ChainConfig),
+	}
 	tests, err := d.SplitStateTests()
 	if err != nil {
 		t.Fatal(err)

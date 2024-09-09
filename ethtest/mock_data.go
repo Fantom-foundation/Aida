@@ -50,9 +50,7 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 			Number:      newBigInt(1),
 			Timestamp:   newBigInt(1),
 			BaseFee:     newBigInt(1),
-			genesis: core.Genesis{
-				Config: chainCfg,
-			},
+			chainCfg:    chainCfg,
 		},
 		inputState: types.GenesisAlloc{
 			common.HexToAddress("0x1"): core.GenesisAccount{

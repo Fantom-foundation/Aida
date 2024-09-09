@@ -1,12 +1,15 @@
 package ethtest
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/tests"
 	"golang.org/x/exp/maps"
 )
 
@@ -43,6 +46,7 @@ func NewTestCaseSplitter(cfg *utils.Config) (*TestCaseSplitter, error) {
 		enabledForks: sortForks(log, cfg.Forks),
 		log:          log,
 		jsons:        tests,
+		chainConfigs: make(map[string]*params.ChainConfig),
 	}, nil
 }
 
@@ -65,8 +69,9 @@ func sortForks(log logger.Logger, cfgForks []string) (forks []string) {
 
 type TestCaseSplitter struct {
 	enabledForks []string  // Which forks are enabled by user (default is all)
-	jsons        []*stJSON // Decoded json files
+	jsons        []*stJSON // Decoded json fil
 	log          logger.Logger
+	chainConfigs map[string]*params.ChainConfig
 }
 
 // SplitStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
@@ -91,6 +96,10 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 			if !ok {
 				continue
 			}
+			chainCfg, err := s.getChainConfig(fork)
+			if err != nil {
+				return nil, err
+			}
 			// Iterate all tests within one fork
 			for _, post := range posts {
 				postNumber++
@@ -104,10 +113,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 				if fork == "Paris" {
 					fork = "Merge"
 				}
-				ctx, err := newStateTestTxContest(stJson, msg, post, fork, postNumber)
-				if err != nil {
-					return nil, err
-				}
+				ctx := newStateTestTxContest(stJson, msg, post, chainCfg, fork, postNumber)
 				dividedTests = append(dividedTests, Transaction{
 					fork,
 					ctx,
@@ -120,4 +126,17 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 	s.log.Noticef("Found %v runnable state tests...", overall)
 
 	return dividedTests, err
+}
+
+func (s *TestCaseSplitter) getChainConfig(fork string) (*params.ChainConfig, error) {
+	if cfg, ok := s.chainConfigs[fork]; ok {
+		return cfg, nil
+	}
+	cfg, _, err := tests.GetChainConfig(fork)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get chain config: %w", err)
+	}
+
+	s.chainConfigs[fork] = cfg
+	return cfg, nil
 }
