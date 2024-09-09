@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/utils"
@@ -57,14 +58,15 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 	case utils.StateTests:
 		// If all dir with all tests is passed, only runnable StateTests are extracted
 		gst := path + "/GeneralStateTests"
-		_, err := os.Stat(gst)
-		if !os.IsNotExist(err) {
+		_, err = os.Stat(gst)
+		if err == nil {
 			dirPaths = append(dirPaths, gst)
 		}
-		eipt := path + "EIPTests/StateTests"
+
+		eipt := filepath.Join(path, "EIPTests/StateTests")
 		_, err = os.Stat(eipt)
-		if !os.IsNotExist(err) {
-			dirPaths = append(dirPaths, path+"EIPTests/StateTests")
+		if err == nil {
+			dirPaths = append(dirPaths, eipt)
 		}
 
 		// Otherwise exact directory with tests is passed

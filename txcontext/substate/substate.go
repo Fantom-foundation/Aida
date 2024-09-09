@@ -47,7 +47,6 @@ func (t *substateData) GetOutputState() txcontext.WorldState {
 }
 
 func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
-	// todo finish
 	return NewBlockEnvironment(t.Env, t.chainCfg)
 }
 

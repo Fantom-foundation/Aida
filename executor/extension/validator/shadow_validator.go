@@ -24,7 +24,7 @@ import (
 )
 
 func MakeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if cfg.ShadowDb || cfg.Validate {
+	if cfg.ShadowDb {
 		return makeShadowDbValidator(cfg)
 	}
 
