@@ -64,7 +64,12 @@ func (s *stBlockEnvironment) GetDifficulty() *big.Int {
 }
 
 func (s *stBlockEnvironment) GetGasLimit() uint64 {
-	return s.GasLimit.Uint64()
+	limit := s.GasLimit.Uint64()
+	if limit == 0 {
+		return params.GenesisGasLimit
+	}
+
+	return limit
 }
 
 func (s *stBlockEnvironment) GetNumber() uint64 {
