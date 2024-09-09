@@ -17,6 +17,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -45,6 +46,7 @@ type ethStateTestValidator struct {
 	cfg            *utils.Config
 	log            logger.Logger
 	numberOfErrors int
+	finalErr       error
 }
 
 func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -64,10 +66,10 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		return nil
 	}
 	if got == nil && want != nil {
-		err = fmt.Errorf("expected error %w, got no error", want)
+		err = fmt.Errorf("expected error %w, got no error\nTest info:\n%s", want, state.Data)
 	}
 	if got != nil && want == nil {
-		err = fmt.Errorf("unexpected error: %w", got)
+		err = fmt.Errorf("unexpected error: %w\nTest info:\n%s", got, state.Data)
 	}
 	if want != nil && got != nil {
 		// TODO check error string - requires somewhat complex string parsing
@@ -79,6 +81,7 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	}
 
 	ctx.ErrorInput <- err
+	e.finalErr = errors.Join(e.finalErr, err)
 	e.numberOfErrors++
 
 	// endless run
@@ -88,7 +91,7 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 
 	// too many errors
 	if e.numberOfErrors >= e.cfg.MaxNumErrors {
-		return err
+		return e.finalErr
 	}
 
 	return nil
