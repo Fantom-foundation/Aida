@@ -2,6 +2,7 @@ package ethtest
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -37,6 +38,8 @@ func (s *stJSON) CreateEnv(fork string) (*stBlockEnvironment, error) {
 
 	// Create copy as each tx needs its own env
 	env := s.Env
+	// todo remove genesis, check:
+
 	env.genesis = core.Genesis{
 		Config:     config,
 		Coinbase:   env.Coinbase,
@@ -46,6 +49,13 @@ func (s *stJSON) CreateEnv(fork string) (*stBlockEnvironment, error) {
 		Timestamp:  env.Timestamp.Uint64(),
 		Alloc:      s.Pre,
 	}
+
+	if env.Random != nil {
+		env.genesis.Mixhash = common.BigToHash(env.Random.Convert())
+		env.genesis.Difficulty = big.NewInt(0)
+	}
+
+	env.ctx = core.NewEVMBlockContext(env.genesis.ToBlock().Header(), nil, &s.Env.Coinbase)
 
 	return &env, nil
 }

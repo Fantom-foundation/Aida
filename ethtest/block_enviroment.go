@@ -20,9 +20,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -37,70 +36,43 @@ type stBlockEnvironment struct {
 	BaseFee       *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
 	ExcessBlobGas *BigInt        `json:"currentExcessBlobGas" gencodec:"optional"`
 	genesis       core.Genesis
+	ctx           vm.BlockContext
 }
 
 func (s *stBlockEnvironment) GetCoinbase() common.Address {
-	return s.Coinbase
+	return s.ctx.Coinbase
 }
 
 func (s *stBlockEnvironment) GetBlobBaseFee() *big.Int {
-	if s.genesis.Config.IsCancun(new(big.Int), s.genesis.ToBlock().Time()) && s.ExcessBlobGas != nil {
-		return eip4844.CalcBlobFee(s.ExcessBlobGas.Uint64())
-	}
-
-	return nil
+	return s.ctx.BlobBaseFee
 }
 
 func (s *stBlockEnvironment) GetDifficulty() *big.Int {
-	var difficulty *big.Int
-	if s.Difficulty != nil {
-		difficulty = s.Difficulty.Convert()
-	}
-
-	if s.genesis.Config.IsLondon(new(big.Int)) && s.Random != nil {
-		difficulty = big.NewInt(0)
-	}
-
-	return difficulty
+	return s.ctx.Difficulty
 }
 
 func (s *stBlockEnvironment) GetGasLimit() uint64 {
-	return s.GasLimit.Uint64()
+	return s.ctx.GasLimit
 }
 
 func (s *stBlockEnvironment) GetNumber() uint64 {
-	return s.blockNumber
+	return s.ctx.BlockNumber.Uint64()
 }
 
 func (s *stBlockEnvironment) GetTimestamp() uint64 {
-	return s.Timestamp.Uint64()
+	return s.ctx.Time
 }
 
 func (s *stBlockEnvironment) GetBlockHash(blockNum uint64) (common.Hash, error) {
-	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(blockNum)).String()))), nil
+	return core.GetHashFn(s.genesis.ToBlock().Header(), nil)(blockNum), nil
 }
 
 func (s *stBlockEnvironment) GetBaseFee() *big.Int {
-	var baseFee *big.Int
-	if s.genesis.Config.IsLondon(new(big.Int)) {
-		baseFee = s.BaseFee.Convert()
-		if s.BaseFee == nil {
-			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
-			// parent - 2 : 0xa as the basefee for 'this' context.
-			baseFee = big.NewInt(0x0a)
-		} else {
-			baseFee = s.BaseFee.Convert()
-		}
-	}
-	return baseFee
+	return s.ctx.BaseFee
 }
 
 func (s *stBlockEnvironment) GetRandom() *common.Hash {
-	if s.genesis.Config.IsLondon(new(big.Int)) && s.Random != nil {
-		random := common.BigToHash(s.Random.Convert())
-		return &random
-	}
-	return nil
+	return s.ctx.Random
 }
 
 func (s *stBlockEnvironment) GetChainConfig() *params.ChainConfig {
