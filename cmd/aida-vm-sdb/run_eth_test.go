@@ -210,8 +210,6 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
-		db.EXPECT().GetHash(),
-		db.EXPECT().Error(),
 		// EndTransaction is not called because execution fails
 	)
 
