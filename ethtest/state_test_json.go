@@ -4,20 +4,33 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 // stJSON serves as a 'middleman' into which are data unmarshalled from geth test files.
 type stJSON struct {
-	path string
-	Env  stBlockEnvironment  `json:"env"`
-	Pre  types.GenesisAlloc  `json:"pre"`
-	Tx   stTransaction       `json:"transaction"`
-	Out  hexutil.Bytes       `json:"out"`
-	Post map[string][]stPost `json:"post"`
+	path        string
+	description string
+	Env         stBlockEnvironment  `json:"env"`
+	Pre         types.GenesisAlloc  `json:"pre"`
+	Tx          stTransaction       `json:"transaction"`
+	Out         hexutil.Bytes       `json:"out"`
+	Post        map[string][]stPost `json:"post"`
 }
 
 func (s *stJSON) setPath(path string) {
 	s.path = path
+}
+
+func (s *stJSON) setDescription(desc string) {
+	s.description = desc
+}
+
+func (s *stJSON) CreateEnv(chainCfg *params.ChainConfig) *stBlockEnvironment {
+	// Create copy as each tx needs its own env
+	env := s.Env
+	env.chainCfg = chainCfg
+	return &env
 }
 
 // stPost indicates data for each transaction.

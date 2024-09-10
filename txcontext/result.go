@@ -27,7 +27,6 @@ type Result interface {
 	GetReceipt() Receipt
 	GetRawResult() ([]byte, error)
 	GetGasUsed() uint64
-	String() string
 }
 
 // Receipt represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.

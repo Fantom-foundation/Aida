@@ -23,28 +23,32 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 )
 
-func newStateTestTxContest(stJson *stJSON, env *stBlockEnvironment, msg *core.Message, rootHash common.Hash, fork string, number int) txcontext.TxContext {
+func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, chainCfg *params.ChainConfig, fork string, postNumber int) txcontext.TxContext {
 	return &stateTestContext{
-		fork:       fork,
-		path:       stJson.path,
-		number:     number,
-		env:        env,
-		inputState: stJson.Pre,
-		msg:        msg,
-		rootHash:   rootHash,
+		fork:          fork,
+		path:          stJson.path,
+		postNumber:    postNumber,
+		description:   stJson.description,
+		env:           stJson.CreateEnv(chainCfg),
+		inputState:    stJson.Pre,
+		msg:           msg,
+		rootHash:      post.RootHash,
+		expectedError: post.ExpectException,
 	}
 }
 
 type stateTestContext struct {
 	txcontext.NilTxContext
-	fork, path string
-	number     int
-	env        *stBlockEnvironment
-	inputState types.GenesisAlloc
-	msg        *core.Message
-	rootHash   common.Hash
+	fork, path, description string
+	postNumber              int
+	env                     *stBlockEnvironment
+	inputState              types.GenesisAlloc
+	msg                     *core.Message
+	rootHash                common.Hash
+	expectedError           string
 }
 
 func (s *stateTestContext) GetStateHash() common.Hash {
@@ -68,6 +72,10 @@ func (s *stateTestContext) GetMessage() *core.Message {
 	return s.msg
 }
 
+func (s *stateTestContext) GetResult() txcontext.Result {
+	return stateTestResult{s.expectedError}
+}
+
 func (s *stateTestContext) String() string {
-	return fmt.Sprintf("Test path: %v\nFork: %v\nTest Number within file: %v", s.path, s.fork, s.number)
+	return fmt.Sprintf("Test path: %v\nDescription: %v\nFork: %v\nPost number: %v", s.path, s.description, s.fork, s.postNumber)
 }
