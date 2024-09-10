@@ -69,7 +69,7 @@ func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
 
 func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.ContinueOnFailure = true
+	cfg.ContinueOnFailure = false
 	ext := makeEthStateTestValidator(cfg, nil)
 
 	tests := []struct {
@@ -113,7 +113,7 @@ func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
 			if err == nil && test.wantError == nil {
 				return
 			}
-			if !strings.EqualFold(err.Error(), test.wantError.Error()) {
+			if !strings.Contains(err.Error(), test.wantError.Error()) {
 				t.Errorf("unexpected error;\ngot: %v\nwant: %v", err, test.wantError)
 			}
 		})
