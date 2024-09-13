@@ -8,7 +8,7 @@ require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240903120428-3fc9e177f6bb
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
 	github.com/Fantom-foundation/Substate v0.0.0-20240823083426-23958ddac462
-	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
+	github.com/Fantom-foundation/Tosca v0.0.0-20240916150721-31800db41e5b
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
 	github.com/dsnet/compress v0.0.1
@@ -128,7 +128,7 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 
 replace github.com/ethereum/evmc/v11 => ./tosca/third_party/evmc
 
-replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240821150740-8b61095b9134
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240916105249-e7951db0c00b
 
 replace github.com/Fantom-foundation/lachesis-base => github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240823114058-cda038e6d40b
 

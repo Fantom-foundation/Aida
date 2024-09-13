@@ -42,7 +42,7 @@ type EvmExecutor struct {
 	archive   state.NonCommittableStateDB
 	timestamp uint64 // EVM requests require timestamp for correct execution
 	chainCfg  *params.ChainConfig
-	vmImpl    string
+	vmImpl    vm.InterpreterFactory
 	blockId   *big.Int
 	rules     opera.EconomyRules
 }
@@ -52,12 +52,16 @@ const globalGasCap = 50_000_000 // highest gas allowance used for estimateGas
 
 // newEvmExecutor creates EvmExecutor for executing requests into StateDB that demand usage of EVM
 func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64) *EvmExecutor {
+	factory, err := cfg.GetInterpreterFactory()
+	if err != nil {
+		panic(err)
+	}
 	return &EvmExecutor{
 		args:      newTxArgs(params),
 		archive:   archive,
 		timestamp: timestamp,
 		chainCfg:  cfg.ChainCfg,
-		vmImpl:    cfg.VmImpl,
+		vmImpl:    factory,
 		blockId:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),
 	}
@@ -139,7 +143,7 @@ func (e *EvmExecutor) newEVM(msg *core.Message, hashErr *error) *vm.EVM {
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-	vmConfig.InterpreterImpl = e.vmImpl
+	vmConfig.Interpreter = e.vmImpl
 
 	txCtx = evmcore.NewEVMTxContext(msg)
 
