@@ -23,9 +23,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// Result is a transaction result.
 type Result interface {
+	// GetReceipt returns the Receipt of current result.
 	GetReceipt() Receipt
+	// GetRawResult returns raw data as byte array and/or an error which depends on whether transaction failed or not.
 	GetRawResult() ([]byte, error)
+	// GetGasUsed returns how much gas transaction used.
 	GetGasUsed() uint64
 }
 
