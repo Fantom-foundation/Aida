@@ -42,13 +42,15 @@ func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, chain
 
 type stateTestContext struct {
 	txcontext.NilTxContext
-	fork, path, description string
-	postNumber              int
-	env                     *stBlockEnvironment
-	inputState              types.GenesisAlloc
-	msg                     *core.Message
-	rootHash                common.Hash
-	expectedError           string
+	fork          string // which fork is the test running
+	path          string // path to file from which is the test
+	description   string // description from JSON test file
+	postNumber    int    // the post number within one 'fork' within one JSON file
+	env           *stBlockEnvironment
+	inputState    types.GenesisAlloc
+	msg           *core.Message
+	rootHash      common.Hash
+	expectedError string
 }
 
 func (s *stateTestContext) GetStateHash() common.Hash {
