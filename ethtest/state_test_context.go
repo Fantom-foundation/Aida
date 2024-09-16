@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-func newStateTestTxContest(stJson *stJSON, msg *core.Message, post stPost, chainCfg *params.ChainConfig, fork string, postNumber int) txcontext.TxContext {
+func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chainCfg *params.ChainConfig, fork string, postNumber int) txcontext.TxContext {
 	return &stateTestContext{
 		fork:          fork,
 		path:          stJson.path,

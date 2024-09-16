@@ -113,10 +113,10 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 				if fork == "Paris" {
 					fork = "Merge"
 				}
-				ctx := newStateTestTxContest(stJson, msg, post, chainCfg, fork, postNumber)
+				txCtx := newStateTestTxContext(stJson, msg, post, chainCfg, fork, postNumber)
 				dividedTests = append(dividedTests, Transaction{
 					fork,
-					ctx,
+					txCtx,
 				})
 				overall++
 			}
