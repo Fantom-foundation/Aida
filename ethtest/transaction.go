@@ -46,7 +46,7 @@ type stTransaction struct {
 	Value                []string            `json:"value"`
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
 	BlobGasFeeCap        *BigInt             `json:"maxFeePerBlobGas"`
-	BlobHashes           []common.Hash       `json:"blobVersionHashes"`
+	BlobHashes           []common.Hash       `json:"blobVersionedHashes"`
 }
 
 func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, error) {
