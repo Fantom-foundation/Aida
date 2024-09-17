@@ -30,10 +30,15 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Substate/db"
-	_ "github.com/Fantom-foundation/Tosca/go/geth_adapter"
-	_ "github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
+
+	"github.com/Fantom-foundation/Tosca/go/geth_adapter"
+	_ "github.com/Fantom-foundation/Tosca/go/interpreter/evmone"
+	_ "github.com/Fantom-foundation/Tosca/go/interpreter/evmzero"
+	_ "github.com/Fantom-foundation/Tosca/go/interpreter/lfvm"
+	"github.com/Fantom-foundation/Tosca/go/tosca"
 )
 
 type ArgumentMode int
@@ -252,6 +257,10 @@ type Config struct {
 	Workers                  int            // number of worker threads
 	TxGeneratorType          []string       // type of the application used for transaction generation
 	Forks                    []string       // Which forks are going to get executed byz
+
+	// -- cached results --
+
+	interpreterFactory vm.InterpreterFactory // cached interpreter factory to facilitate reuse in interpreter instances
 }
 
 type configContext struct {
@@ -335,6 +344,29 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cc.reportNewConfig()
 
 	return cfg, nil
+}
+
+func (cfg *Config) GetInterpreterFactory() (vm.InterpreterFactory, error) {
+	// The interpreter factory is cached to enable the factory instance to
+	// reuse the same interpreter instance for multiple transactions. This
+	// is necessary for the Tosca interpreters, which benefit from reusing
+	// the same interpreter due to their internal code caches.
+	if cfg.interpreterFactory != nil {
+		return cfg.interpreterFactory, nil
+	}
+	name := strings.ToLower(cfg.VmImpl)
+	if name == "" || name == "geth" {
+		return nil, nil // use default geth interpreter, no factory needed
+	}
+
+	// try to get the factory from Tosca's interpreter registry
+	interpreter, err := tosca.NewInterpreter(name)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get interpreter for %q: %v", cfg.VmImpl, err)
+	}
+
+	cfg.interpreterFactory = geth_adapter.NewGethInterpreterFactory(interpreter)
+	return cfg.interpreterFactory, nil
 }
 
 func (cc *configContext) setFirstOperaBlock() error {

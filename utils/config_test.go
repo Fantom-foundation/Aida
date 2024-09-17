@@ -26,9 +26,8 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Substate/db"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/Fantom-foundation/Tosca/go/tosca"
 	"github.com/urfave/cli/v2"
 )
 
@@ -339,26 +338,11 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 // TestUtilsConfig_VmImplsAreRegistered checks if interpreters are correctly registered
 func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
-	checkedImpls := []string{"lfvm", "lfvm-si", "geth", "evmzero", "evmone"}
-
-	statedb := state.MakeInMemoryStateDB(nil, 0)
-	defer func(statedb state.StateDB) {
-		err := statedb.Close()
-		if err != nil {
-			t.Errorf("Unable to close stateDB: %v", err)
-		}
-	}(statedb)
-	chainConfig, err := GetChainConfig(0xFA)
-	if err != nil {
-		t.Fatalf("cannot get chain config: %v", err)
-	}
-
+	checkedImpls := []string{"lfvm", "lfvm-si", "evmzero", "evmone"}
 	for _, interpreterImpl := range checkedImpls {
-		evm := vm.NewEVM(vm.BlockContext{}, vm.TxContext{}, statedb, chainConfig, vm.Config{
-			InterpreterImpl: interpreterImpl,
-		})
-		if evm == nil {
-			t.Errorf("Unable to create EVM with InterpreterImpl %s", interpreterImpl)
+		factory := tosca.GetInterpreterFactory(interpreterImpl)
+		if factory == nil {
+			t.Errorf("interpreter %q is not registered", interpreterImpl)
 		}
 	}
 }
