@@ -161,7 +161,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.ps.AddPrinter(p2db)
 
 	// 3. if metadata could be fetched -> continue without the failed metadata
-	rm, err := rr.MakeRunMetadata(connection, rp.id)
+	rm, err := rr.MakeRunMetadata(connection, rp.id, rr.FetchUnixInfo)
 
 	// if this were to happened, it should happen already at 2 but added again just in case
 	if rm == nil {

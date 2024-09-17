@@ -62,8 +62,8 @@ type RunMetadata struct {
 
 type FetchInfo func() (map[string]string, error)
 
-func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
-	return makeRunMetadata(connection, id.fetchConfigInfo, fetchUnixInfo)
+func MakeRunMetadata(connection string, id *RunIdentity, fetchEnv FetchInfo) (*RunMetadata, error) {
+	return makeRunMetadata(connection, id.fetchConfigInfo, fetchEnv)
 }
 
 // makeRunMetadata creates RunMetadata to keep track of metadata about the run.
@@ -114,7 +114,7 @@ func (rm *RunMetadata) Close() {
 
 // fetchEnvInfo fetches environment info by executing a number of linux commands.
 // Any errors are collected and returned.
-func fetchUnixInfo() (map[string]string, error) {
+func FetchUnixInfo() (map[string]string, error) {
 	cmds := map[string]func() (string, error){
 		"Processor":     func() (string, error) { return bash(bashCmdProcessor) },
 		"Memory":        func() (string, error) { return bash(bashCmdMemory) },

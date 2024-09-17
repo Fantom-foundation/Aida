@@ -27,7 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/register"
+	rr "github.com/Fantom-foundation/Aida/register"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -80,7 +80,7 @@ func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log log
 		log:             log,
 		reportFrequency: reportFrequency,
 		ps:              utils.NewPrinters(),
-		id:              register.MakeRunIdentity(time.Now().Unix(), cfg),
+		id:              rr.MakeRunIdentity(time.Now().Unix(), cfg),
 	}
 }
 
@@ -109,8 +109,8 @@ type registerRequestProgress struct {
 	overallReqRate  float64
 	overallGasRate  float64
 
-	id   *register.RunIdentity
-	meta *register.RunMetadata
+	id   *rr.RunIdentity
+	meta *rr.RunMetadata
 }
 
 type rpcProcessInfo struct {
@@ -135,7 +135,7 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 	rp.ps.AddPrinter(p2db)
 
 	// 3. if metadata could be fetched -> continue without the failed metadata
-	rm, err := register.MakeRunMetadata(connection, rp.id)
+	rm, err := rr.MakeRunMetadata(connection, rp.id, rr.FetchUnixInfo)
 
 	// if this were to happened, it should happen already at 2 but added again just in case
 	if rm == nil {
