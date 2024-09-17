@@ -742,18 +742,6 @@ func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
 	}
 }
 
-func TestConfigContext_setChainId_AutomaticallyAssingsForEthTests(t *testing.T) {
-	cfg := &Config{}
-	cc := NewConfigContext(cfg, &cli.Context{Command: &cli.Command{Name: ethTestCmdName}})
-	if err := cc.setChainId(); err != nil {
-		t.Fatalf("failed to set chain-id: %v", err)
-	}
-
-	if cc.cfg.ChainID != EthTestsChainID {
-		t.Errorf("unexpected chain-id\n got: %v want: %v", cc.cfg.ChainID, EthTestsChainID)
-	}
-}
-
 // createFakeAidaDb creates fake empty aidaDB with metadata for testing purposes
 func createFakeAidaDb(cfg *Config) error {
 	// fake metadata values

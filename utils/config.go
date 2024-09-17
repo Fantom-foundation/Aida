@@ -68,11 +68,10 @@ const (
 	TestnetChainID  ChainID = 4002
 	// EthTestsChainID is a mock ChainID which is necessary for setting
 	// the chain rules to allow any block number for any fork.
-	EthTestsChainID ChainID = 1337
 )
 
 var RealChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum"}
-var AllowedChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum", EthTestsChainID: "eth-tests"}
+var AllowedChainIDs = ChainIDs{MainnetChainID: "mainnet", TestnetChainID: "testnet", EthereumChainID: "ethereum"}
 
 const (
 	AidaDbRepositoryMainnetUrl  = "https://storage.googleapis.com/aida-repository-public/mainnet/aida-patches"
@@ -134,10 +133,6 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
-
-	// EthTest must always set its fork blocks to 0 because each test has random block number
-	// and if that block number is not greater than the config, the test won't get executed
-	EthTestsChainID: {},
 }
 
 // special transaction number for pseudo transactions
@@ -409,8 +404,6 @@ func GetChainConfig(chainId ChainID) (*params.ChainConfig, error) {
 		chainConfig := params.MainnetChainConfig
 		chainConfig.DAOForkSupport = false
 		return chainConfig, nil
-	case EthTestsChainID:
-		return params.AllDevChainProtocolChanges, nil
 	default:
 		// Make a copy of the basic config before modifying it to avoid
 		// unexpected side-effects and synchronization issues in parallel runs.
@@ -626,10 +619,6 @@ func (cc *configContext) setChainId() error {
 		}
 
 		if cc.cfg.ChainID == 0 {
-			if strings.EqualFold(cc.ctx.Command.Name, ethTestCmdName) {
-				cc.cfg.ChainID = EthTestsChainID
-				return nil
-			}
 			cc.log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cc.cfg.AidaDb)
 			cc.cfg.ChainID = MainnetChainID
 		} else {
