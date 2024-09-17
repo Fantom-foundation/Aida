@@ -56,7 +56,7 @@ const (
 )
 
 type RunMetadata struct {
-	meta map[string]string
+	Meta map[string]string
 	ps   *utils.Printers
 }
 
@@ -72,7 +72,7 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 // 3. On Print(), print all metadata into the corresponding table.
 func makeRunMetadata(connection string, fetchCfg FetchInfo, fetchEnv FetchInfo) (*RunMetadata, error) {
 	rm := &RunMetadata{
-		meta: make(map[string]string),
+		Meta: make(map[string]string),
 		ps:   utils.NewPrinters(),
 	}
 
@@ -84,7 +84,7 @@ func makeRunMetadata(connection string, fetchCfg FetchInfo, fetchEnv FetchInfo) 
 		// commands that failed are to be logged, but they are not fatal.
 		warnings = errors.Join(warnings, w)
 	}
-	maps.Copy(rm.meta, cfgInfo)
+	maps.Copy(rm.Meta, cfgInfo)
 
 	// 2. fetch environment information about where the run is executed.
 	envInfo, w := fetchEnv()
@@ -92,7 +92,7 @@ func makeRunMetadata(connection string, fetchCfg FetchInfo, fetchEnv FetchInfo) 
 		// commands that failed are to be logged, but they are not fatal.
 		warnings = errors.Join(warnings, w)
 	}
-	maps.Copy(rm.meta, envInfo)
+	maps.Copy(rm.Meta, envInfo)
 
 	// 3. On Print(), print all metadata into the corresponding table.
 	p2db, err := utils.NewPrinterToSqlite3(rm.sqlite3(connection))
@@ -152,7 +152,7 @@ func (rm *RunMetadata) sqlite3(conn string) (string, string, string, func() [][]
 	return conn, MetadataCreateTableIfNotExist, MetadataInsertOrReplace,
 		func() [][]any {
 			values := [][]any{}
-			for k, v := range rm.meta {
+			for k, v := range rm.Meta {
 				values = append(values, []any{k, v})
 			}
 			return values
