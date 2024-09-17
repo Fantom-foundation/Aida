@@ -10,6 +10,9 @@
 # Output of the go coverage tool
 *.out
 
+# OS files
+.DS_Store
+
 # dependency directories
 vendor/
 

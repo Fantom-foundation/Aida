@@ -16,12 +16,12 @@ import (
 
 func TestTestCaseSplitter_DivideStateTests_DividesDataAccordingToIndexes(t *testing.T) {
 	stJson := CreateTestStJson(t)
-	d := TestCaseSplitter{
+	splitter := TestCaseSplitter{
 		jsons:        []*stJSON{stJson},
 		log:          logger.NewLogger("info", "test-case-splitter-test"),
 		chainConfigs: make(map[string]*params.ChainConfig),
 	}
-	tests, err := d.SplitStateTests()
+	tests, err := splitter.SplitStateTests()
 	if err != nil {
 		t.Fatal(err)
 	}

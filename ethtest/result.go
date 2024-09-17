@@ -24,7 +24,3 @@ func (s stateTestResult) GetRawResult() ([]byte, error) {
 func (s stateTestResult) GetGasUsed() uint64 {
 	return 0
 }
-
-func (s stateTestResult) String() string {
-	return ""
-}
