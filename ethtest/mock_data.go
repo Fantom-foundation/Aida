@@ -146,12 +146,12 @@ func CreateTestStJson(*testing.T) *stJSON {
 
 func CreateErrorTestTransaction(*testing.T) txcontext.TxContext {
 	return &stateTestContext{
-		ExpectedError: "err",
+		expectedError: "err",
 	}
 }
 
 func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
 	return &stateTestContext{
-		ExpectedError: "",
+		expectedError: "",
 	}
 }
