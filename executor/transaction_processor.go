@@ -125,7 +125,11 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 
 	}
 
-	vmCfg.InterpreterImpl = cfg.VmImpl
+	factory, err := cfg.GetInterpreterFactory()
+	if err != nil {
+		return nil, err
+	}
+	vmCfg.Interpreter = factory
 	vmCfg.Tracer = nil
 
 	var processor processor
@@ -137,10 +141,10 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 			log:   logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
 		}
 	default:
-		interpreter := tosca.GetInterpreter(cfg.VmImpl)
-		if interpreter == nil {
+		interpreter, err := tosca.NewInterpreter(cfg.VmImpl)
+		if err != nil {
 			available := maps.Keys(tosca.GetAllRegisteredInterpreters())
-			return nil, fmt.Errorf("unknown interpreter: %s, supported: %v", cfg.VmImpl, available)
+			return nil, fmt.Errorf("failed to create interpreter %s, error %v, supported: %v", cfg.VmImpl, err, available)
 		}
 		evm := tosca.GetProcessor(cfg.EvmImpl, interpreter)
 		if evm == nil {
