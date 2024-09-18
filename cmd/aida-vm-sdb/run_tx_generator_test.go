@@ -46,12 +46,12 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		Run(2, 4, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: newTestTxCtx(2)})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: newTestTxCtx(2)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: newTestTxCtx(t, 2)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: newTestTxCtx(t, 2)})
 			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: newTestTxCtx(3)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: newTestTxCtx(t, 3)})
 			// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: newTestTxCtx(4)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: newTestTxCtx(t, 4)})
 			return nil
 		})
 
@@ -108,9 +108,13 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	}
 }
 
-func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
+func newTestTxCtx(t *testing.T, blkNumber uint64) txcontext.TxContext {
+	chainCfg, err := utils.GetChainConfig(250)
+	if err != nil {
+		t.Fatalf("cannot create chain config")
+	}
 	return txgenerator.NewTxContext(
-		testTxBlkEnv{blkNumber},
+		testTxBlkEnv{blkNumber, chainCfg},
 		&core.Message{
 			To:                &common.Address{0x2},
 			From:              common.Address{0x1},
@@ -130,6 +134,7 @@ func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
 // testTxBlkEnv is a dummy block environment used for testing.
 type testTxBlkEnv struct {
 	blkNumber uint64
+	chainCfg  *params.ChainConfig
 }
 
 func (env testTxBlkEnv) GetRandom() *common.Hash {
@@ -137,8 +142,7 @@ func (env testTxBlkEnv) GetRandom() *common.Hash {
 }
 
 func (env testTxBlkEnv) GetChainConfig() *params.ChainConfig {
-	//TODO implement me
-	panic("implement me")
+	return env.chainCfg
 }
 
 func (env testTxBlkEnv) GetCoinbase() common.Address {
