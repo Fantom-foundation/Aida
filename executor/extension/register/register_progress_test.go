@@ -156,7 +156,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Fatalf("Failed to connect to database at %s.", connection)
 	}
 
-	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	_, err = sDb.Exec(registerProgressCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
@@ -300,7 +300,7 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 		t.Fatalf("Failed to connect to database at %s.", connection)
 	}
 
-	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	_, err = sDb.Exec(registerProgressCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}

@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	RegisterRequestProgressCreateTableIfNotExist = `
+	registerRequestProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats_rpc (
 			count INTEGER NOT NULL,
 			req_rate float,
@@ -42,7 +42,7 @@ const (
 			overall_gas_rate float
 		)
 	`
-	RegisterRequestProgressInsertOrReplace = `
+	registerRequestProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats_rpc (
 			count,
 			req_rate, gas_rate, overall_req_rate, overall_gas_rate
@@ -217,8 +217,8 @@ func (rp *registerRequestProgress) PostRun(_ executor.State[*rpc.RequestAndResul
 
 func (rp *registerRequestProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
 	return conn,
-		RegisterRequestProgressCreateTableIfNotExist,
-		RegisterRequestProgressInsertOrReplace,
+		registerRequestProgressCreateTableIfNotExist,
+		registerRequestProgressInsertOrReplace,
 		func() [][]any {
 			return [][]any{
 				{

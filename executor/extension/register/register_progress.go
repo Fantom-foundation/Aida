@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,21 +35,21 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type WhenToPrint int
+type whenToPrint int
 
 const (
-	OnPreBlock WhenToPrint = iota
+	OnPreBlock whenToPrint = iota
 	OnPreTransaction
 )
 
 const (
-	ArchiveDbDirectoryName = "archive"
+	archiveDbDirectoryName = "archive"
 
 	TxGeneratorCommandName = "tx-generator"
 
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
-	RegisterProgressCreateTableIfNotExist = `
+	registerProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
   			start INTEGER NOT NULL,
 	  		end INTEGER NOT NULL,
@@ -61,7 +62,7 @@ const (
   			overall_gas_rate float
 		)
 	`
-	RegisterProgressInsertOrReplace = `
+	registerProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats (
 			start, end, 
 			memory, live_disk, archive_disk, 
@@ -91,7 +92,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		}
 	}
 
-	var when WhenToPrint
+	var when whenToPrint
 	switch {
 	case cfg.CommandName == TxGeneratorCommandName:
 		when = OnPreTransaction
@@ -119,7 +120,7 @@ type registerProgress struct {
 	log  logger.Logger
 	lock sync.Mutex
 	ps   *utils.Printers
-	when WhenToPrint
+	when whenToPrint
 
 	// Where am I?
 	interval           *utils.Interval
@@ -178,7 +179,11 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.startOfRun = now
 	rp.lastUpdate = now
 	rp.pathToStateDb = ctx.StateDbPath
-	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
+	if strings.ToLower(rp.cfg.DbImpl) == "carmen" {
+		rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, archiveDbDirectoryName)
+	} else {
+		rp.pathToArchiveDb = ctx.StateDbPath
+	}
 
 	// Check if any path-to-state-db is not initialized, terminate now if so
 	_, err = utils.GetDirectorySize(rp.pathToStateDb)
@@ -283,7 +288,9 @@ func (rp *registerProgress) GetId() string {
 }
 
 func (rp *registerProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return conn, RegisterProgressCreateTableIfNotExist, RegisterProgressInsertOrReplace,
+	return conn,
+		registerProgressCreateTableIfNotExist,
+		registerProgressInsertOrReplace,
 		func() [][]any {
 			values := [][]any{}
 
