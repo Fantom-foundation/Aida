@@ -54,7 +54,12 @@ func RunTxGenerator(ctx *cli.Context) error {
 
 	provider := executor.NewNormaTxProvider(cfg, db)
 
-	return runTransactions(cfg, provider, db, dbPath, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return runTransactions(cfg, provider, db, dbPath, processor, nil)
 }
 
 func runTransactions(
@@ -85,7 +90,7 @@ func runTransactions(
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
-		tracker.MakeBlockProgressTracker(cfg, 100),
+		tracker.MakeBlockProgressTracker(cfg, cfg.TrackerGranularity),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		validator.MakeShadowDbValidator(cfg),

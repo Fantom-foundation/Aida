@@ -89,6 +89,8 @@ const (
 	SetTransientStateID
 	SetTransientStateLclsID
 	SelfDestruct6780ID
+	PointCacheID
+	WitnessID
 
 	// WARNING: New IDs should be added here. Any change in the order of the
 	// IDs above invalidates persisted data -- in particular storage traces.
@@ -157,6 +159,8 @@ var opDict = map[byte]OperationDictionary{
 	SetTxContextID:           {label: "SetTxContext", readfunc: ReadPanic},
 	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
 	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
+	PointCacheID:             {label: "PointCache", readfunc: ReadPanic},
+	WitnessID:                {label: "Witness", readfunc: ReadPanic},
 
 	// Transient Storage
 	GetTransientStateID:     {label: "GetTransientState", readfunc: ReadGetTransientState},

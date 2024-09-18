@@ -25,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	gc "github.com/ethereum/go-ethereum/common"
 )
 
 // MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled
@@ -90,6 +91,11 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 	if !m.cfg.KeepDb && !m.cfg.StateDbSrcDirectAccess {
 		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
+
+	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, 0, gc.Hash{}, false); err != nil {
+		return fmt.Errorf("failed to create state-db info file; %v", err)
+	}
+
 	return nil
 }
 
@@ -132,7 +138,7 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 	if err != nil {
 		return fmt.Errorf("cannot get state hash; %w", err)
 	}
-	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, lastProcessedBlock, rootHash); err != nil {
+	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, lastProcessedBlock, rootHash, true); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
 

@@ -30,7 +30,7 @@ import (
 
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid Variant
 func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
-	csDB, err := MakeCarmenStateDB("", "invalid-Variant", 5, "")
+	csDB, err := MakeDefaultCarmenStateDB("", "invalid-Variant", 5, "")
 	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
@@ -49,7 +49,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 	for _, tc := range GetAllCarmenConfigurations() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -276,7 +276,7 @@ func TestCarmenState_StateOperations(t *testing.T) {
 func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -494,7 +494,7 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 				t.Fatalf("cannot close carmen test context; %v", err)
 			}
 
-			csDB, err = MakeCarmenStateDB(tempDir, tc.Variant, tc.Schema, tc.Archive)
+			csDB, err = MakeDefaultCarmenStateDB(tempDir, tc.Variant, tc.Schema, tc.Archive)
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
@@ -524,7 +524,7 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -574,7 +574,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -625,7 +625,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -678,7 +678,7 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
@@ -813,7 +813,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 func TestCarmenState_GetShadowDB(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
 		t.Run(tc.String(), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
+			csDB, err := MakeDefaultCarmenStateDB(t.TempDir(), tc.Variant, tc.Schema, tc.Archive)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}

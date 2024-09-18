@@ -4,3 +4,6 @@
 [submodule "tosca"]
 	path = tosca
 	url = https://github.com/Fantom-foundation/Tosca.git
+[submodule "sonic"]
+	path = sonic
+	url = https://github.com/Fantom-foundation/Sonic.git

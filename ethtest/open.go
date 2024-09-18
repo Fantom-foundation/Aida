@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -29,6 +30,7 @@ import (
 type ethTest interface {
 	*stJSON
 	setPath(path string)
+	setDescription(desc string)
 }
 
 // getTestsWithinPath returns all tests in given directory (and subdirectories)
@@ -40,6 +42,7 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 		return nil, err
 	}
 
+	// Check for single file
 	if !info.IsDir() {
 		tests, err := readTestsFromFile[T](path)
 		if err != nil {
@@ -48,12 +51,26 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 		return tests, nil
 	}
 
+	// Get all files for given test types
+	var dirPaths []string
 	switch testType {
 	case utils.StateTests:
+		// If all dir with all tests is passed, only runnable StateTests are extracted
 		gst := path + "/GeneralStateTests"
-		_, err := os.Stat(gst)
-		if !os.IsNotExist(err) {
-			path = gst
+		_, err = os.Stat(gst)
+		if err == nil {
+			dirPaths = append(dirPaths, gst)
+		}
+
+		eipt := filepath.Join(path, "EIPTests/StateTests")
+		_, err = os.Stat(eipt)
+		if err == nil {
+			dirPaths = append(dirPaths, eipt)
+		}
+
+		// Otherwise exact directory with tests is passed
+		if len(dirPaths) == 0 {
+			dirPaths = []string{path}
 		}
 	case utils.BlockTests:
 		return nil, errors.New("blockchain test-type not yet implemented")
@@ -61,14 +78,14 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 		return nil, errors.New("please chose which testType do you want to read")
 	}
 
-	paths, err := utils.GetDirectoryFiles(".json", path)
+	filePaths, err := utils.GetFilesWithinDirectories(".json", []string{path})
 	if err != nil {
 		return nil, fmt.Errorf("cannot read files within directory %v; %v", path, err)
 	}
 
 	var tests []T
 
-	for _, p := range paths {
+	for _, p := range filePaths {
 		toAppend, err := readTestsFromFile[T](p)
 		if err != nil {
 			return nil, err
@@ -96,8 +113,9 @@ func readTestsFromFile[T ethTest](path string) ([]T, error) {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)
 	}
 
-	for _, t := range b {
+	for desc, t := range b {
 		t.setPath(path)
+		t.setDescription(desc)
 		tests = append(tests, t)
 	}
 	return tests, nil

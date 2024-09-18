@@ -25,17 +25,28 @@ import (
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
-func MakeCarmenStateDB(dir string, variant string, schema int, archive string) (StateDB, error) {
-	return MakeCarmenStateDBWithCacheSize(dir, variant, schema, archive, 0, 0)
+func MakeDefaultCarmenStateDB(dir string, variant string, schema int, archive string) (StateDB, error) {
+	return MakeCarmenStateDB(dir, variant, schema, archive, 0, 0, 0, 0)
 }
 
-func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, archive string, liveDbCacheSize, archiveCacheSize int) (StateDB, error) {
+func MakeCarmenStateDB(
+	dir string,
+	variant string,
+	schema int,
+	archive string,
+	liveDbCacheSize,
+	archiveCacheSize,
+	checkpointInterval,
+	checkpointPeriod int,
+) (StateDB, error) {
 	var archiveType carmen.Archive
 
 	switch strings.ToLower(archive) {
@@ -72,6 +83,16 @@ func MakeCarmenStateDBWithCacheSize(dir string, variant string, schema int, arch
 
 	if archiveCacheSize > 0 {
 		properties.SetInteger(carmen.ArchiveCache, archiveCacheSize)
+	}
+
+	// How often will Carmen create checkpoints - in blocks
+	if checkpointInterval > 0 {
+		properties.SetInteger(carmen.CheckpointInterval, checkpointInterval)
+	}
+
+	// How often will Carmen create checkpoints - in minutes
+	if checkpointPeriod > 0 {
+		properties.SetInteger(carmen.CheckpointPeriod, checkpointPeriod)
 	}
 
 	db, err := carmen.OpenDatabase(dir, cfg, properties)
@@ -126,7 +147,7 @@ func (s *carmenStateDB) SelfDestruct(addr common.Address) {
 }
 
 func (s *carmenStateDB) Selfdestruct6780(addr common.Address) {
-	panic("Selfdestruct6780 not implemented")
+	s.txCtx.SelfDestruct6780(carmen.Address(addr))
 	return
 }
 
@@ -322,6 +343,16 @@ func (s *carmenStateDB) GetLogs(common.Hash, uint64, common.Hash) []*types.Log {
 
 	}
 	return res
+}
+
+func (s *carmenStateDB) PointCache() *utils.PointCache {
+	// this should not be relevant for revisions up to Cancun
+	panic("PointCache not implemented")
+}
+
+func (s *carmenStateDB) Witness() *stateless.Witness {
+	// this should not be relevant for revisions up to Cancun
+	return nil
 }
 
 func (s *carmenStateDB) Finalise(bool) {

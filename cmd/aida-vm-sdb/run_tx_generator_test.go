@@ -102,7 +102,7 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().Close(),
 	)
 
-	if err := runTransactions(cfg, provider, db, "dummyPath", processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
+	if err := runTransactions(cfg, provider, db, t.TempDir(), processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -158,6 +158,11 @@ func (env testTxBlkEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
 	// we don't have real block hashes, so we just use the block number
 	return common.BigToHash(big.NewInt(int64(blockNumber))), nil
 }
+
 func (env testTxBlkEnv) GetBaseFee() *big.Int {
+	return big.NewInt(0)
+}
+
+func (env testTxBlkEnv) GetBlobBaseFee() *big.Int {
 	return big.NewInt(0)
 }

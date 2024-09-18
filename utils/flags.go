@@ -54,6 +54,16 @@ var (
 		Usage: "sets the balance range of the stochastic simulation",
 		Value: 1000000,
 	}
+	CarmenCheckpointInterval = cli.IntFlag{
+		Name:  "carmen-checkpoint-interval",
+		Usage: "defines how often (in blocks) will Carmen create checkpoints",
+		Value: 0,
+	}
+	CarmenCheckpointPeriod = cli.IntFlag{
+		Name:  "carmen-checkpoint-period",
+		Usage: "defines how often (in minutes) will Carmen create checkpoints",
+		Value: 0,
+	}
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
@@ -247,6 +257,11 @@ var (
 		Name:  "validate-tx",
 		Usage: "enables validation after transaction processing",
 	}
+	EvmImplementation = cli.StringFlag{
+		Name:  "evm-impl",
+		Usage: "select EVM implementation",
+		Value: "aida",
+	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
 		Usage: "select VM implementation",
@@ -388,6 +403,11 @@ var (
 	TrackProgressFlag = cli.BoolFlag{
 		Name:  "track-progress",
 		Usage: "enables track progress logging",
+	}
+	TrackerGranularityFlag = cli.IntFlag{
+		Name:  "tracker-granularity",
+		Usage: "chooses how often will tracker report achieved block",
+		Value: 100_000,
 	}
 	ValidateStateHashesFlag = cli.BoolFlag{
 		Name:  "validate-state-hash",

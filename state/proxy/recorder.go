@@ -24,9 +24,11 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie/utils"
 	"github.com/holiman/uint256"
 )
 
@@ -318,6 +320,18 @@ func (r *RecorderProxy) AddLog(log *types.Log) {
 // GetLogs retrieves log entries.
 func (r *RecorderProxy) GetLogs(hash common.Hash, block uint64, blockHash common.Hash) []*types.Log {
 	return r.db.GetLogs(hash, block, blockHash)
+}
+
+// PointCache returns the point cache used in computations.
+func (r *RecorderProxy) PointCache() *utils.PointCache {
+	//TODO record operation id
+	return r.db.PointCache()
+}
+
+// Witness retrieves the current state witness.
+func (r *RecorderProxy) Witness() *stateless.Witness {
+	//TODO record operation id
+	return r.db.Witness()
 }
 
 // AddPreimage adds a SHA3 preimage.

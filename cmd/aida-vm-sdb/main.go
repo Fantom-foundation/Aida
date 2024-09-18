@@ -52,6 +52,8 @@ var RunSubstateCmd = cli.Command{
 		&utils.AidaDbFlag,
 
 		// StateDb
+		&utils.CarmenCheckpointInterval,
+		&utils.CarmenCheckpointPeriod,
 		&utils.CarmenSchemaFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
@@ -73,6 +75,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.ShadowDbVariantFlag,
 
 		// VM
+		&utils.EvmImplementation,
 		&utils.VmImplementation,
 
 		// Profiling
@@ -114,6 +117,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.TrackProgressFlag,
 		&utils.ErrorLoggingFlag,
+		&utils.TrackerGranularityFlag,
 	},
 	Description: `
 The aida-vm-sdb substate command requires two arguments: <blockNumFirst> <blockNumLast>
@@ -150,6 +154,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.OverwriteRunIdFlag,
 
 		// VM
+		&utils.EvmImplementation,
 		&utils.VmImplementation,
 
 		// Profiling
@@ -168,6 +173,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.BlockLengthFlag,
+		&utils.TrackerGranularityFlag,
 	},
 	Description: `
 The aida-vm-sdb tx-generator command requires two arguments: <blockNumFirst> <blockNumLast>

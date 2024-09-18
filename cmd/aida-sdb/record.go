@@ -48,6 +48,7 @@ var RecordCommand = cli.Command{
 		&utils.DebugFromFlag,
 		&utils.AidaDbFlag,
 		&log.LogLevelFlag,
+		&utils.TrackerGranularityFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -74,7 +75,12 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
 	defer substateIterator.Close()
 
-	return record(cfg, substateIterator, executor.MakeLiveDbTxProcessor(cfg), nil)
+	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	if err != nil {
+		return err
+	}
+
+	return record(cfg, substateIterator, processor, nil)
 }
 
 func record(
@@ -85,7 +91,7 @@ func record(
 ) error {
 	var extensions = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
-		tracker.MakeBlockProgressTracker(cfg, 0),
+		tracker.MakeBlockProgressTracker(cfg, cfg.TrackerGranularity),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),

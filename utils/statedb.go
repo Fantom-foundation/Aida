@@ -107,9 +107,21 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
 	}
 
-	// do we have an archive inside loaded StateDb?
-	cfg.ArchiveMode = stateDbInfo.ArchiveMode
-	cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+	// If the state db is in read-only mode, set archive config as in statedb_info
+	if cfg.StateDbSrcReadOnly {
+		cfg.ArchiveMode = stateDbInfo.ArchiveMode
+		cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+	// If new blocks will be written to statedb, use the archive config from cli flags.
+	// Loaded state db with an archive may continue to be processed in a live-db mode or vice versa.
+	} else {
+		// if source db already has an archive, the archive variant must not change.
+		if cfg.ArchiveMode && stateDbInfo.ArchiveMode {
+			if cfg.ArchiveVariant != stateDbInfo.ArchiveVariant{
+			    cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+			    log.Warning("Cannot change archive variant. Now using %s instead.", stateDbInfo.ArchiveVariant)
+			}
+		}
+	}
 	cfg.DbImpl = stateDbInfo.Impl
 	cfg.DbVariant = stateDbInfo.Variant
 	cfg.CarmenSchema = stateDbInfo.Schema
@@ -201,18 +213,39 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenSchema int, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
+func makeStateDBVariant(
+	directory, impl,
+	variant, archiveVariant string,
+	carmenSchema int,
+	rootHash common.Hash,
+	cfg *Config,
+) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode, state.NewChainConduit(cfg.ChainID == EthereumChainID, cfg.ChainCfg))
+		return state.MakeGethStateDB(
+			directory,
+			variant,
+			rootHash,
+			cfg.ArchiveMode,
+			state.NewChainConduit(cfg.ChainID == EthereumChainID, cfg.ChainCfg),
+		)
 	case "carmen":
 		// Disable archive if not enabled.
 		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDBWithCacheSize(directory, variant, carmenSchema, archiveVariant, cfg.CarmenNodeCacheSize, cfg.CarmenNodeCacheSize)
+		return state.MakeCarmenStateDB(
+			directory,
+			variant,
+			carmenSchema,
+			archiveVariant,
+			cfg.CarmenNodeCacheSize,
+			cfg.CarmenNodeCacheSize,
+			cfg.CarmenCheckpointInterval,
+			cfg.CarmenCheckpointPeriod,
+		)
 	}
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }
