@@ -29,14 +29,14 @@ import (
 )
 
 const (
-	metadataCreateTableIfNotExist = `
+	MetadataCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS metadata (
 			key STRING NOT NULL PRIMARY KEY,
 			value STRING NUT NULL
 		)
 	`
 
-	metadataInsertOrReplace = `
+	MetadataInsertOrReplace = `
 		INSERT or REPLACE INTO metadata (
 			key, value
 		) VALUES (
@@ -149,8 +149,8 @@ func bash(cmd string) (string, error) {
 }
 
 func (rm *RunMetadata) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return conn, metadataCreateTableIfNotExist,
-		metadataInsertOrReplace,
+	return conn, MetadataCreateTableIfNotExist,
+		MetadataInsertOrReplace,
 		func() [][]any {
 			values := [][]any{}
 			for k, v := range rm.Meta {
