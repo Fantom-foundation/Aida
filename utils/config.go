@@ -236,6 +236,7 @@ type Config struct {
 	StateDbSrcReadOnly       bool           // if true, source database is not modified
 	StateValidationMode      ValidationMode // state validation mode
 	SubstateDb               string         // substate directory
+	SubstateEncoding         string         // rlp (default) or protobuf - when reading from disk
 	SyncPeriodLength         uint64         // length of a sync-period in number of blocks
 	TargetDb                 string         // represents the path of a target DB
 	TargetEpoch              uint64         // represents the ID of target epoch to be reached by autogen patch generator

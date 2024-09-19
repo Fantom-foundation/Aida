@@ -32,7 +32,7 @@ import (
 
 // OpenSubstateProvider opens a substate database as configured in the given parameters.
 func OpenSubstateProvider(cfg *utils.Config, ctxt *cli.Context, aidaDb db.BaseDB) Provider[txcontext.TxContext] {
-	substateDb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
+	substateDb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb).SetDecoder(cfg.SubstateEncoding)
 	return &substateProvider{substateDb, ctxt, cfg.Workers}
 }
 
