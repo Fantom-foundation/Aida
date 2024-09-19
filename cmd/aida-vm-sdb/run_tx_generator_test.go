@@ -100,6 +100,7 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 
 		// db_manager closes the db
+		db.EXPECT().GetHash(),
 		db.EXPECT().Close(),
 	)
 

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -109,23 +110,30 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		return err
 	}
 
+	// get root hash before closing db
+	rootHash, err := ctx.State.GetHash()
+	if err != nil {
+		return fmt.Errorf("cannot get state hash; %w", err)
+	}
+
+	start := time.Now()
+	if err := ctx.State.Close(); err != nil {
+		return fmt.Errorf("failed to close state-db; %v", err)
+	}
+	m.log.Noticef("DB close time: %v seconds", time.Since(start).Round(time.Second))
+
 	// db was not modified, then close db without chnaging state-db info and keep db folder as-is.
 	if m.cfg.StateDbSrcReadOnly {
-		if err := ctx.State.Close(); err != nil {
-			return fmt.Errorf("failed to close state-db; %v", err)
-		}
 		m.log.Noticef("State-db directory was read-only %v. No updates to state-db info", ctx.StateDbPath)
 		return nil
 	}
 
 	// if db isn't kept and db was not modified in-place, then close and delete temporary state-db.
 	if !m.cfg.KeepDb && !m.cfg.StateDbSrcDirectAccess {
-		if err := ctx.State.Close(); err != nil {
-			return fmt.Errorf("failed to close state-db; %v", err)
-		}
 		return os.RemoveAll(ctx.StateDbPath)
 	}
 
+	// Db is kept after run. Rename db folder and write meta information to a file.
 	// lastProcessedBlock contains number of last successfully processed block
 	// - processing finished successfully to the end, but then state.Block is set to params.To
 	// - error occurred therefore previous block is last successful
@@ -134,19 +142,10 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		lastProcessedBlock -= 1
 	}
 
-	rootHash, err := ctx.State.GetHash()
-	if err != nil {
-		return fmt.Errorf("cannot get state hash; %w", err)
-	}
+	// write state db info
 	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, lastProcessedBlock, rootHash, true); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
-
-	// stateDb needs to be closed between committing and renaming
-	if err := ctx.State.Close(); err != nil {
-		return fmt.Errorf("failed to close state-db; %v", err)
-	}
-
 	// if db was modified in-place, no need to rename state-db folder.
 	if !m.cfg.StateDbSrcDirectAccess {
 		newName := utils.RenameTempStateDbDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
