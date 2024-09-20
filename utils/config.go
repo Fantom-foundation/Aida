@@ -279,8 +279,8 @@ func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
 }
 
 // NewTestConfig creates a new config for test purpose
-func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool) *Config {
-	chainCfg, err := getChainConfig(chainId, "")
+func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool, fork string) *Config {
+	chainCfg, err := getChainConfig(chainId, fork)
 	if err != nil {
 		t.Fatalf("cannot get chain cfg: %v", err)
 	}

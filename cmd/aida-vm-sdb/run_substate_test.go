@@ -43,7 +43,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	cfg.ContinueOnFailure = true
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
@@ -129,7 +129,7 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -208,7 +208,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true, "")
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
@@ -258,7 +258,7 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true, "")
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {

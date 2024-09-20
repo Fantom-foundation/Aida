@@ -42,7 +42,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
 	archiveFour := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -99,7 +99,7 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	archiveTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveThree := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	cfg.Workers = 2
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
@@ -154,7 +154,7 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -231,7 +231,7 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	cfg.Workers = 2
 	// Simulate the execution of four requests in three blocks.
 	provider.EXPECT().
@@ -304,7 +304,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true, "")
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -338,7 +338,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true, "")
 	cfg.Workers = 2
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
@@ -373,7 +373,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true, "")
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")
 	if err != nil {
@@ -411,7 +411,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true, "")
 	cfg.Workers = 2
 	var err error
 	reqBlockTwo.Response.Result, err = json.Marshal("0x1")

@@ -71,7 +71,7 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		Result: &substate.Result{
 			Status: 0,
 		},
-	}, nil)
+	})
 
 	gomock.InOrder(
 		db.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
@@ -141,7 +141,7 @@ func TestSubstateProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 		Result: &substate.Result{
 			Status: 0,
 		},
-	}, nil)
+	})
 
 	ext.PreRun(executor.State[txcontext.TxContext]{
 		Block:       4,

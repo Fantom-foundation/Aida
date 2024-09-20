@@ -38,8 +38,9 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, false, "Cancun")
 	cfg.ContinueOnFailure = true
+
 	data := ethtest.CreateTestTransaction(t)
 
 	provider.EXPECT().
@@ -101,7 +102,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, false)
+	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, false, "Cancun")
 	data := ethtest.CreateTestTransaction(t)
 
 	// Simulate the execution of three transactions in two blocks.
@@ -173,7 +174,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, true, "Cancun")
 	data := ethtest.CreateTestTransaction(t)
 
 	provider.EXPECT().
@@ -233,7 +234,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, true, "Cancun")
 	data := ethtest.CreateTestTransaction(t)
 
 	provider.EXPECT().

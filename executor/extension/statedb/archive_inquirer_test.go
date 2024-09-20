@@ -95,7 +95,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.TestnetChainID, 0, 0, false)
+	cfg := utils.NewTestConfig(t, utils.TestnetChainID, 0, 0, false, "")
 	cfg.ArchiveMode = true
 	cfg.ArchiveQueryRate = 100
 	cfg.ArchiveMaxQueryAge = 100
