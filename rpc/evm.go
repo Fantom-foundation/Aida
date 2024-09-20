@@ -56,7 +56,6 @@ func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *ut
 	if err != nil {
 		return nil, fmt.Errorf("cannot get interpreter factory: %w", err)
 	}
-
 	chainCfg, err := cfg.GetChainConfig("")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get chain config: %w", err)
