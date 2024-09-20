@@ -52,18 +52,18 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			// Block 3
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			// Block 4
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			return nil
 		})
@@ -145,18 +145,18 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			// Block 3
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			// Block 4
 			consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg),
+				Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx),
 			})
 			return nil
 		})
@@ -243,12 +243,12 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx)})
 			return nil
 		})
 
@@ -325,12 +325,12 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: substatecontext.NewTxContext(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: substatecontext.NewTxContext(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx, cfg.ChainCfg)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContext(emptyTx)})
 			return nil
 		})
 
@@ -404,7 +404,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			return consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx, cfg.ChainCfg),
+				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx),
 			})
 		})
 
@@ -457,7 +457,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			return consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx, cfg.ChainCfg),
+				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx),
 			})
 		})
 
@@ -508,7 +508,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			return consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx, cfg.ChainCfg),
+				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx),
 			})
 		})
 
@@ -552,7 +552,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			return consumer(executor.TransactionInfo[txcontext.TxContext]{
-				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx, cfg.ChainCfg),
+				Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx),
 			})
 		})
 

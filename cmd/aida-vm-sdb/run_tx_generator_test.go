@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
 	"go.uber.org/mock/gomock"
 )
 
@@ -109,12 +108,8 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 }
 
 func newTestTxCtx(t *testing.T, blkNumber uint64) txcontext.TxContext {
-	chainCfg, err := utils.GetChainConfig(250)
-	if err != nil {
-		t.Fatalf("cannot create chain config")
-	}
 	return txgenerator.NewTxContext(
-		testTxBlkEnv{blkNumber, chainCfg},
+		testTxBlkEnv{blkNumber},
 		&core.Message{
 			To:                &common.Address{0x2},
 			From:              common.Address{0x1},
@@ -134,15 +129,10 @@ func newTestTxCtx(t *testing.T, blkNumber uint64) txcontext.TxContext {
 // testTxBlkEnv is a dummy block environment used for testing.
 type testTxBlkEnv struct {
 	blkNumber uint64
-	chainCfg  *params.ChainConfig
 }
 
 func (env testTxBlkEnv) GetRandom() *common.Hash {
 	return nil
-}
-
-func (env testTxBlkEnv) GetChainConfig() *params.ChainConfig {
-	return env.chainCfg
 }
 
 func (env testTxBlkEnv) GetCoinbase() common.Address {
@@ -179,4 +169,8 @@ func (env testTxBlkEnv) GetBaseFee() *big.Int {
 
 func (env testTxBlkEnv) GetBlobBaseFee() *big.Int {
 	return big.NewInt(0)
+}
+
+func (env testTxBlkEnv) GetFork() string {
+	return ""
 }

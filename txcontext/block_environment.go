@@ -20,7 +20,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 // BlockEnvironment represents an interface for retrieving and modifying Ethereum-like blockchain environment information.
@@ -49,9 +48,9 @@ type BlockEnvironment interface {
 	// GetBlobBaseFee retrieves the base fee for blob transactions.
 	GetBlobBaseFee() *big.Int
 
-	// GetChainConfig returns current setup for ChainConfig.
-	GetChainConfig() *params.ChainConfig
-
 	// GetRandom returns the random hash.
 	GetRandom() *common.Hash
+
+	// GetFork returns the fork name of currently ran transaction.
+	GetFork() string
 }

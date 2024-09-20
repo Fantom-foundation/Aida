@@ -23,7 +23,6 @@ import (
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/db"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,10 +34,9 @@ import (
 func OpenSubstateProvider(cfg *utils.Config, ctxt *cli.Context, aidaDb db.BaseDB) Provider[txcontext.TxContext] {
 	substateDb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
 	return &substateProvider{
-		substateDb,
-		ctxt,
-		cfg.Workers,
-		cfg.ChainCfg,
+		db:                  substateDb,
+		ctxt:                ctxt,
+		numParallelDecoders: cfg.Workers,
 	}
 }
 
@@ -48,7 +46,6 @@ type substateProvider struct {
 	db                  db.SubstateDB
 	ctxt                *cli.Context
 	numParallelDecoders int
-	chainCfg            *params.ChainConfig
 }
 
 func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxContext]) error {
@@ -58,7 +55,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx, s.chainCfg)}); err != nil {
+		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx)}); err != nil {
 			return err
 		}
 	}

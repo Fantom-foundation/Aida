@@ -126,7 +126,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		var statedb state.StateDB
 		statedb = state.MakeInMemoryStateDB(substatecontext.NewWorldState(tx.InputSubstate), tx.Block)
 		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if _, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx, cfg.ChainCfg)); err != nil {
+		if _, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx)); err != nil {
 			return err
 		}
 

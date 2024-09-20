@@ -89,6 +89,7 @@ func RunEthereumTest(ctx *cli.Context) error {
 
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
+	cfg.ChainID = utils.EthTestsChainID
 
 	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {

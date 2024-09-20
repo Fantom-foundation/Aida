@@ -17,6 +17,7 @@
 package utildb
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -87,9 +88,14 @@ func genDeletedAccountsTask(
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
-	ss := substatecontext.NewTxContext(tx, cfg.ChainCfg)
+	ss := substatecontext.NewTxContext(tx)
 
-	conduit := state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, cfg.ChainCfg)
+	chainCfg, err := cfg.GetChainConfig("")
+	if err != nil {
+		return fmt.Errorf("cannot get chain config: %w", err)
+	}
+
+	conduit := state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, chainCfg)
 	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputState(), tx.Block, conduit)
 	if err != nil {
 		return err

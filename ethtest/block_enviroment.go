@@ -36,6 +36,7 @@ type stBlockEnvironment struct {
 	BaseFee       *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
 	ExcessBlobGas *BigInt        `json:"currentExcessBlobGas" gencodec:"optional"`
 	chainCfg      *params.ChainConfig
+	fork          string
 }
 
 func (s *stBlockEnvironment) GetCoinbase() common.Address {
@@ -107,6 +108,6 @@ func (s *stBlockEnvironment) GetRandom() *common.Hash {
 	return nil
 }
 
-func (s *stBlockEnvironment) GetChainConfig() *params.ChainConfig {
-	return s.chainCfg
+func (s *stBlockEnvironment) GetFork() string {
+	return s.fork
 }

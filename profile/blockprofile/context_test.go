@@ -232,7 +232,7 @@ func TestFindTxAddresses(t *testing.T) {
 			InputSubstate:  substate.WorldState{},
 			OutputSubstate: substate.WorldState{},
 			Message:        &substate.Message{},
-		}, nil),
+		}),
 	}
 
 	addresses := findTxAddresses(testTransaction)
@@ -250,7 +250,7 @@ func TestFindTxAddresses(t *testing.T) {
 			InputSubstate:  substate.WorldState{addr1: &substate.Account{}},
 			OutputSubstate: substate.WorldState{addr2: &substate.Account{}, addr3: &substate.Account{}},
 			Message:        &substate.Message{},
-		}, nil),
+		}),
 	}
 	addresses = findTxAddresses(testTransaction)
 	if len(addresses) != 3 {
@@ -272,7 +272,7 @@ func TestFindTxAddresses(t *testing.T) {
 				From: zero,
 				To:   nil,
 			},
-		}, nil),
+		}),
 	}
 
 	addresses = findTxAddresses(testTransaction)
@@ -304,7 +304,7 @@ func TestRecordTransaction(t *testing.T) {
 			Result: &substate.Result{
 				GasUsed: 11111,
 			},
-		}, nil),
+		}),
 		Transaction: 1,
 		Block:       0,
 	}
@@ -373,7 +373,7 @@ func TestRecordTransaction(t *testing.T) {
 			Result: &substate.Result{
 				GasUsed: 22222,
 			},
-		}, nil),
+		}),
 		Transaction: 2,
 		Block:       0,
 	}
@@ -502,7 +502,7 @@ func TestGetTransactionType(t *testing.T) {
 		Message:       &substate.Message{},
 	}
 
-	data := substatecontext.NewTxContext(sub, nil)
+	data := substatecontext.NewTxContext(sub)
 
 	testTransaction := executor.State[txcontext.TxContext]{
 		Data:        data,
@@ -516,14 +516,14 @@ func TestGetTransactionType(t *testing.T) {
 
 	// expect transafer type
 	sub.Message.To = (*substatetypes.Address)(&toAddr)
-	testTransaction.Data = substatecontext.NewTxContext(sub, nil)
+	testTransaction.Data = substatecontext.NewTxContext(sub)
 	// to address doesn't exist in input substate
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 	// to address exists in input substate but doesn't have byte-code
 	sub.InputSubstate[substatetypes.Address(toAddr)] = substate.NewAccount(1, big.NewInt(1), []byte{})
-	testTransaction.Data = substatecontext.NewTxContext(sub, nil)
+	testTransaction.Data = substatecontext.NewTxContext(sub)
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
@@ -532,7 +532,7 @@ func TestGetTransactionType(t *testing.T) {
 	// to address exists in input substate and has byte-code
 	sub.InputSubstate[substatetypes.Address(toAddr)].Code = []byte{1, 2, 3, 4}
 	sub.Message.From = substatetypes.Address(fromAddr1)
-	testTransaction.Data = substatecontext.NewTxContext(sub, nil)
+	testTransaction.Data = substatecontext.NewTxContext(sub)
 	if tt := getTransactionType(testTransaction); tt != CallTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
 	}
@@ -541,7 +541,7 @@ func TestGetTransactionType(t *testing.T) {
 	// from address 0 to an sfc address (with byte-code
 	sub.Message.From = substatetypes.Address(fromAddr2)
 	sub.InputSubstate[substatetypes.Address(toAddr)] = substate.NewAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
-	testTransaction.Data = substatecontext.NewTxContext(sub, nil)
+	testTransaction.Data = substatecontext.NewTxContext(sub)
 	if tt := getTransactionType(testTransaction); tt != MaintenanceTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
 	}

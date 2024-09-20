@@ -386,7 +386,7 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContext(alloc, nil),
+		Data:        substatecontext.NewTxContext(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -415,7 +415,7 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContext(alloc, nil),
+		Data:        substatecontext.NewTxContext(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -464,7 +464,7 @@ func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) 
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContext(&substate.Substate{}, nil),
+		Data:        substatecontext.NewTxContext(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -746,7 +746,7 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 		Transaction: 1,
 		Data: substatecontext.NewTxContext(&substate.Substate{
 			OutputSubstate: getIncorrectWorldState(),
-		}, nil),
+		}),
 	}, ctx)
 
 	if err != nil {
@@ -773,7 +773,7 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 		Transaction: 1,
 		Data: substatecontext.NewTxContext(&substate.Substate{
 			InputSubstate: getIncorrectWorldState(),
-		}, nil),
+		}),
 	}, ctx)
 
 	if err != nil {
@@ -924,7 +924,7 @@ func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 	ext := makeLiveDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)), ValidateTxTarget{WorldState: false, Receipt: true})
 
 	// test positive
-	err := ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub, nil)}, ctx)
+	err := ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err != nil {
 		t.Fatalf("Failed to validate VM output. %v", err)
 	}
@@ -932,14 +932,14 @@ func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 	// test negative
 	// mismatched contract
 	sub.Result.ContractAddress = substatetypes.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
-	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub, nil)}, ctx)
+	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
 	}
 	// mismatched gas used
 	sub = &substate.Substate{Result: getDummyResult()}
 	sub.Result.GasUsed = 0
-	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub, nil)}, ctx)
+	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect gas used mismatch error.")
 	}
@@ -947,7 +947,7 @@ func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 	// mismatched gas used
 	sub = &substate.Substate{Result: getDummyResult()}
 	sub.Result.Status = types.ReceiptStatusFailed
-	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub, nil)}, ctx)
+	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect staatus mismatch error.")
 	}
@@ -1013,7 +1013,7 @@ func getIncorrectTestWorldState() txcontext.TxContext {
 		OutputSubstate: getIncorrectWorldState(),
 	}
 
-	return substatecontext.NewTxContext(sub, nil)
+	return substatecontext.NewTxContext(sub)
 }
 
 func getIncorrectWorldState() substate.WorldState {

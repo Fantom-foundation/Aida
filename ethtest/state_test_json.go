@@ -26,10 +26,11 @@ func (s *stJSON) setDescription(desc string) {
 	s.description = desc
 }
 
-func (s *stJSON) CreateEnv(chainCfg *params.ChainConfig) *stBlockEnvironment {
+func (s *stJSON) CreateEnv(chainCfg *params.ChainConfig, fork string) *stBlockEnvironment {
 	// Create copy as each tx needs its own env
 	env := s.Env
 	env.chainCfg = chainCfg
+	env.fork = fork
 	return &env
 }
 

@@ -51,20 +51,26 @@ const maxGasLimit = 9995800     // used when request does not specify gas
 const globalGasCap = 50_000_000 // highest gas allowance used for estimateGas
 
 // newEvmExecutor creates EvmExecutor for executing requests into StateDB that demand usage of EVM
-func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64) *EvmExecutor {
+func newEvmExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64) (*EvmExecutor, error) {
 	factory, err := cfg.GetInterpreterFactory()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("cannot get interpreter factory: %w", err)
 	}
+
+	chainCfg, err := cfg.GetChainConfig("")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get chain config: %w", err)
+	}
+
 	return &EvmExecutor{
 		args:      newTxArgs(params),
 		archive:   archive,
 		timestamp: timestamp,
-		chainCfg:  cfg.ChainCfg,
+		chainCfg:  chainCfg,
 		vmImpl:    factory,
 		blockId:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),
-	}
+	}, nil
 }
 
 // newTxArgs decodes recorded params into ethapi.TransactionArgs

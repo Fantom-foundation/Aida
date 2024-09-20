@@ -23,24 +23,18 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
 )
 
-func NewBlockEnvironment(env *substate.Env, chainCfg *params.ChainConfig) txcontext.BlockEnvironment {
-	return &blockEnvironment{env, chainCfg}
+func NewBlockEnvironment(env *substate.Env) txcontext.BlockEnvironment {
+	return &blockEnvironment{env}
 }
 
 type blockEnvironment struct {
 	*substate.Env
-	chainCfg *params.ChainConfig
 }
 
 func (e *blockEnvironment) GetRandom() *common.Hash {
 	return nil
-}
-
-func (e *blockEnvironment) GetChainConfig() *params.ChainConfig {
-	return e.chainCfg
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
@@ -80,4 +74,8 @@ func (e *blockEnvironment) GetBaseFee() *big.Int {
 
 func (e *blockEnvironment) GetBlobBaseFee() *big.Int {
 	return e.BlobBaseFee
+}
+
+func (e *blockEnvironment) GetFork() string {
+	return ""
 }
