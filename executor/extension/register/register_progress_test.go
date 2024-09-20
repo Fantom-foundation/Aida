@@ -23,9 +23,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/register"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
@@ -154,12 +156,12 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Fatalf("Failed to connect to database at %s.", connection)
 	}
 
-	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	_, err = sDb.Exec(registerProgressCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
 
-	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	_, err = sDb.Exec(register.MetadataCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
 	}
@@ -298,12 +300,12 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 		t.Fatalf("Failed to connect to database at %s.", connection)
 	}
 
-	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	_, err = sDb.Exec(registerProgressCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
 
-	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	_, err = sDb.Exec(register.MetadataCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
 	}
@@ -371,9 +373,9 @@ func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T)
 		return map[string]string{}, errors.Join(errs, noBash)
 	}
 
-	rm, err := makeRunMetadata(
+	rm, err := register.MakeRunMetadata(
 		connection,
-		func() (map[string]string, error) { return map[string]string{}, nil },
+		register.MakeRunIdentity(time.Now().Unix(), &utils.Config{}),
 		mockEnvInfoFetcher,
 	)
 
