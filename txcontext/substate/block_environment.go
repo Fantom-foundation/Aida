@@ -77,5 +77,6 @@ func (e *blockEnvironment) GetBlobBaseFee() *big.Int {
 }
 
 func (e *blockEnvironment) GetFork() string {
+	// for now, only necessary for get-tests
 	return ""
 }

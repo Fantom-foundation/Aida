@@ -105,20 +105,20 @@ func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Co
 }
 
 // MakeEthTestProcessor creates an executor.Processor which processes transaction created from ethereum test package.
-func MakeEthTestProcessor(cfg *utils.Config) (*EthTestProcessor, error) {
+func MakeEthTestProcessor(cfg *utils.Config) (*ethTestProcessor, error) {
 	processor, err := MakeTxProcessor(cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &EthTestProcessor{processor}, nil
+	return &ethTestProcessor{processor}, nil
 }
 
-type EthTestProcessor struct {
+type ethTestProcessor struct {
 	*TxProcessor
 }
 
 // Process transaction inside state into given LIVE StateDb
-func (p *EthTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	// We ignore error in this case, because some tests require the processor to fail,
 	// ethStateTestValidator decides whether error is fatal.
 	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)

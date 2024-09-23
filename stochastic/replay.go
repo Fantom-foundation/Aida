@@ -207,7 +207,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 				runErr = fmt.Errorf("error: stochastic replay failed.")
 			}
 
-			runErr = fmt.Errorf("%v\n\tBlock %v Ctx %v: %v", runErr, ss.blockNum, ss.txNum, err)
+			runErr = fmt.Errorf("%v\n\tBlock %v Tx %v: %v", runErr, ss.blockNum, ss.txNum, err)
 			if !cfg.ContinueOnFailure {
 				break
 			}

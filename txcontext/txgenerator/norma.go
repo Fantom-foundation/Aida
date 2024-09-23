@@ -123,5 +123,6 @@ func (e normaTxBlockEnv) GetBaseFee() *big.Int {
 }
 
 func (e normaTxBlockEnv) GetFork() string {
+	// for now, only necessary for get-tests
 	return ""
 }
