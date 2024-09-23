@@ -17,6 +17,7 @@
 package main
 
 import (
+	"math"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
@@ -31,6 +32,10 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	txGeneratorDefaultProgressReportFrequency = 100
 )
 
 // RunTxGenerator performs sequential block processing on a StateDb using transaction generator
@@ -65,11 +70,20 @@ func runTransactions(
 	processor executor.Processor[txcontext.TxContext],
 	extra []executor.Extension[txcontext.TxContext],
 ) error {
+
+	var progressReportFrequency int = txGeneratorDefaultProgressReportFrequency
+	if cfg.BlockLength > 0 {
+		progressReportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
+	}
+
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		statedb.MakeStateDbManager[txcontext.TxContext](cfg, stateDbPath),
-		register.MakeRegisterProgress(cfg, 0),
+		register.MakeRegisterProgress(cfg,
+			progressReportFrequency,
+			register.OnPreTransaction,
+		),
 		// RegisterProgress should be the as top-most as possible on the list
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.

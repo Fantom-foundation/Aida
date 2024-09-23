@@ -33,6 +33,8 @@ import (
 )
 
 const (
+	defaultRequestReportFrequency = 100_000
+
 	registerRequestProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats_rpc (
 			count INTEGER NOT NULL,
@@ -54,8 +56,8 @@ const (
 )
 
 // MakeRegisterRequestProgress creates a blockProgressTracker that depends on the
-// PostBlock event and is only useful as part of a sequential evaluation.
-func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executor.Extension[*rpc.RequestAndResults] {
+// PostBlock event and is only useful as part of a sequential evaluation.a
+func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when whenToPrint) executor.Extension[*rpc.RequestAndResults] {
 	// As temporary measure: issue a warning to user if both RegisterRun and TrackProgress is on.
 	log := logger.NewLogger(cfg.LogLevel, "RegisterRequestProgress")
 	if cfg.RegisterRun != "" && cfg.TrackProgress {
@@ -66,19 +68,20 @@ func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executo
 		return extension.NilExtension[*rpc.RequestAndResults]{}
 	}
 
-	if reportFrequency == 0 {
-		reportFrequency = RegisterProgressDefaultReportFrequency
+	var freq int = defaultRequestReportFrequency
+	if reportFrequency != 0 {
+		freq = reportFrequency
 	}
 
-	return makeRegisterRequestProgress(cfg, reportFrequency, log)
+	return makeRegisterRequestProgress(cfg, freq, when, log)
 }
 
-func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log logger.Logger) *registerRequestProgress {
-
+func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when whenToPrint, log logger.Logger) *registerRequestProgress {
 	return &registerRequestProgress{
 		cfg:             cfg,
 		log:             log,
 		reportFrequency: reportFrequency,
+		when:            when,
 		ps:              utils.NewPrinters(),
 		id:              rr.MakeRunIdentity(time.Now().Unix(), cfg),
 	}
@@ -93,6 +96,7 @@ type registerRequestProgress struct {
 	log  logger.Logger
 	lock sync.Mutex
 	ps   *utils.Printers
+	when whenToPrint
 
 	// Where am I?
 	lastReportedRequestCount uint64
