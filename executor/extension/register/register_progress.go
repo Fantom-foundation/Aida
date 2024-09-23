@@ -18,7 +18,6 @@ package register
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -44,10 +43,7 @@ const (
 
 const (
 	archiveDbDirectoryName = "archive"
-
-	TxGeneratorCommandName = "tx-generator"
-
-	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
+	defaultReportFrequency uint64 = 100_000
 
 	registerProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
@@ -78,32 +74,20 @@ const (
 // MakeRegisterProgress creates an extention that
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
-func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.TxContext] {
+func MakeRegisterProgress(cfg *utils.Config, reportFrequency int, when whenToPrint) executor.Extension[txcontext.TxContext] {
 	if cfg.RegisterRun == "" {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
-	if reportFrequency == 0 {
-		switch {
-		case cfg.CommandName == TxGeneratorCommandName && cfg.BlockLength != 0:
-			reportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
-		default:
-			reportFrequency = RegisterProgressDefaultReportFrequency
-		}
-	}
-
-	var when whenToPrint
-	switch {
-	case cfg.CommandName == TxGeneratorCommandName:
-		when = OnPreTransaction
-	default:
-		when = OnPreBlock
+	var freq uint64 = defaultReportFrequency
+	if reportFrequency > 0 {
+		freq = uint64(reportFrequency)
 	}
 
 	return &registerProgress{
 		cfg:      cfg,
 		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
-		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
+		interval: utils.NewInterval(cfg.First, cfg.Last, freq),
 		when:     when,
 		ps:       utils.NewPrinters(),
 		id:       rr.MakeRunIdentity(time.Now().Unix(), cfg),
