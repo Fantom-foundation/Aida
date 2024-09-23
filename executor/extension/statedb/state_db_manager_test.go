@@ -41,6 +41,7 @@ func TestStateDbManager_DbClosureWithoutKeepDb(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
+	mockStateDB.EXPECT().GetHash()
 	mockStateDB.EXPECT().Close()
 
 	state := executor.State[any]{

@@ -35,6 +35,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	substateDefaultProgressReportFrequency = 100_000
+)
+
 // RunSubstate performs sequential block processing on a StateDb
 func RunSubstate(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -86,7 +90,10 @@ func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxCont
 	extensionList = append(extensionList, extra...)
 
 	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
-		register.MakeRegisterProgress(cfg, 100_000),
+		register.MakeRegisterProgress(cfg,
+			substateDefaultProgressReportFrequency,
+			register.OnPreBlock,
+		),
 		// RegisterProgress should be the as top-most as possible on the list
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.
