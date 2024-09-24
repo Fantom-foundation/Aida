@@ -22,10 +22,10 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/tests"
 )
 
 var (
@@ -36,7 +36,7 @@ var (
 )
 
 func CreateTestTransaction(t *testing.T) txcontext.TxContext {
-	chainCfg, err := utils.GetChainConfig(1337)
+	chainCfg, _, err := tests.GetChainConfig("Cancun")
 	if err != nil {
 		t.Fatalf("cannot get chain config: %v", err)
 	}
@@ -141,5 +141,17 @@ func CreateTestStJson(*testing.T) *stJSON {
 				},
 			},
 		},
+	}
+}
+
+func CreateErrorTestTransaction(*testing.T) txcontext.TxContext {
+	return &stateTestContext{
+		expectedError: "err",
+	}
+}
+
+func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
+	return &stateTestContext{
+		expectedError: "",
 	}
 }
