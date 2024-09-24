@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -107,7 +106,7 @@ func newGethTransactionResult(logs []*types.Log, msg *core.Message, msgResult *c
 	}
 }
 
-func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
+func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult executionResult, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64
@@ -121,7 +120,7 @@ func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmco
 	var returnData []byte
 	if msgResult != nil {
 		returnData = msgResult.Return()
-		gasUsed = msgResult.UsedGas
+		gasUsed = msgResult.GetGasUsed()
 		if msgResult.Failed() {
 			status = types.ReceiptStatusFailed
 		} else {
@@ -131,7 +130,7 @@ func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmco
 
 	return transactionResult{
 		result:          returnData,
-		err:             err,
+		err:             msgResult.GetError(),
 		contractAddress: contract,
 		logs:            logs,
 		bloom:           types.BytesToBloom(types.LogsBloom(logs)),

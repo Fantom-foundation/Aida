@@ -205,6 +205,39 @@ type aidaProcessor struct {
 	log   logger.Logger
 }
 
+// executionResult is a wrapper around ExecutionResult so both types from core and evmcore can be used.
+type executionResult interface {
+	Failed() bool
+	Return() []byte
+	GetGasUsed() uint64
+	GetError() error
+}
+
+// messageResult is a basic implementation of execution result which
+// contains data owned by ExecutionResult from both evmcore and core.
+type messageResult struct {
+	failed     bool
+	returnData []byte
+	gasUsed    uint64
+	err        error
+}
+
+func (w messageResult) Failed() bool {
+	return w.failed
+}
+
+func (w messageResult) Return() []byte {
+	return w.returnData
+}
+
+func (w messageResult) GetGasUsed() uint64 {
+	return w.gasUsed
+}
+
+func (w messageResult) GetError() error {
+	return w.err
+}
+
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
@@ -214,59 +247,41 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 		hashError error
 	)
 
-	// switch to core if --use-geth-block-processor
-	if s.cfg.UseGethBlockProcessor {
+	db.SetTxContext(txHash, tx)
+	snapshot := db.Snapshot()
+	blockCtx := prepareBlockCtx(inputEnv, &hashError)
+	var (
+		origin    common.Address
+		msgResult executionResult
+	)
+
+	// switch to core if --use-geth-tx-processor
+	if s.cfg.UseGethTxProcessor {
 		var gasPool = new(core.GasPool)
 		gasPool.AddGas(inputEnv.GetGasLimit())
 
-		db.SetTxContext(txHash, tx)
-		blockCtx := prepareBlockCtx(inputEnv, &hashError)
 		txCtx := core.NewEVMTxContext(msg)
 		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+		origin = evm.TxContext.Origin
 
-		snapshot := db.Snapshot()
+		r, err := core.ApplyMessage(evm, msg, gasPool)
+		msgResult = messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+	} else {
+		var gasPool = new(evmcore.GasPool)
+		gasPool.AddGas(inputEnv.GetGasLimit())
 
-		msgResult, err := core.ApplyMessage(evm, msg, gasPool)
-		if err != nil {
-			db.RevertToSnapshot(snapshot)
-			finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
-		}
+		txCtx := evmcore.NewEVMTxContext(msg)
+		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+		origin = evm.TxContext.Origin
 
-		// inform about failing transaction
-		if msgResult != nil && msgResult.Failed() {
-			s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
-		}
-
-		// check whether getHash func produced an error
-		if hashError != nil {
-			finalError = errors.Join(finalError, hashError)
-		}
-
-		// if no prior error, create result and pass it to the data.
-		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-		res = newGethTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, err, evm.TxContext.Origin)
-
-		return
+		r, err := evmcore.ApplyMessage(evm, msg, gasPool)
+		msgResult = messageResult{r.Failed(), r.Return(), r.UsedGas, err}
 	}
 
-	// prepare tx
-	var gasPool = new(evmcore.GasPool)
-	gasPool.AddGas(inputEnv.GetGasLimit())
-
-	db.SetTxContext(txHash, tx)
-	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
-	snapshot := db.Snapshot()
-
-	// apply
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gasPool)
-	if err != nil {
-		// if transaction fails, revert to the first snapshot.
+	if msgResult.GetError() != nil {
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), msgResult.GetError())
 	}
-
 	// inform about failing transaction
 	if msgResult != nil && msgResult.Failed() {
 		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
@@ -277,9 +292,9 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 		finalError = errors.Join(finalError, hashError)
 	}
 
-	// if no prior error, create result and pass it to the data.
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, err, evm.TxContext.Origin)
+	// if no prior error, create result and pass it to the data.
+	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, origin)
 	return
 }
 
@@ -424,13 +439,13 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		err = fmt.Errorf("transaction failed")
 	}
 
-	result := &evmcore.ExecutionResult{
-		UsedGas:    uint64(receipt.GasUsed),
-		Err:        err,
-		ReturnData: receipt.Output,
+	result := &messageResult{
+		gasUsed:    uint64(receipt.GasUsed),
+		err:        err,
+		returnData: receipt.Output,
 	}
 
-	return newTransactionResult(log, msg, result, nil, msg.From), nil
+	return newTransactionResult(log, msg, result, msg.From), nil
 }
 
 // toscaTxContext is a bridge between Tosca's transaction context and the one provided by the executor.
