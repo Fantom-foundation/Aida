@@ -452,4 +452,9 @@ var (
 		Usage:   "determines number of workers",
 		Value:   4,
 	}
+	UseGethBlockProcessorFlag = cli.BoolFlag{
+		Name:  "use-geth-block-processor",
+		Usage: "When set, use go-ethereum/core instead of go-opera/evmcore when ApplyMessage()",
+		Value: false,
+	}
 )

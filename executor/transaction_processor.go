@@ -208,19 +208,54 @@ type aidaProcessor struct {
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
-		gasPool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		inputEnv  = st.GetBlockEnvironment()
 		msg       = st.GetMessage()
 		hashError error
 	)
 
+	// switch to core if --use-geth-block-processor
+	if s.cfg.UseGethBlockProcessor {
+		var gasPool = new(core.GasPool)
+		gasPool.AddGas(inputEnv.GetGasLimit())
+
+		db.SetTxContext(txHash, tx)
+		blockCtx := prepareBlockCtx(inputEnv, &hashError)
+		txCtx := core.NewEVMTxContext(msg)
+		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+
+		snapshot := db.Snapshot()
+
+		msgResult, err := core.ApplyMessage(evm, msg, gasPool)
+		if err != nil {
+			db.RevertToSnapshot(snapshot)
+			finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		}
+
+		// inform about failing transaction
+		if msgResult != nil && msgResult.Failed() {
+			s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
+		}
+
+		// check whether getHash func produced an error
+		if hashError != nil {
+			finalError = errors.Join(finalError, hashError)
+		}
+
+		// if no prior error, create result and pass it to the data.
+		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
+		res = newGethTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, err, evm.TxContext.Origin)
+
+		return
+	}
+
 	// prepare tx
+	var gasPool = new(evmcore.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := core.NewEVMTxContext(msg)
+	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
