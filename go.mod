@@ -7,7 +7,7 @@ toolchain go1.22.0
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240903120428-3fc9e177f6bb
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
-	github.com/Fantom-foundation/Substate v0.0.0-20240823083426-23958ddac462
+	github.com/Fantom-foundation/Substate v0.0.0-20240923131341-778490a05e65
 	github.com/Fantom-foundation/Tosca v0.0.0-20240916150721-31800db41e5b
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
@@ -72,6 +72,7 @@ require (
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
