@@ -238,6 +238,24 @@ func (w messageResult) GetError() error {
 	return w.err
 }
 
+// applyMessageUsingGeth applies message using the go-ethereum implementation of ApplyMessage using 'core' package.
+func (s *aidaProcessor) applyMessageUsingGeth(inputEnv txcontext.BlockEnvironment, msg *core.Message, evm *vm.EVM) executionResult {
+	// Here we use the geth implementation
+	var gasPool = new(core.GasPool)
+	gasPool.AddGas(inputEnv.GetGasLimit())
+	r, err := core.ApplyMessage(evm, msg, gasPool)
+	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+}
+
+// applyMessageUsingSonic applies message using the sonic implementation of ApplyMessage using 'evmcore' package.
+func (s *aidaProcessor) applyMessageUsingSonic(inputEnv txcontext.BlockEnvironment, msg *evmcore.Message, evm *vm.EVM) executionResult {
+	// Here we use the sonic implementation
+	var gasPool = new(evmcore.GasPool)
+	gasPool.AddGas(inputEnv.GetGasLimit())
+	r, err := evmcore.ApplyMessage(evm, *msg, gasPool)
+	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+}
+
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
@@ -257,25 +275,19 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	// switch to core if --use-geth-tx-processor
 	if s.cfg.UseGethTxProcessor {
-		var gasPool = new(core.GasPool)
-		gasPool.AddGas(inputEnv.GetGasLimit())
-
+		// Here we use the ethereum implementation
 		txCtx := core.NewEVMTxContext(msg)
 		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 		origin = evm.TxContext.Origin
 
-		r, err := core.ApplyMessage(evm, msg, gasPool)
-		msgResult = messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+		msgResult = s.applyMessageUsingGeth(inputEnv, msg, evm)
 	} else {
-		var gasPool = new(evmcore.GasPool)
-		gasPool.AddGas(inputEnv.GetGasLimit())
-
+		// Here we use the sonic implementation
 		txCtx := evmcore.NewEVMTxContext(msg)
 		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 		origin = evm.TxContext.Origin
 
-		r, err := evmcore.ApplyMessage(evm, msg, gasPool)
-		msgResult = messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+		msgResult = s.applyMessageUsingGeth(inputEnv, msg, evm)
 	}
 
 	if msgResult.GetError() != nil {

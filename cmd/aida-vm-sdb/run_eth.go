@@ -70,6 +70,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ValidateStateHashesFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
+		&utils.UseGethTxProcessorFlag,
 
 		// Ethereum execution tests
 		&utils.EthTestTypeFlag,
