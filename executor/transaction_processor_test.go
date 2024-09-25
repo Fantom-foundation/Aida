@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -88,4 +90,36 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 		})
 	}
 
+}
+
+func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
+	cfg := utils.NewTestConfig(t, 250, 0, 1, false)
+	tests := []struct {
+		name               string
+		useGethTxProcessor bool
+	}{
+		{
+			name:               "expect_applyMessageUsingGeth",
+			useGethTxProcessor: true,
+		},
+		{
+			name:               "expect_applyMessageUsingSonic",
+			useGethTxProcessor: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg.UseGethTxProcessor = test.useGethTxProcessor
+			aidaProcessor := makeAidaProcessor(cfg, vm.Config{})
+			apply := aidaProcessor.applyMessageUsingSonic
+			if cfg.UseGethTxProcessor {
+				apply = aidaProcessor.applyMessageUsingGeth
+			}
+
+			if got, want := fmt.Sprintf("%p", aidaProcessor.applyMessage), fmt.Sprintf("%p", apply); got != want {
+				t.Errorf("unexpected apply func")
+			}
+
+		})
+	}
 }

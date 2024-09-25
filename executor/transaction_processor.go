@@ -122,7 +122,6 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 	case utils.MainnetChainID:
 		vmCfg = opera.DefaultVMConfig
 		vmCfg.NoBaseFee = true
-
 	}
 
 	factory, err := cfg.GetInterpreterFactory()
@@ -135,17 +134,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
 	case "", "aida":
-		ap := &aidaProcessor{
-			vmCfg: vmCfg,
-			cfg:   cfg,
-			log:   logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
-		}
-		if cfg.UseGethTxProcessor {
-			ap.applyMessage = ap.applyMessageUsingSonic
-		} else {
-			ap.applyMessage = ap.applyMessageUsingGeth
-		}
-		processor = ap
+		processor = makeAidaProcessor(cfg, vmCfg)
 	default:
 		interpreter, err := tosca.NewInterpreter(cfg.VmImpl)
 		if err != nil {
@@ -174,6 +163,20 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
 		processor: processor,
 	}, nil
+}
+
+func makeAidaProcessor(cfg *utils.Config, vmCfg vm.Config) *aidaProcessor {
+	ap := &aidaProcessor{
+		vmCfg: vmCfg,
+		cfg:   cfg,
+		log:   logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
+	}
+	ap.applyMessage = ap.applyMessageUsingSonic
+	if cfg.UseGethTxProcessor {
+		ap.applyMessage = ap.applyMessageUsingGeth
+	}
+
+	return ap
 }
 
 func (s *TxProcessor) isErrFatal() bool {
