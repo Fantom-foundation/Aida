@@ -31,7 +31,6 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -250,17 +249,17 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	}
 
 	// prepare tx
-	var gasPool = new(evmcore.GasPool)
+	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
+	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gasPool)
+	msgResult, err := core.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
@@ -424,7 +423,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		err = fmt.Errorf("transaction failed")
 	}
 
-	result := &evmcore.ExecutionResult{
+	result := &core.ExecutionResult{
 		UsedGas:    uint64(receipt.GasUsed),
 		Err:        err,
 		ReturnData: receipt.Output,

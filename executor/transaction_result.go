@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -107,7 +106,7 @@ func newGethTransactionResult(logs []*types.Log, msg *core.Message, msgResult *c
 	}
 }
 
-func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
+func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *core.ExecutionResult, err error, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64
