@@ -135,11 +135,17 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
 	case "", "aida":
-		processor = &aidaProcessor{
+		ap := &aidaProcessor{
 			vmCfg: vmCfg,
 			cfg:   cfg,
 			log:   logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
 		}
+		if cfg.UseGethTxProcessor {
+			ap.applyMessage = ap.applyMessageUsingSonic
+		} else {
+			ap.applyMessage = ap.applyMessageUsingGeth
+		}
+		processor = ap
 	default:
 		interpreter, err := tosca.NewInterpreter(cfg.VmImpl)
 		if err != nil {
@@ -200,9 +206,10 @@ type processor interface {
 }
 
 type aidaProcessor struct {
-	vmCfg vm.Config
-	cfg   *utils.Config
-	log   logger.Logger
+	vmCfg        vm.Config
+	cfg          *utils.Config
+	log          logger.Logger
+	applyMessage applyMessage
 }
 
 // executionResult is a wrapper around ExecutionResult so both types from core and evmcore can be used.
@@ -238,22 +245,30 @@ func (w messageResult) GetError() error {
 	return w.err
 }
 
+type applyMessage func(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment) (executionResult, common.Address)
+
 // applyMessageUsingGeth applies message using the go-ethereum implementation of ApplyMessage using 'core' package.
-func (s *aidaProcessor) applyMessageUsingGeth(inputEnv txcontext.BlockEnvironment, msg *core.Message, evm *vm.EVM) executionResult {
+func (s *aidaProcessor) applyMessageUsingGeth(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment) (executionResult, common.Address) {
 	// Here we use the geth implementation
+	txCtx := core.NewEVMTxContext(msg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+
 	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	r, err := core.ApplyMessage(evm, msg, gasPool)
-	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}, evm.TxContext.Origin
 }
 
 // applyMessageUsingSonic applies message using the sonic implementation of ApplyMessage using 'evmcore' package.
-func (s *aidaProcessor) applyMessageUsingSonic(inputEnv txcontext.BlockEnvironment, msg *evmcore.Message, evm *vm.EVM) executionResult {
+func (s *aidaProcessor) applyMessageUsingSonic(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment) (executionResult, common.Address) {
 	// Here we use the sonic implementation
+	txCtx := evmcore.NewEVMTxContext(msg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+
 	var gasPool = new(evmcore.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
-	r, err := evmcore.ApplyMessage(evm, *msg, gasPool)
-	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}
+	r, err := evmcore.ApplyMessage(evm, msg, gasPool)
+	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}, evm.TxContext.Origin
 }
 
 // processRegularTx executes VM on a chosen storage system.
@@ -268,27 +283,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	db.SetTxContext(txHash, tx)
 	snapshot := db.Snapshot()
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	var (
-		origin    common.Address
-		msgResult executionResult
-	)
-
-	// switch to core if --use-geth-tx-processor
-	if s.cfg.UseGethTxProcessor {
-		// Here we use the ethereum implementation
-		txCtx := core.NewEVMTxContext(msg)
-		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
-		origin = evm.TxContext.Origin
-
-		msgResult = s.applyMessageUsingGeth(inputEnv, msg, evm)
-	} else {
-		// Here we use the sonic implementation
-		txCtx := evmcore.NewEVMTxContext(msg)
-		evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
-		origin = evm.TxContext.Origin
-
-		msgResult = s.applyMessageUsingGeth(inputEnv, msg, evm)
-	}
+	msgResult, origin := s.applyMessage(db, msg, blockCtx, inputEnv)
 
 	if msgResult.GetError() != nil {
 		db.RevertToSnapshot(snapshot)
