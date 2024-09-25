@@ -32,6 +32,7 @@ import (
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/tests"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Fantom-foundation/Tosca/go/geth_adapter"
@@ -93,8 +94,6 @@ const (
 	SubsetCheck   ValidationMode = iota // confirms whether a substate is contained in stateDB.
 	EqualityCheck                       // confirms whether a substate and StateDB are identical.
 )
-
-const ethTestCmdName = "ethereum-test"
 
 // A map of key blocks on Fantom chain
 var KeywordBlocks = map[ChainID]map[string]uint64{
@@ -167,7 +166,7 @@ type Config struct {
 	CarmenStateCacheSize     int     // the number of values cached in the Carmen StateDB (0 for default value)
 	CarmenNodeCacheSize      int     // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
 	ChainID                  ChainID // Blockchain ID (mainnet: 250/testnet: 4002)
-	ChainCfg                 *params.ChainConfig
+	chainCfg                 *params.ChainConfig
 	ChannelBufferSize        int    // set a buffer size for profiling channel
 	CompactDb                bool   // compact database after merging
 	ContinueOnFailure        bool   // continue validation when an error detected
@@ -275,8 +274,8 @@ func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
 }
 
 // NewTestConfig creates a new config for test purpose
-func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool) *Config {
-	chainCfg, err := GetChainConfig(chainId)
+func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool, fork string) *Config {
+	chainCfg, err := getChainConfig(chainId, fork)
 	if err != nil {
 		t.Fatalf("cannot get chain cfg: %v", err)
 	}
@@ -284,7 +283,7 @@ func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate b
 		ChainID:         chainId,
 		First:           first,
 		Last:            last,
-		ChainCfg:        chainCfg,
+		chainCfg:        chainCfg,
 		LogLevel:        "Critical",
 		SkipPriming:     true,
 		Validate:        validate,
@@ -341,6 +340,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	return cfg, nil
 }
 
+func (cfg *Config) GetChainConfig(fork string) (*params.ChainConfig, error) {
+	if cfg.chainCfg != nil && fork == "" {
+		return cfg.chainCfg, nil
+	}
+	return getChainConfig(cfg.ChainID, fork)
+}
+
 func (cfg *Config) GetInterpreterFactory() (vm.InterpreterFactory, error) {
 	// The interpreter factory is cached to enable the factory instance to
 	// reuse the same interpreter instance for multiple transactions. This
@@ -394,8 +400,12 @@ func (cfg *Config) SetStateDbSrcReadOnly() {
 	cfg.StateDbSrcReadOnly = true
 }
 
-// GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainId ChainID) (*params.ChainConfig, error) {
+// getChainConfig returns chain configuration of either mainnet or testnets.
+func getChainConfig(chainId ChainID, fork string) (*params.ChainConfig, error) {
+	if chainId == EthTestsChainID {
+		chainCfg, _, err := tests.GetChainConfig(fork)
+		return chainCfg, err
+	}
 	if _, ok := AllowedChainIDs[chainId]; !ok {
 		return nil, fmt.Errorf("unknown chain id %v\nallowed chain-ids: %v", chainId, AllowedChainIDs)
 	}
@@ -796,6 +806,10 @@ func (cc *configContext) reportNewConfig() {
 }
 
 func (cc *configContext) setChainConfig() (err error) {
-	cc.cfg.ChainCfg, err = GetChainConfig(cc.cfg.ChainID)
+	// Each test will have its own chainConfig - no need to set here
+	if cc.cfg.ChainID == EthTestsChainID {
+		return nil
+	}
+	cc.cfg.chainCfg, err = getChainConfig(cc.cfg.ChainID, "")
 	return err
 }

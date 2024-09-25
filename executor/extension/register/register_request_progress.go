@@ -27,12 +27,15 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
+	rr "github.com/Fantom-foundation/Aida/register"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 const (
-	RegisterRequestProgressCreateTableIfNotExist = `
+	defaultRequestReportFrequency = 100_000
+
+	registerRequestProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats_rpc (
 			count INTEGER NOT NULL,
 			req_rate float,
@@ -41,7 +44,7 @@ const (
 			overall_gas_rate float
 		)
 	`
-	RegisterRequestProgressInsertOrReplace = `
+	registerRequestProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats_rpc (
 			count,
 			req_rate, gas_rate, overall_req_rate, overall_gas_rate
@@ -53,8 +56,8 @@ const (
 )
 
 // MakeRegisterRequestProgress creates a blockProgressTracker that depends on the
-// PostBlock event and is only useful as part of a sequential evaluation.
-func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executor.Extension[*rpc.RequestAndResults] {
+// PostBlock event and is only useful as part of a sequential evaluation.a
+func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when whenToPrint) executor.Extension[*rpc.RequestAndResults] {
 	// As temporary measure: issue a warning to user if both RegisterRun and TrackProgress is on.
 	log := logger.NewLogger(cfg.LogLevel, "RegisterRequestProgress")
 	if cfg.RegisterRun != "" && cfg.TrackProgress {
@@ -65,21 +68,22 @@ func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executo
 		return extension.NilExtension[*rpc.RequestAndResults]{}
 	}
 
-	if reportFrequency == 0 {
-		reportFrequency = RegisterProgressDefaultReportFrequency
+	var freq int = defaultRequestReportFrequency
+	if reportFrequency != 0 {
+		freq = reportFrequency
 	}
 
-	return makeRegisterRequestProgress(cfg, reportFrequency, log)
+	return makeRegisterRequestProgress(cfg, freq, when, log)
 }
 
-func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log logger.Logger) *registerRequestProgress {
-
+func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when whenToPrint, log logger.Logger) *registerRequestProgress {
 	return &registerRequestProgress{
 		cfg:             cfg,
 		log:             log,
 		reportFrequency: reportFrequency,
+		when:            when,
 		ps:              utils.NewPrinters(),
-		id:              MakeRunIdentity(time.Now().Unix(), cfg),
+		id:              rr.MakeRunIdentity(time.Now().Unix(), cfg),
 	}
 }
 
@@ -92,6 +96,7 @@ type registerRequestProgress struct {
 	log  logger.Logger
 	lock sync.Mutex
 	ps   *utils.Printers
+	when whenToPrint
 
 	// Where am I?
 	lastReportedRequestCount uint64
@@ -108,8 +113,8 @@ type registerRequestProgress struct {
 	overallReqRate  float64
 	overallGasRate  float64
 
-	id   *RunIdentity
-	meta *RunMetadata
+	id   *rr.RunIdentity
+	meta *rr.RunMetadata
 }
 
 type rpcProcessInfo struct {
@@ -134,7 +139,7 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 	rp.ps.AddPrinter(p2db)
 
 	// 3. if metadata could be fetched -> continue without the failed metadata
-	rm, err := MakeRunMetadata(connection, rp.id)
+	rm, err := rr.MakeRunMetadata(connection, rp.id, rr.FetchUnixInfo)
 
 	// if this were to happened, it should happen already at 2 but added again just in case
 	if rm == nil {
@@ -200,12 +205,12 @@ func (rp *registerRequestProgress) PostRun(_ executor.State[*rpc.RequestAndResul
 	rp.ps.Print()
 	rp.ps.Close()
 
-	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	rp.meta.Meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
 	if err != nil {
-		rp.meta.meta["RunSucceed"] = strconv.FormatBool(false)
-		rp.meta.meta["RunError"] = fmt.Sprintf("%v", err)
+		rp.meta.Meta["RunSucceed"] = strconv.FormatBool(false)
+		rp.meta.Meta["RunError"] = fmt.Sprintf("%v", err)
 	} else {
-		rp.meta.meta["RunSucceed"] = strconv.FormatBool(true)
+		rp.meta.Meta["RunSucceed"] = strconv.FormatBool(true)
 	}
 
 	rp.meta.Print()
@@ -216,8 +221,8 @@ func (rp *registerRequestProgress) PostRun(_ executor.State[*rpc.RequestAndResul
 
 func (rp *registerRequestProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
 	return conn,
-		RegisterRequestProgressCreateTableIfNotExist,
-		RegisterRequestProgressInsertOrReplace,
+		registerRequestProgressCreateTableIfNotExist,
+		registerRequestProgressInsertOrReplace,
 		func() [][]any {
 			return [][]any{
 				{

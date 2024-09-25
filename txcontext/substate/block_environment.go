@@ -33,6 +33,10 @@ type blockEnvironment struct {
 	*substate.Env
 }
 
+func (e *blockEnvironment) GetRandom() *common.Hash {
+	return nil
+}
+
 func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
 	if e.BlockHashes == nil {
 		return common.Hash{}, fmt.Errorf("getHash(%d) invoked, no blockhashes provided", block)
@@ -70,4 +74,9 @@ func (e *blockEnvironment) GetBaseFee() *big.Int {
 
 func (e *blockEnvironment) GetBlobBaseFee() *big.Int {
 	return e.BlobBaseFee
+}
+
+func (e *blockEnvironment) GetFork() string {
+	// for now, only necessary for get-tests
+	return ""
 }

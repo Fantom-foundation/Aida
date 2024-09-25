@@ -19,13 +19,16 @@ package register
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/register"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
@@ -81,7 +84,7 @@ type metadataResponse struct {
 func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.RegisterRun = ""
-	ext := MakeRegisterProgress(cfg, 0)
+	ext := MakeRegisterProgress(cfg, 0, OnPreBlock)
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Fatalf("extension RegisterProgress is enabled even though not disabled in configuration.")
 	}
@@ -98,7 +101,7 @@ func TestRegisterProgress_TerminatesIfPathToRegisterDirDoesNotExist(t *testing.T
 	cfg.Last = 25
 	interval := 10
 
-	ext := MakeRegisterProgress(cfg, interval)
+	ext := MakeRegisterProgress(cfg, interval, OnPreBlock)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
 	}
@@ -123,7 +126,7 @@ func TestRegisterProgress_TerminatesIfPathToStateDBDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	stateDb := state.NewMockStateDB(ctrl)
 
-	ext := MakeRegisterProgress(cfg, interval)
+	ext := MakeRegisterProgress(cfg, interval, OnPreBlock)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
 	}
@@ -154,12 +157,12 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Fatalf("Failed to connect to database at %s.", connection)
 	}
 
-	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	_, err = sDb.Exec(registerProgressCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
 
-	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	_, err = sDb.Exec(register.MetadataCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
 	}
@@ -185,7 +188,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	interval := 10
 	// expects [5-9]P[10-19]P[20-24]P, where P is print
 
-	ext := MakeRegisterProgress(cfg, interval)
+	ext := MakeRegisterProgress(cfg, interval, OnPreBlock)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
 	}
@@ -298,12 +301,12 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 		t.Fatalf("Failed to connect to database at %s.", connection)
 	}
 
-	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	_, err = sDb.Exec(registerProgressCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
 
-	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	_, err = sDb.Exec(register.MetadataCreateTableIfNotExist)
 	if err != nil {
 		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
 	}
@@ -325,7 +328,7 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
 	)
 
-	ext := MakeRegisterProgress(cfg, 123)
+	ext := MakeRegisterProgress(cfg, 123, OnPreBlock)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Fatalf("RegisterProgress is disabled even though enabled in configuration.")
 	}
@@ -371,9 +374,9 @@ func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T)
 		return map[string]string{}, errors.Join(errs, noBash)
 	}
 
-	rm, err := makeRunMetadata(
+	rm, err := register.MakeRunMetadata(
 		connection,
-		func() (map[string]string, error) { return map[string]string{}, nil },
+		register.MakeRunIdentity(time.Now().Unix(), &utils.Config{}),
 		mockEnvInfoFetcher,
 	)
 
@@ -396,8 +399,7 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 			First:       0,
 			Last:        1_000_000,
 			BlockLength: 0,
-		}: RegisterProgressDefaultReportFrequency,
-
+		}: defaultReportFrequency,
 		{
 			RegisterRun: "enabled",
 			CommandName: "tx-generator",
@@ -405,7 +407,6 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 			Last:        1_000_000,
 			BlockLength: 50_000,
 		}: 1,
-
 		{
 			RegisterRun: "enabled",
 			CommandName: "tx-generator",
@@ -413,7 +414,6 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 			Last:        1_000_000,
 			BlockLength: 1,
 		}: 50_000,
-
 		{
 			RegisterRun: "enabled",
 			CommandName: "tx-generator",
@@ -424,7 +424,12 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 	}
 
 	for cfg, expectedFreq := range tests {
-		ext := MakeRegisterProgress(cfg, 0) // 0 to see defaults
+		var freq int = int(cfg.BlockLength)
+		if cfg.CommandName == "tx-generator" {
+			freq = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
+		}
+
+		ext := MakeRegisterProgress(cfg, freq, OnPreBlock) // 0 to see defaults
 		if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); ok {
 			t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
 		}

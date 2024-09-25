@@ -24,10 +24,11 @@ import (
 )
 
 func MakeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if !cfg.ShadowDb {
-		return extension.NilExtension[txcontext.TxContext]{}
+	if cfg.ShadowDb {
+		return makeShadowDbValidator(cfg)
 	}
-	return makeShadowDbValidator(cfg)
+
+	return extension.NilExtension[txcontext.TxContext]{}
 }
 
 func makeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {

@@ -32,7 +32,7 @@ func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chain
 		path:          stJson.path,
 		postNumber:    postNumber,
 		description:   stJson.description,
-		env:           stJson.CreateEnv(chainCfg),
+		env:           stJson.CreateEnv(chainCfg, fork),
 		inputState:    stJson.Pre,
 		msg:           msg,
 		rootHash:      post.RootHash,

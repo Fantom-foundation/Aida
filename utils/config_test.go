@@ -56,7 +56,7 @@ func TestUtilsConfig_GetChainConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("ChainID: %d", tc), func(t *testing.T) {
-			chainConfig, err := GetChainConfig(tc)
+			chainConfig, err := getChainConfig(tc, "")
 			if err != nil {
 				t.Fatalf("cannot get chain config: %v", err)
 			}

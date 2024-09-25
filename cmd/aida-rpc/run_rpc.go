@@ -32,6 +32,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	rpcDefaultProgressReportFrequency = 100_000
+)
+
 func RunRpc(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
@@ -61,7 +65,11 @@ type rpcProcessor struct {
 }
 
 func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	ctx.ExecutionResult = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	var err error
+	ctx.ExecutionResult, err = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -76,8 +84,11 @@ func run(
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
-		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
-		register.MakeRegisterRequestProgress(cfg, 100_000),
+		// If not, error that happen afterwards (e.g. on top of) will not be correctly recorded.
+		register.MakeRegisterRequestProgress(cfg,
+			rpcDefaultProgressReportFrequency,
+			register.OnPreBlock,
+		),
 
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),

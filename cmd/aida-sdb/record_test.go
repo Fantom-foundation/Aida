@@ -38,7 +38,7 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	path := t.TempDir() + "test_trace"
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 10, 11, false)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 10, 11, false, "")
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 	provider.EXPECT().

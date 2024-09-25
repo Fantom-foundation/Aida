@@ -39,18 +39,18 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 
-	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, true)
+	cfg := utils.NewTestConfig(t, utils.MainnetChainID, 2, 4, false, "")
 	// Simulate the execution of four transactions in three blocks.
 	provider.EXPECT().
 		Run(2, 4, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: newTestTxCtx(2)})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: newTestTxCtx(2)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: newTestTxCtx(t, 2)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: newTestTxCtx(t, 2)})
 			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: newTestTxCtx(3)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: newTestTxCtx(t, 3)})
 			// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: newTestTxCtx(4)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: newTestTxCtx(t, 4)})
 			return nil
 		})
 
@@ -99,6 +99,7 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 
 		// db_manager closes the db
+		db.EXPECT().GetHash(),
 		db.EXPECT().Close(),
 	)
 
@@ -107,7 +108,7 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	}
 }
 
-func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
+func newTestTxCtx(t *testing.T, blkNumber uint64) txcontext.TxContext {
 	return txgenerator.NewTxContext(
 		testTxBlkEnv{blkNumber},
 		&core.Message{
@@ -129,6 +130,10 @@ func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
 // testTxBlkEnv is a dummy block environment used for testing.
 type testTxBlkEnv struct {
 	blkNumber uint64
+}
+
+func (env testTxBlkEnv) GetRandom() *common.Hash {
+	return nil
 }
 
 func (env testTxBlkEnv) GetCoinbase() common.Address {
@@ -165,4 +170,8 @@ func (env testTxBlkEnv) GetBaseFee() *big.Int {
 
 func (env testTxBlkEnv) GetBlobBaseFee() *big.Int {
 	return big.NewInt(0)
+}
+
+func (env testTxBlkEnv) GetFork() string {
+	return ""
 }

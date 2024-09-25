@@ -18,36 +18,34 @@ package register
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
+	rr "github.com/Fantom-foundation/Aida/register"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type WhenToPrint int
+type whenToPrint int
 
 const (
-	OnPreBlock WhenToPrint = iota
+	OnPreBlock whenToPrint = iota
 	OnPreTransaction
 )
 
 const (
-	ArchiveDbDirectoryName = "archive"
+	archiveDbDirectoryName = "archive"
+	defaultReportFrequency uint64 = 100_000
 
-	TxGeneratorCommandName = "tx-generator"
-
-	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
-
-	RegisterProgressCreateTableIfNotExist = `
+	registerProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
   			start INTEGER NOT NULL,
 	  		end INTEGER NOT NULL,
@@ -60,7 +58,7 @@ const (
   			overall_gas_rate float
 		)
 	`
-	RegisterProgressInsertOrReplace = `
+	registerProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats (
 			start, end, 
 			memory, live_disk, archive_disk, 
@@ -76,35 +74,23 @@ const (
 // MakeRegisterProgress creates an extention that
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
-func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.TxContext] {
+func MakeRegisterProgress(cfg *utils.Config, reportFrequency int, when whenToPrint) executor.Extension[txcontext.TxContext] {
 	if cfg.RegisterRun == "" {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
-	if reportFrequency == 0 {
-		switch {
-		case cfg.CommandName == TxGeneratorCommandName && cfg.BlockLength != 0:
-			reportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
-		default:
-			reportFrequency = RegisterProgressDefaultReportFrequency
-		}
-	}
-
-	var when WhenToPrint
-	switch {
-	case cfg.CommandName == TxGeneratorCommandName:
-		when = OnPreTransaction
-	default:
-		when = OnPreBlock
+	var freq uint64 = defaultReportFrequency
+	if reportFrequency > 0 {
+		freq = uint64(reportFrequency)
 	}
 
 	return &registerProgress{
 		cfg:      cfg,
 		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
-		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
+		interval: utils.NewInterval(cfg.First, cfg.Last, freq),
 		when:     when,
 		ps:       utils.NewPrinters(),
-		id:       MakeRunIdentity(time.Now().Unix(), cfg),
+		id:       rr.MakeRunIdentity(time.Now().Unix(), cfg),
 	}
 }
 
@@ -118,7 +104,7 @@ type registerProgress struct {
 	log  logger.Logger
 	lock sync.Mutex
 	ps   *utils.Printers
-	when WhenToPrint
+	when whenToPrint
 
 	// Where am I?
 	interval           *utils.Interval
@@ -135,8 +121,8 @@ type registerProgress struct {
 	pathToArchiveDb string
 	memory          *state.MemoryUsage
 
-	id   *RunIdentity
-	meta *RunMetadata
+	id   *rr.RunIdentity
+	meta *rr.RunMetadata
 }
 
 // PreRun checks the following items:
@@ -160,7 +146,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.ps.AddPrinter(p2db)
 
 	// 3. if metadata could be fetched -> continue without the failed metadata
-	rm, err := MakeRunMetadata(connection, rp.id)
+	rm, err := rr.MakeRunMetadata(connection, rp.id, rr.FetchUnixInfo)
 
 	// if this were to happened, it should happen already at 2 but added again just in case
 	if rm == nil {
@@ -177,7 +163,11 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.startOfRun = now
 	rp.lastUpdate = now
 	rp.pathToStateDb = ctx.StateDbPath
-	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
+	if strings.ToLower(rp.cfg.DbImpl) == "carmen" {
+		rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, archiveDbDirectoryName)
+	} else {
+		rp.pathToArchiveDb = ctx.StateDbPath
+	}
 
 	// Check if any path-to-state-db is not initialized, terminate now if so
 	_, err = utils.GetDirectorySize(rp.pathToStateDb)
@@ -255,12 +245,12 @@ func (rp *registerProgress) PostRun(_ executor.State[txcontext.TxContext], ctx *
 	rp.Reset()
 	rp.ps.Close()
 
-	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	rp.meta.Meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
 	if err != nil {
-		rp.meta.meta["RunSucceed"] = strconv.FormatBool(false)
-		rp.meta.meta["RunError"] = fmt.Sprintf("%v", err)
+		rp.meta.Meta["RunSucceed"] = strconv.FormatBool(false)
+		rp.meta.Meta["RunError"] = fmt.Sprintf("%v", err)
 	} else {
-		rp.meta.meta["RunSucceed"] = strconv.FormatBool(true)
+		rp.meta.Meta["RunSucceed"] = strconv.FormatBool(true)
 	}
 
 	rp.meta.Print()
@@ -282,7 +272,9 @@ func (rp *registerProgress) GetId() string {
 }
 
 func (rp *registerProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return conn, RegisterProgressCreateTableIfNotExist, RegisterProgressInsertOrReplace,
+	return conn,
+		registerProgressCreateTableIfNotExist,
+		registerProgressInsertOrReplace,
 		func() [][]any {
 			values := [][]any{}
 
