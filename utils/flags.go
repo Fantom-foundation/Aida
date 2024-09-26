@@ -222,7 +222,7 @@ var (
 	SubstateEncodingFlag = cli.StringFlag{
 		Name:  "substate-encoding",
 		Usage: "select encoding when reading substate from disk: rlp (default) or protobuf",
-		Value: "default",
+		Value: "rlp",
 	}
 	TraceFlag = cli.BoolFlag{
 		Name:  "trace",
