@@ -232,6 +232,15 @@ type messageResult struct {
 	err        error
 }
 
+func newExecutionResult(failed bool, returnData []byte, gasUsed uint64, err error) executionResult {
+	return messageResult{
+		failed:     failed,
+		returnData: returnData,
+		gasUsed:    gasUsed,
+		err:        err,
+	}
+}
+
 func (w messageResult) Failed() bool {
 	return w.failed
 }
@@ -259,7 +268,10 @@ func (s *aidaProcessor) applyMessageUsingGeth(db state.VmStateDB, msg *core.Mess
 	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	r, err := core.ApplyMessage(evm, msg, gasPool)
-	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}, evm.TxContext.Origin
+	if r != nil {
+		return newExecutionResult(r.Failed(), r.Return(), r.UsedGas, errors.Join(r.Err, err)), evm.TxContext.Origin
+	}
+	return newExecutionResult(false, nil, 0, err), evm.TxContext.Origin
 }
 
 // applyMessageUsingSonic applies message using the sonic implementation of ApplyMessage using 'evmcore' package.
@@ -271,7 +283,10 @@ func (s *aidaProcessor) applyMessageUsingSonic(db state.VmStateDB, msg *core.Mes
 	var gasPool = new(evmcore.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	r, err := evmcore.ApplyMessage(evm, msg, gasPool)
-	return messageResult{r.Failed(), r.Return(), r.UsedGas, err}, evm.TxContext.Origin
+	if r != nil {
+		return newExecutionResult(r.Failed(), r.Return(), r.UsedGas, errors.Join(r.Err, err)), evm.TxContext.Origin
+	}
+	return newExecutionResult(false, nil, 0, err), evm.TxContext.Origin
 }
 
 // processRegularTx executes VM on a chosen storage system.
