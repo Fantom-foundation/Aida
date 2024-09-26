@@ -47,4 +47,10 @@ type BlockEnvironment interface {
 
 	// GetBlobBaseFee retrieves the base fee for blob transactions.
 	GetBlobBaseFee() *big.Int
+
+	// GetRandom returns the random hash.
+	GetRandom() *common.Hash
+
+	// GetFork returns the fork name of currently ran transaction.
+	GetFork() string
 }

@@ -501,6 +501,7 @@ func TestGetTransactionType(t *testing.T) {
 		InputSubstate: substate.WorldState{},
 		Message:       &substate.Message{},
 	}
+
 	data := substatecontext.NewTxContext(sub)
 
 	testTransaction := executor.State[txcontext.TxContext]{

@@ -73,6 +73,11 @@ type normaTxBlockEnv struct {
 	blkNumber uint64
 }
 
+// GetRandom is not used in Norma Tx-Generator.
+func (e normaTxBlockEnv) GetRandom() *common.Hash {
+	return nil
+}
+
 // GetCoinbase returns the coinbase address.
 func (e normaTxBlockEnv) GetCoinbase() common.Address {
 	return common.HexToAddress("0x1")
@@ -115,4 +120,9 @@ func (e normaTxBlockEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
 // GetBaseFee returns the base fee for transactions in the current block.
 func (e normaTxBlockEnv) GetBaseFee() *big.Int {
 	return big.NewInt(0)
+}
+
+func (e normaTxBlockEnv) GetFork() string {
+	// for now, only necessary for get-tests
+	return ""
 }
