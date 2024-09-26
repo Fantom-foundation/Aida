@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -94,6 +95,7 @@ func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmco
 		} else {
 			status = types.ReceiptStatusSuccessful
 		}
+		err = errors.Join(err, msgResult.Err)
 	}
 
 	return transactionResult{
