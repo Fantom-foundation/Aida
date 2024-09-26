@@ -24,7 +24,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/core"
 	"golang.org/x/exp/maps"
 
@@ -229,7 +228,7 @@ type aidaProcessor struct {
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
-		gasPool   = new(evmcore.GasPool)
+		gasPool   = new(core.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		inputEnv  = st.GetBlockEnvironment()
 		msg       = st.GetMessage()
@@ -247,12 +246,12 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
+	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gasPool)
+	msgResult, err := core.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
@@ -421,7 +420,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		err = fmt.Errorf("transaction failed")
 	}
 
-	result := &evmcore.ExecutionResult{
+	result := &core.ExecutionResult{
 		UsedGas:    uint64(receipt.GasUsed),
 		Err:        err,
 		ReturnData: receipt.Output,

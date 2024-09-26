@@ -17,10 +17,10 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -74,7 +74,7 @@ func (r transactionResult) String() string {
 	return fmt.Sprintf("Status: %v\nBloom: %s\nContract Address: %s\nGas Used: %v\nLogs: %v\n", r.status, string(r.bloom.Bytes()), r.contractAddress, r.gasUsed, r.logs)
 }
 
-func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
+func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *core.ExecutionResult, err error, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64
@@ -94,6 +94,7 @@ func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmco
 		} else {
 			status = types.ReceiptStatusSuccessful
 		}
+		err = errors.Join(err, msgResult.Err)
 	}
 
 	return transactionResult{
