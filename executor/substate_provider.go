@@ -39,7 +39,7 @@ func OpenSubstateProvider(cfg *utils.Config, ctxt *cli.Context, aidaDb db.BaseDB
 	if err != nil {
 		return nil, fmt.Errorf("failed to set substate encoding; %w", err)
 	}
-
+	
 	return &substateProvider{
 		db:                  substateDb,
 		ctxt:                ctxt,
