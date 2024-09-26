@@ -73,7 +73,7 @@ func (r transactionResult) String() string {
 	return fmt.Sprintf("Status: %v\nBloom: %s\nContract Address: %s\nGas Used: %v\nLogs: %v\n", r.status, string(r.bloom.Bytes()), r.contractAddress, r.gasUsed, r.logs)
 }
 
-func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult executionResult, origin common.Address) transactionResult {
+func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult executionResult, err error, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64
@@ -97,7 +97,7 @@ func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult execut
 
 	return transactionResult{
 		result:          returnData,
-		err:             msgResult.GetError(),
+		err:             err,
 		contractAddress: contract,
 		logs:            logs,
 		bloom:           types.BytesToBloom(types.LogsBloom(logs)),

@@ -26,6 +26,7 @@ import (
 
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/params"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -253,15 +254,6 @@ type messageResult struct {
 	err        error
 }
 
-func newExecutionResult(failed bool, returnData []byte, gasUsed uint64, err error) executionResult {
-	return messageResult{
-		failed:     failed,
-		returnData: returnData,
-		gasUsed:    gasUsed,
-		err:        err,
-	}
-}
-
 func (w messageResult) Failed() bool {
 	return w.failed
 }
@@ -278,36 +270,36 @@ func (w messageResult) GetError() error {
 	return w.err
 }
 
-type applyMessage func(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment) (executionResult, common.Address)
+type applyMessage func(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig) (executionResult, error)
 
 // applyMessageUsingGeth applies message using the go-ethereum implementation of ApplyMessage using 'core' package.
-func (s *aidaProcessor) applyMessageUsingGeth(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment) (executionResult, common.Address) {
+func (s *aidaProcessor) applyMessageUsingGeth(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig) (executionResult, error) {
 	// Here we use the geth implementation
 	txCtx := core.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 
 	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	r, err := core.ApplyMessage(evm, msg, gasPool)
-	if r != nil {
-		return newExecutionResult(r.Failed(), r.Return(), r.UsedGas, errors.Join(r.Err, err)), evm.TxContext.Origin
+	if err != nil {
+		return nil, err
 	}
-	return newExecutionResult(false, nil, 0, err), evm.TxContext.Origin
+	return messageResult{r.Failed(), r.Return(), r.UsedGas, r.Err}, nil
 }
 
 // applyMessageUsingSonic applies message using the sonic implementation of ApplyMessage using 'evmcore' package.
-func (s *aidaProcessor) applyMessageUsingSonic(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment) (executionResult, common.Address) {
+func (s *aidaProcessor) applyMessageUsingSonic(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig) (executionResult, error) {
 	// Here we use the sonic implementation
 	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 
 	var gasPool = new(evmcore.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	r, err := evmcore.ApplyMessage(evm, msg, gasPool)
-	if r != nil {
-		return newExecutionResult(r.Failed(), r.Return(), r.UsedGas, errors.Join(r.Err, err)), evm.TxContext.Origin
+	if err != nil {
+		return nil, err
 	}
-	return newExecutionResult(false, nil, 0, err), evm.TxContext.Origin
+	return messageResult{r.Failed(), r.Return(), r.UsedGas, r.Err}, nil
 }
 
 // processRegularTx executes VM on a chosen storage system.
@@ -328,9 +320,14 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	db.SetTxContext(txHash, tx)
 	snapshot := db.Snapshot()
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	msgResult, origin := s.applyMessage(db, msg, blockCtx, inputEnv)
+	msgResult, err := s.applyMessage(db, msg, blockCtx, inputEnv, chainCfg)
+	if err != nil {
+		// if transaction fails, revert to the first snapshot.
+		db.RevertToSnapshot(snapshot)
+		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+	}
 
-	if msgResult.GetError() != nil {
+	if msgResult != nil && msgResult.GetError() != nil {
 		db.RevertToSnapshot(snapshot)
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), msgResult.GetError())
 	}
@@ -346,7 +343,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
 	// if no prior error, create result and pass it to the data.
-	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, origin)
+	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, finalError, msg.From)
 	return
 }
 
@@ -502,7 +499,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		returnData: receipt.Output,
 	}
 
-	return newTransactionResult(log, msg, result, msg.From), nil
+	return newTransactionResult(log, msg, result, finalError, msg.From), nil
 }
 
 // toscaTxContext is a bridge between Tosca's transaction context and the one provided by the executor.
