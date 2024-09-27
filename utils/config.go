@@ -38,9 +38,15 @@ import (
 	"github.com/Fantom-foundation/Tosca/go/geth_adapter"
 	_ "github.com/Fantom-foundation/Tosca/go/interpreter/evmone"
 	_ "github.com/Fantom-foundation/Tosca/go/interpreter/evmzero"
-	_ "github.com/Fantom-foundation/Tosca/go/interpreter/lfvm"
+	"github.com/Fantom-foundation/Tosca/go/interpreter/lfvm"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
 )
+
+func init() {
+	if err := lfvm.RegisterExperimentalInterpreterConfigurations(); err != nil {
+		panic(fmt.Sprintf("failed to register experimental LFVM interpreter configurations: %v", err))
+	}
+}
 
 type ArgumentMode int
 type ChainID int
