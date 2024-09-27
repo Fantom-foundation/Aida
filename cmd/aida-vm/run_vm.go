@@ -45,7 +45,10 @@ func RunVm(ctx *cli.Context) error {
 	}
 	defer aidaDb.Close()
 
-	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	substateIterator, err := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open substate provider; %w", err)
+	}
 	defer substateIterator.Close()
 
 	processor, err := executor.MakeLiveDbTxProcessor(cfg)
