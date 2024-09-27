@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'quick' }
+    agent { label 'x86-4-32-s' }
 
     options {
         timestamps ()
@@ -13,7 +13,7 @@ pipeline {
         ARCHIVE = '--archive --archive-variant s5'
         PRIME = '--update-buffer-size 4000'
         VM = '--vm-impl lfvm'
-        AIDADB = '--aida-db /mnt/aida-db-central/aida-db'
+        AIDADB = '--aida-db /mnt/aida-db-mainnet/aida-db'
         TMPDB = '--db-tmp /mnt/tmp-disk'
         DBSRC = '/mnt/tmp-disk/state_db_carmen_go-file_${TOBLOCK}'
         PROFILE = '--cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown'
