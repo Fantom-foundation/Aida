@@ -93,7 +93,7 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 }
 
 func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
-	cfg := utils.NewTestConfig(t, 250, 0, 1, false)
+	cfg := utils.NewTestConfig(t, 250, 0, 1, false, "")
 	tests := []struct {
 		name               string
 		useGethTxProcessor bool
