@@ -111,6 +111,7 @@ type ethStateHashValidator struct {
 }
 
 func (e *ethStateHashValidator) GetStateHash(int) (common.Hash, error) {
+	// todo maybe use map and delete after use
 	hash := e.hashes[e.index]
 	e.index++
 
