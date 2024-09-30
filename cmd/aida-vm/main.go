@@ -57,7 +57,7 @@ func main() {
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbLoggingFlag,
 			&utils.CacheFlag,
-			&utils.UseGethBlockProcessorFlag,
+			&utils.UseGethTxProcessorFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

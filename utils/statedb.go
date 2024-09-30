@@ -111,14 +111,14 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	if cfg.StateDbSrcReadOnly {
 		cfg.ArchiveMode = stateDbInfo.ArchiveMode
 		cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
-	// If new blocks will be written to statedb, use the archive config from cli flags.
-	// Loaded state db with an archive may continue to be processed in a live-db mode or vice versa.
+		// If new blocks will be written to statedb, use the archive config from cli flags.
+		// Loaded state db with an archive may continue to be processed in a live-db mode or vice versa.
 	} else {
 		// if source db already has an archive, the archive variant must not change.
 		if cfg.ArchiveMode && stateDbInfo.ArchiveMode {
-			if cfg.ArchiveVariant != stateDbInfo.ArchiveVariant{
-			    cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
-			    log.Warning("Cannot change archive variant. Now using %s instead.", stateDbInfo.ArchiveVariant)
+			if cfg.ArchiveVariant != stateDbInfo.ArchiveVariant {
+				cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+				log.Warning("Cannot change archive variant. Now using %s instead.", stateDbInfo.ArchiveVariant)
 			}
 		}
 	}
@@ -224,12 +224,17 @@ func makeStateDBVariant(
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
+		chainCfg, err := cfg.GetChainConfig("")
+		if err != nil {
+			return nil, fmt.Errorf("cannot get chain config: %w", err)
+		}
+
 		return state.MakeGethStateDB(
 			directory,
 			variant,
 			rootHash,
 			cfg.ArchiveMode,
-			state.NewChainConduit(cfg.ChainID == EthereumChainID, cfg.ChainCfg),
+			state.NewChainConduit(cfg.ChainID == EthereumChainID, chainCfg),
 		)
 	case "carmen":
 		// Disable archive if not enabled.

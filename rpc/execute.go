@@ -31,35 +31,38 @@ import (
 // TODO FIX!
 const falsyContract = "0xe0c38b2a8d09aad53f1c67734b9a95e43d5981c0"
 
-func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) txcontext.Result {
+func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) (txcontext.Result, error) {
 	switch rec.Query.MethodBase {
 	case "getBalance":
-		return executeGetBalance(rec.Query.Params[0], archive)
+		return executeGetBalance(rec.Query.Params[0], archive), nil
 	case "getTransactionCount":
-		return executeGetTransactionCount(rec.Query.Params[0], archive)
+		return executeGetTransactionCount(rec.Query.Params[0], archive), nil
 	case "call":
 		if rec.Timestamp == 0 {
-			return nil
+			return nil, nil
 		}
-		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
+		evm, err := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
+		if err != nil {
+			return nil, err
+		}
 		// calls to this contract are excluded for now,
 		// this contract causes issues in validation
 		if strings.Compare(falsyContract, strings.ToLower(evm.args.To.String())) == 0 {
 			rec.SkipValidation = true
 		}
-		return executeCall(evm)
+		return executeCall(evm), nil
 
 	case "estimateGas":
 		// estimateGas is currently not suitable for rpc replay since the estimation  in geth is always calculated for current state
 		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
-		return executeGetCode(rec.Query.Params[0], archive)
+		return executeGetCode(rec.Query.Params[0], archive), nil
 	case "getStorageAt":
-		return executeGetStorageAt(rec.Query.Params, archive)
+		return executeGetStorageAt(rec.Query.Params, archive), nil
 	default:
 		break
 	}
-	return nil
+	return nil, nil
 }
 
 // executeGetBalance request into given archive and send result to comparator
