@@ -107,7 +107,7 @@ func runSubstates(cfg *utils.Config, provider executor.Provider[txcontext.TxCont
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		statedb.MakeStateDbPrepper(),
 		archiveInquirer,
-		validator.MakeStateHashValidator[txcontext.TxContext](cfg),
+		validator.MakeStateHashValidator[txcontext.TxContext](cfg, utils.MakeStateHashProvider(aidaDb)),
 		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
 		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),

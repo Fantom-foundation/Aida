@@ -35,7 +35,6 @@ func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chain
 		env:           stJson.CreateEnv(chainCfg, fork),
 		inputState:    stJson.Pre,
 		msg:           msg,
-		rootHash:      post.RootHash,
 		expectedError: post.ExpectException,
 	}
 }
@@ -49,12 +48,11 @@ type stateTestContext struct {
 	env           *stBlockEnvironment
 	inputState    types.GenesisAlloc
 	msg           *core.Message
-	rootHash      common.Hash
 	expectedError string
 }
 
 func (s *stateTestContext) GetStateHash() common.Hash {
-	return s.rootHash
+	return common.Hash{}
 }
 
 func (s *stateTestContext) GetOutputState() txcontext.WorldState {

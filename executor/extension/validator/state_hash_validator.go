@@ -30,19 +30,19 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func MakeStateHashValidator[T any](cfg *utils.Config) executor.Extension[T] {
+func MakeStateHashValidator[T any](cfg *utils.Config, hashProvider utils.StateHashProvider) executor.Extension[T] {
 	// todo make true when --validate is chosen (validate should enable all validations)
 
-	if !cfg.ValidateStateHashes {
-		return extension.NilExtension[T]{}
-	}
+	//if !cfg.ValidateStateHashes {
+	//	return extension.NilExtension[T]{}
+	//}
 
 	log := logger.NewLogger("INFO", "state-hash-validator")
-	return makeStateHashValidator[T](cfg, log)
+	return makeStateHashValidator[T](cfg, log, hashProvider)
 }
 
-func makeStateHashValidator[T any](cfg *utils.Config, log logger.Logger) *stateHashValidator[T] {
-	return &stateHashValidator[T]{cfg: cfg, log: log, nextArchiveBlockToCheck: int(cfg.First)}
+func makeStateHashValidator[T any](cfg *utils.Config, log logger.Logger, hashProvider utils.StateHashProvider) *stateHashValidator[T] {
+	return &stateHashValidator[T]{cfg: cfg, log: log, nextArchiveBlockToCheck: int(cfg.First), hashProvider: hashProvider}
 }
 
 type stateHashValidator[T any] struct {
@@ -66,8 +66,6 @@ func (e *stateHashValidator[T]) PreRun(_ executor.State[T], ctx *executor.Contex
 	} else if e.cfg.DbImpl != "geth" {
 		return errors.New("state-hash-validation only works with db-impl carmen or geth")
 	}
-
-	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb)
 	return nil
 }
 

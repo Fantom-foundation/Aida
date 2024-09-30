@@ -22,29 +22,30 @@ import (
 	statetest "github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
-	return ethTestProvider{cfg}
+func NewEthStateTestProvider(cfg *utils.Config) (Provider[txcontext.TxContext], []common.Hash, error) {
+	splitter, err := statetest.NewTestCaseSplitter(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tests, rootHashes, err := splitter.SplitStateTests()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ethTestProvider{tests}, rootHashes, nil
 }
 
 type ethTestProvider struct {
-	cfg *utils.Config
+	tests []statetest.Transaction
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	splitter, err := statetest.NewTestCaseSplitter(e.cfg)
-	if err != nil {
-		return err
-	}
-
-	tests, err := splitter.SplitStateTests()
-	if err != nil {
-		return err
-	}
-
-	for i, tx := range tests {
-		err = consumer(TransactionInfo[txcontext.TxContext]{
+	for i, tx := range e.tests {
+		err := consumer(TransactionInfo[txcontext.TxContext]{
 			// Blocks 0 and 1 are used by priming
 			Block:       2,
 			Transaction: i,

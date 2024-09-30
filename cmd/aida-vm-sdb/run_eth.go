@@ -27,6 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
 
@@ -96,7 +97,24 @@ func RunEthereumTest(ctx *cli.Context) error {
 		return err
 	}
 
-	return runEth(cfg, executor.NewEthStateTestProvider(cfg), nil, processor, nil)
+	provider, hashes, err := executor.NewEthStateTestProvider(cfg)
+	if err != nil {
+		return err
+	}
+
+	return runEth(cfg, provider, nil, processor, []executor.Extension[txcontext.TxContext]{validator.MakeStateHashValidator[txcontext.TxContext](cfg, &ethStateHashValidator{hashes: hashes})})
+}
+
+type ethStateHashValidator struct {
+	hashes []common.Hash
+	index  int
+}
+
+func (e *ethStateHashValidator) GetStateHash(int) (common.Hash, error) {
+	hash := e.hashes[e.index]
+	e.index++
+
+	return hash, nil
 }
 
 func runEth(
@@ -139,7 +157,7 @@ func runEth(
 			To:                     int(cfg.Last) + 1,
 			NumWorkers:             1,
 			State:                  stateDb,
-			ParallelismGranularity: executor.TransactionLevel,
+			ParallelismGranularity: executor.BlockLevel,
 		},
 		processor,
 		extensionList,

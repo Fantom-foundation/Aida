@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/tests"
 	"golang.org/x/exp/maps"
@@ -77,7 +78,7 @@ type TestCaseSplitter struct {
 // SplitStateTests iterates unmarshalled Geth-State test-files and divides them by 1) fork and
 // 2) tests cases. Each file contains 1..N enabledForks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
-func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err error) {
+func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, rootHashes []common.Hash, err error) {
 	var overall uint32
 
 	// Iterate all JSONs
@@ -98,7 +99,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 			}
 			chainCfg, err := s.getChainConfig(fork)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			// Iterate all tests within one fork
 			for _, post := range posts {
@@ -118,6 +119,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 					fork,
 					txCtx,
 				})
+				rootHashes = append(rootHashes, post.RootHash)
 				overall++
 			}
 		}
@@ -125,7 +127,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 
 	s.log.Noticef("Found %v runnable state tests...", overall)
 
-	return dividedTests, err
+	return dividedTests, rootHashes, err
 }
 
 func (s *TestCaseSplitter) getChainConfig(fork string) (*params.ChainConfig, error) {

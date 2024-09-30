@@ -63,7 +63,7 @@ func (e ethStateTestDbPrepper) PreTransaction(_ executor.State[txcontext.TxConte
 	return nil
 }
 
-func (e ethStateTestDbPrepper) PostTransaction(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateTestDbPrepper) PostBlock(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if ctx.State != nil {
 		err := ctx.State.Close()
 		if err != nil {
