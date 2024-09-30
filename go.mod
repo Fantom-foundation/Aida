@@ -7,12 +7,12 @@ toolchain go1.22.0
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-20240903120428-3fc9e177f6bb
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
-	github.com/Fantom-foundation/Substate v0.0.0-20240927114920-9485797574f2
+	github.com/Fantom-foundation/Substate v0.0.0-20240930092859-d12af8cad7ef
 	github.com/Fantom-foundation/Tosca v0.0.0-20240916150721-31800db41e5b
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20240116072301-a75735c4ef00
 	github.com/dsnet/compress v0.0.1
-	github.com/ethereum/go-ethereum v1.14.9
+	github.com/ethereum/go-ethereum v1.14.8
 	github.com/go-echarts/go-echarts/v2 v2.2.5
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/gogo/protobuf v1.3.2
