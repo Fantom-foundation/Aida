@@ -73,7 +73,6 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 	}
 
 	for name := range tosca.GetAllRegisteredProcessorFactories() {
-		fmt.Println("GetAllRegisteredProcessorFactories", name)
 		tests[name] = isTosca
 	}
 
