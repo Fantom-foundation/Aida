@@ -24,8 +24,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/Fantom-foundation/go-opera/evmcore"
-	"github.com/ethereum/go-ethereum/core"
+	geth_core "github.com/ethereum/go-ethereum/core"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -229,7 +228,7 @@ type aidaProcessor struct {
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
-		gasPool   = new(evmcore.GasPool)
+		gasPool   = new(geth_core.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		inputEnv  = st.GetBlockEnvironment()
 		msg       = st.GetMessage()
@@ -247,12 +246,12 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := evmcore.NewEVMTxContext(msg)
+	txCtx := geth_core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gasPool)
+	msgResult, err := geth_core.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
@@ -299,8 +298,8 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	}
 
 	blockCtx := &vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
+		CanTransfer: geth_core.CanTransfer,
+		Transfer:    geth_core.Transfer,
 		Coinbase:    inputEnv.GetCoinbase(),
 		BlockNumber: new(big.Int).SetUint64(inputEnv.GetNumber()),
 		Time:        inputEnv.GetTimestamp(),
@@ -421,7 +420,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		err = fmt.Errorf("transaction failed")
 	}
 
-	result := &evmcore.ExecutionResult{
+	result := &geth_core.ExecutionResult{
 		UsedGas:    uint64(receipt.GasUsed),
 		Err:        err,
 		ReturnData: receipt.Output,

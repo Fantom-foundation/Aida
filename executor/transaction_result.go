@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	geth_core "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -74,7 +74,7 @@ func (r transactionResult) String() string {
 	return fmt.Sprintf("Status: %v\nBloom: %s\nContract Address: %s\nGas Used: %v\nLogs: %v\n", r.status, string(r.bloom.Bytes()), r.contractAddress, r.gasUsed, r.logs)
 }
 
-func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
+func newTransactionResult(logs []*types.Log, msg *core.Message, msgResult *geth_core.ExecutionResult, err error, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64

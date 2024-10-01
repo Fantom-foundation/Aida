@@ -699,7 +699,7 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 	case NoArgs:
 	case PathArg:
 		if len(args) != 1 {
-			return fmt.Errorf("path argument (%v) is required to run this command", args[0])
+			return fmt.Errorf("path argument is required to run this command")
 		}
 
 		_, err := os.Stat(args[0])
