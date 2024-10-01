@@ -155,7 +155,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
-	case "", "aida":
+	case "", "aida", "aida-geth":
 		processor = makeAidaProcessor(cfg, vmCfg)
 	default:
 		interpreter, err := tosca.NewInterpreter(cfg.VmImpl)
@@ -185,20 +185,6 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
 		processor: processor,
 	}, nil
-}
-
-func makeAidaProcessor(cfg *utils.Config, vmCfg vm.Config) *aidaProcessor {
-	ap := &aidaProcessor{
-		vmCfg: vmCfg,
-		cfg:   cfg,
-		log:   logger.NewLogger(cfg.LogLevel, "AidaProcessor"),
-	}
-	ap.applyMessage = ap.applyMessageUsingSonic
-	if cfg.UseGethTxProcessor {
-		ap.applyMessage = ap.applyMessageUsingGeth
-	}
-
-	return ap
 }
 
 func (s *TxProcessor) isErrFatal() bool {
@@ -237,6 +223,24 @@ type aidaProcessor struct {
 	applyMessage applyMessage
 }
 
+// for testing purposes
+func makeAidaProcessor(cfg *utils.Config, vmCfg vm.Config) *aidaProcessor {
+	evmImpl := strings.ToLower(cfg.EvmImpl)
+
+	amf := applyMessageUsingSonic
+	switch evmImpl {
+	case "aida-geth":
+		amf = applyMessageUsingGeth
+	}
+
+	return &aidaProcessor{
+		vmCfg:        vmCfg,
+		cfg:          cfg,
+		log:          logger.NewLogger(cfg.LogLevel, fmt.Sprintf("AidaProcessor(%s)", evmImpl)),
+		applyMessage: amf,
+	}
+}
+
 // executionResult is a wrapper around ExecutionResult so both types from core and evmcore can be used.
 type executionResult interface {
 	Failed() bool
@@ -270,13 +274,13 @@ func (w messageResult) GetError() error {
 	return w.err
 }
 
-type applyMessage func(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig) (executionResult, error)
+type applyMessage func(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig, vmCfg vm.Config) (executionResult, error)
 
 // applyMessageUsingGeth applies message using the go-ethereum implementation of ApplyMessage using 'core' package.
-func (s *aidaProcessor) applyMessageUsingGeth(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig) (executionResult, error) {
+func applyMessageUsingGeth(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig, vmCfg vm.Config) (executionResult, error) {
 	// Here we use the geth implementation
 	txCtx := core.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, vmCfg)
 
 	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
@@ -288,10 +292,10 @@ func (s *aidaProcessor) applyMessageUsingGeth(db state.VmStateDB, msg *core.Mess
 }
 
 // applyMessageUsingSonic applies message using the sonic implementation of ApplyMessage using 'evmcore' package.
-func (s *aidaProcessor) applyMessageUsingSonic(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig) (executionResult, error) {
+func applyMessageUsingSonic(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig, vmCfg vm.Config) (executionResult, error) {
 	// Here we use the sonic implementation
 	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, vmCfg)
 
 	var gasPool = new(evmcore.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
@@ -320,7 +324,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	db.SetTxContext(txHash, tx)
 	snapshot := db.Snapshot()
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	msgResult, err := s.applyMessage(db, msg, blockCtx, inputEnv, chainCfg)
+	msgResult, err := s.applyMessage(db, msg, blockCtx, inputEnv, chainCfg, s.vmCfg)
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
