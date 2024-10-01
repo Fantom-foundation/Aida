@@ -327,10 +327,6 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
 	}
 
-	if msgResult != nil && msgResult.GetError() != nil {
-		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), msgResult.GetError())
-	}
 	// inform about failing transaction
 	if msgResult != nil && msgResult.Failed() {
 		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
