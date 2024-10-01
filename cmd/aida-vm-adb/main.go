@@ -58,7 +58,6 @@ var RunArchiveApp = cli.App{
 
 		// VM
 		&utils.VmImplementation,
-		&utils.UseGethTxProcessorFlag,
 	},
 	Description: "Runs transactions on historic states derived from an archive DB",
 }
