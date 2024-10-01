@@ -783,7 +783,7 @@ func (cc *configContext) reportNewConfig() {
 	}
 	log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
 	log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
-	log.Noticef("Used EVM implementation: %v", cfg.VmImpl)
+	log.Noticef("Used EVM implementation: %v", cfg.EvmImpl)
 	log.Noticef("Used VM implementation: %v", cfg.VmImpl)
 	log.Infof("Aida DB directory: %v", cfg.AidaDb)
 
