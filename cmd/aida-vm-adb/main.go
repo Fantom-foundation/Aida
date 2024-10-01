@@ -58,6 +58,7 @@ var RunArchiveApp = cli.App{
 
 		// VM
 		&utils.VmImplementation,
+		&utils.EvmImplementation,
 	},
 	Description: "Runs transactions on historic states derived from an archive DB",
 }
