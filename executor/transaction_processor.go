@@ -375,6 +375,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 		Difficulty:  inputEnv.GetDifficulty(),
 		GasLimit:    inputEnv.GetGasLimit(),
 		GetHash:     getHash,
+		Random:      inputEnv.GetRandom(),
 	}
 	// If currentBaseFee is defined, add it to the vmContext.
 	baseFee := inputEnv.GetBaseFee()

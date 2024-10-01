@@ -17,6 +17,8 @@
 package validator
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -44,9 +46,16 @@ type shadowDbValidator struct {
 
 func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	// Retrieve hash from the state, if this there is mismatch between prime and shadow db error is returned
-	_, err := ctx.State.GetHash()
+	got, err := ctx.State.GetHash()
 	if err != nil {
 		return err
 	}
+
+	// Todo move to state_hash_validator
+	want := s.Data.GetStateHash()
+	if got != want {
+		return fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
+	}
+
 	return ctx.State.Error()
 }
