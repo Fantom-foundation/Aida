@@ -49,6 +49,7 @@ var RecordCommand = cli.Command{
 		&utils.AidaDbFlag,
 		&log.LogLevelFlag,
 		&utils.TrackerGranularityFlag,
+		&utils.EvmImplementation,
 	},
 	Description: `
 The trace record command requires two arguments:
