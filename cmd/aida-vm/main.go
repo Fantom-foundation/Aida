@@ -57,7 +57,6 @@ func main() {
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbLoggingFlag,
 			&utils.CacheFlag,
-			&utils.UseGethTxProcessorFlag,
 			&utils.SubstateEncodingFlag,
 		},
 	}
