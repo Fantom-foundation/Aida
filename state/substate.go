@@ -29,7 +29,7 @@ import (
 // NewOffTheChainStateDB returns an empty in-memory *state.StateDB without disk caches
 func NewOffTheChainStateDB() *state.StateDB {
 	db := rawdb.NewMemoryDatabase()
-	statedb, _ := state.New(types.EmptyRootHash, db, nil)
+	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(db), nil)
 	return statedb
 }
 
