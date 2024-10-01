@@ -452,9 +452,4 @@ var (
 		Usage:   "determines number of workers",
 		Value:   4,
 	}
-	UseGethTxProcessorFlag = cli.BoolFlag{
-		Name:  "use-geth-tx-processor",
-		Usage: "When set, use go-ethereum/core instead of go-opera/evmcore when processing a transaction.",
-		Value: false,
-	}
 )
