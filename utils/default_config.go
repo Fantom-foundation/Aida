@@ -106,7 +106,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		// TODO re-enable equality check once supported in Carmen
 		StateValidationMode:   SubsetCheck,
 		SubstateDb:            getFlagValue(ctx, AidaDbFlag).(string),
-		SubstateEncoding:      getFlagValue(ctx, SubstateEncodingFlag).(string),
+		
 		SyncPeriodLength:      getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
 		TargetDb:              getFlagValue(ctx, TargetDbFlag).(string),
 		TargetEpoch:           getFlagValue(ctx, TargetEpochFlag).(uint64),
@@ -120,7 +120,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		UpdateDb:              getFlagValue(ctx, UpdateDbFlag).(string),
 		UpdateOnFailure:       getFlagValue(ctx, UpdateOnFailure).(bool),
 		UpdateType:            getFlagValue(ctx, UpdateTypeFlag).(string),
-		Validate:              getFlagValue(ctx, ValidateFlag).(bool),
+		UseGethTxProcessor:    getFlagValue(ctx, UseGethTxProcessorFlag).(bool),
+    Validate:              getFlagValue(ctx, ValidateFlag).(bool),
 		ValidateStateHashes:   getFlagValue(ctx, ValidateStateHashesFlag).(bool),
 		ValidateTxState:       getFlagValue(ctx, ValidateTxStateFlag).(bool),
 		ValuesNumber:          getFlagValue(ctx, ValuesNumberFlag).(int64),

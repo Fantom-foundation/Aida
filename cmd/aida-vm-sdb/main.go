@@ -118,6 +118,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.TrackProgressFlag,
 		&utils.ErrorLoggingFlag,
 		&utils.TrackerGranularityFlag,
+		&utils.UseGethTxProcessorFlag,
 	},
 	Description: `
 The aida-vm-sdb substate command requires two arguments: <blockNumFirst> <blockNumLast>
@@ -174,6 +175,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.BlockLengthFlag,
 		&utils.TrackerGranularityFlag,
+		&utils.UseGethTxProcessorFlag,
 	},
 	Description: `
 The aida-vm-sdb tx-generator command requires two arguments: <blockNumFirst> <blockNumLast>

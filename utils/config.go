@@ -249,6 +249,7 @@ type Config struct {
 	UpdateDb                 string         // update-set directory
 	UpdateOnFailure          bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 	UpdateType               string         // download datatype
+	UseGethTxProcessor       bool           // if true, uses go-ethereum/core instead of go-opera/evmcore when processing a transaction
 	Validate                 bool           // validate validate aida-db
 	ValidateStateHashes      bool           // if this is true state hash validation is enabled in Executor
 	ValidateTxState          bool           // validate stateDB before and after transaction
@@ -784,6 +785,7 @@ func (cc *configContext) reportNewConfig() {
 	log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
 	log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
 	log.Noticef("Used EVM implementation: %v", cfg.VmImpl)
+	log.Noticef("Forced geth block processor?: %v", cfg.UseGethTxProcessor)
 	log.Noticef("Used VM implementation: %v", cfg.VmImpl)
 	log.Infof("Aida DB directory: %v", cfg.AidaDb)
 
