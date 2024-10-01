@@ -24,6 +24,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/Fantom-foundation/go-opera/evmcore"
+	"github.com/ethereum/go-ethereum/core"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -31,10 +33,8 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -102,6 +102,27 @@ func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Co
 	}
 
 	return err
+}
+
+// MakeEthTestProcessor creates an executor.Processor which processes transaction created from ethereum test package.
+func MakeEthTestProcessor(cfg *utils.Config) (*ethTestProcessor, error) {
+	processor, err := MakeTxProcessor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &ethTestProcessor{processor}, nil
+}
+
+type ethTestProcessor struct {
+	*TxProcessor
+}
+
+// Process transaction inside state into given LIVE StateDb
+func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+	// We ignore error in this case, because some tests require the processor to fail,
+	// ethStateTestValidator decides whether error is fatal.
+	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+	return nil
 }
 
 type TxProcessor struct {
@@ -218,10 +239,16 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	// prepare tx
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
+	chainCfg, err := s.cfg.GetChainConfig(inputEnv.GetFork())
+	// Return early if chain config cannot be created.
+	if err != nil {
+		return res, fmt.Errorf("cannot get chain config: %w", err)
+	}
+
 	db.SetTxContext(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	txCtx := core.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, s.cfg.ChainCfg, s.vmCfg)
+	txCtx := evmcore.NewEVMTxContext(msg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 	snapshot := db.Snapshot()
 
 	// apply
@@ -244,7 +271,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	// if no prior error, create result and pass it to the data.
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, err, evm.TxContext.Origin)
+	res = newTransactionResult(db.GetLogs(txHash, uint64(block), blockHash), msg, msgResult, finalError, evm.TxContext.Origin)
 	return
 }
 
@@ -289,7 +316,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 
 	blobBaseFee := inputEnv.GetBlobBaseFee()
 	if blobBaseFee != nil {
-		blockCtx.BlobBaseFee = new(big.Int).Set(blobBaseFee) // todo maybe use eip4844.CalcBlobGas()
+		blockCtx.BlobBaseFee = new(big.Int).Set(blobBaseFee)
 	}
 	return blockCtx
 }
@@ -308,11 +335,16 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 	blockEnvironment := st.GetBlockEnvironment()
 	message := st.GetMessage()
 
+	chainCfg, err := t.cfg.GetChainConfig(blockEnvironment.GetFork())
+	if err != nil {
+		return res, fmt.Errorf("cannot get chain config: %w", err)
+	}
+
 	revision := tosca.R07_Istanbul
-	if block >= int(t.cfg.ChainCfg.BerlinBlock.Uint64()) {
+	if block >= int(chainCfg.BerlinBlock.Uint64()) {
 		revision = tosca.R09_Berlin
 	}
-	if block >= int(t.cfg.ChainCfg.LondonBlock.Uint64()) {
+	if block >= int(chainCfg.LondonBlock.Uint64()) {
 		revision = tosca.R10_London
 	}
 
@@ -321,7 +353,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		Timestamp:   int64(blockEnvironment.GetTimestamp()),
 		GasLimit:    tosca.Gas(blockEnvironment.GetGasLimit()),
 		Coinbase:    tosca.Address(blockEnvironment.GetCoinbase()),
-		ChainID:     tosca.Word(bigToValue(t.cfg.ChainCfg.ChainID)),
+		ChainID:     tosca.Word(bigToValue(chainCfg.ChainID)),
 		PrevRandao:  tosca.Hash(bigToValue(blockEnvironment.GetDifficulty())),
 		BaseFee:     bigToValue(blockEnvironment.GetBaseFee()),
 		BlobBaseFee: tosca.Value{}, // = 0, since blobs are not supported by Fantom yet

@@ -70,6 +70,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ValidateStateHashesFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
+		&utils.MaxNumErrorsFlag,
 
 		// Ethereum execution tests
 		&utils.EthTestTypeFlag,
@@ -88,8 +89,9 @@ func RunEthereumTest(ctx *cli.Context) error {
 
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
+	cfg.ChainID = utils.EthTestsChainID
 
-	processor, err := executor.MakeLiveDbTxProcessor(cfg)
+	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {
 		return err
 	}

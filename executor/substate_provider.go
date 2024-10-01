@@ -19,6 +19,8 @@ package executor
 //go:generate mockgen -source substate_provider.go -destination substate_provider_mocks.go -package executor
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -31,9 +33,18 @@ import (
 // ----------------------------------------------------------------------------
 
 // OpenSubstateProvider opens a substate database as configured in the given parameters.
-func OpenSubstateProvider(cfg *utils.Config, ctxt *cli.Context, aidaDb db.BaseDB) Provider[txcontext.TxContext] {
+func OpenSubstateProvider(cfg *utils.Config, ctxt *cli.Context, aidaDb db.BaseDB) (Provider[txcontext.TxContext], error) {
 	substateDb := db.MakeDefaultSubstateDBFromBaseDB(aidaDb)
-	return &substateProvider{substateDb, ctxt, cfg.Workers}
+	_, err := substateDb.SetSubstateEncoding(cfg.SubstateEncoding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set substate encoding; %w", err)
+	}
+
+	return &substateProvider{
+		db:                  substateDb,
+		ctxt:                ctxt,
+		numParallelDecoders: cfg.Workers,
+	}, nil
 }
 
 // substateProvider is an adapter of Aida's SubstateProvider interface defined above to the

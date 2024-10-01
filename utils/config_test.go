@@ -56,7 +56,7 @@ func TestUtilsConfig_GetChainConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("ChainID: %d", tc), func(t *testing.T) {
-			chainConfig, err := GetChainConfig(tc)
+			chainConfig, err := getChainConfig(tc, "")
 			if err != nil {
 				t.Fatalf("cannot get chain config: %v", err)
 			}
@@ -739,18 +739,6 @@ func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
 	// checks
 	if cfg.DbTmp != os.TempDir() {
 		t.Fatalf("failed to adjust temporary database location; got: %v; expected: %v", cfg.DbTmp, os.TempDir())
-	}
-}
-
-func TestConfigContext_setChainId_AutomaticallyAssingsForEthTests(t *testing.T) {
-	cfg := &Config{}
-	cc := NewConfigContext(cfg, &cli.Context{Command: &cli.Command{Name: ethTestCmdName}})
-	if err := cc.setChainId(); err != nil {
-		t.Fatalf("failed to set chain-id: %v", err)
-	}
-
-	if cc.cfg.ChainID != EthTestsChainID {
-		t.Errorf("unexpected chain-id\n got: %v want: %v", cc.cfg.ChainID, EthTestsChainID)
 	}
 }
 
