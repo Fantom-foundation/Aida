@@ -239,6 +239,7 @@ type Config struct {
 	SyncPeriodLength         uint64         // length of a sync-period in number of blocks
 	TargetDb                 string         // represents the path of a target DB
 	TargetEpoch              uint64         // represents the ID of target epoch to be reached by autogen patch generator
+	EthTestHash              string         // represents test hash from eth-test package we want to run
 	Trace                    bool           // trace flag
 	TraceDirectory           string         // name of trace directory
 	TraceFile                string         // name of trace file
@@ -261,6 +262,7 @@ type Config struct {
 	// -- cached results --
 
 	interpreterFactory vm.InterpreterFactory // cached interpreter factory to facilitate reuse in interpreter instances
+
 }
 
 type configContext struct {

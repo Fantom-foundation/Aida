@@ -7,10 +7,15 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
+type info struct {
+	GeneratedTestHash string `json:"generatedTestHash"`
+}
+
 // stJSON serves as a 'middleman' into which are data unmarshalled from geth test files.
 type stJSON struct {
 	path        string
 	description string
+	Info        info                `json:"_info"`
 	Env         stBlockEnvironment  `json:"env"`
 	Pre         types.GenesisAlloc  `json:"pre"`
 	Tx          stTransaction       `json:"transaction"`
@@ -24,6 +29,10 @@ func (s *stJSON) setPath(path string) {
 
 func (s *stJSON) setDescription(desc string) {
 	s.description = desc
+}
+
+func (s *stJSON) getGeneratedTestHash() string {
+	return s.Info.GeneratedTestHash
 }
 
 func (s *stJSON) CreateEnv(chainCfg *params.ChainConfig, fork string) *stBlockEnvironment {

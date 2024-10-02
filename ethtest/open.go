@@ -31,6 +31,7 @@ type ethTest interface {
 	*stJSON
 	setPath(path string)
 	setDescription(desc string)
+	getGeneratedTestHash() string
 }
 
 // getTestsWithinPath returns all tests in given directory (and subdirectories)
@@ -44,7 +45,7 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 
 	// Check for single file
 	if !info.IsDir() {
-		tests, err := readTestsFromFile[T](path)
+		tests, err := readTestsFromFile[T](path, cfg.EthTestHash)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +87,7 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 	var tests []T
 
 	for _, p := range filePaths {
-		toAppend, err := readTestsFromFile[T](p)
+		toAppend, err := readTestsFromFile[T](p, cfg.EthTestHash)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +97,7 @@ func getTestsWithinPath[T ethTest](cfg *utils.Config, testType utils.EthTestType
 	return tests, err
 }
 
-func readTestsFromFile[T ethTest](path string) ([]T, error) {
+func readTestsFromFile[T ethTest](path string, testHash string) ([]T, error) {
 	var tests []T
 	file, err := os.Open(path)
 	if err != nil {
@@ -116,7 +117,15 @@ func readTestsFromFile[T ethTest](path string) ([]T, error) {
 	for desc, t := range b {
 		t.setPath(path)
 		t.setDescription(desc)
+		// do we want to run a single test?
+		if testHash != "" && testHash == t.getGeneratedTestHash() {
+			tests = append(tests, t)
+			return tests, nil
+		}
 		tests = append(tests, t)
+	}
+	if tests == nil {
+		return nil, fmt.Errorf("no tests found for given setup")
 	}
 	return tests, nil
 }

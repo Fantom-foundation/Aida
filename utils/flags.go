@@ -452,4 +452,8 @@ var (
 		Usage:   "determines number of workers",
 		Value:   4,
 	}
+	EthTestHashFlag = cli.StringFlag{
+		Name:  "eth-test-hash",
+		Usage: "determines which single test from eth-test package do we want to run",
+	}
 )

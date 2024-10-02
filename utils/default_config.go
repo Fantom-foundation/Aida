@@ -128,6 +128,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		VmImpl:              getFlagValue(ctx, VmImplementation).(string),
 		Workers:             getFlagValue(ctx, WorkersFlag).(int),
 		TxGeneratorType:     getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
+		EthTestHash:         getFlagValue(ctx, EthTestHashFlag).(string),
 	}
 
 	return cfg
