@@ -117,10 +117,14 @@ func readTestsFromFile[T ethTest](path string, testHash string) ([]T, error) {
 	for desc, t := range b {
 		t.setPath(path)
 		t.setDescription(desc)
+
 		// do we want to run a single test?
-		if testHash != "" && testHash == t.getGeneratedTestHash() {
-			tests = append(tests, t)
-			return tests, nil
+		if testHash != "" {
+			if testHash == t.getGeneratedTestHash() {
+				tests = append(tests, t)
+				return tests, nil
+			}
+			continue
 		}
 		tests = append(tests, t)
 	}
