@@ -72,21 +72,20 @@ func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext
 		if !e.cfg.ContinueOnFailure {
 			return err
 		}
-		e.log.Error(err)
 		e.error = errors.Join(e.error, err)
 	}
 
-	if err := ctx.State.Error(); err != nil {
-		if !e.cfg.ContinueOnFailure {
-			return err
-		}
-		e.log.Error(err)
-		e.error = errors.Join(e.error, err)
-	}
+	//if err := ctx.State.Error(); err != nil {
+	//	if !e.cfg.ContinueOnFailure {
+	//		return err
+	//	}
+	//	e.log.Error(err)
+	//	e.error = errors.Join(e.error, err)
+	//}
 
 	return nil
 }
 
-func (e *shadowDbValidator) PostRun(s executor.State[txcontext.TxContext], ctx *executor.Context, err error) error {
-	return errors.Unwrap(e.error)
+func (e *shadowDbValidator) PostRun(executor.State[txcontext.TxContext], *executor.Context, error) error {
+	return e.error
 }

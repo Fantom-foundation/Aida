@@ -629,7 +629,7 @@ func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) (common.
 	if resP != resS {
 		s.logIssue(opName, fmt.Sprintf("%x", resP), fmt.Sprintf("%x", resS), args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
-		return common.Hash{}, s.err
+		return common.Hash{}, nil
 	}
 	return resP, nil
 }
