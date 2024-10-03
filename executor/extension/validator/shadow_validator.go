@@ -17,10 +17,12 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -36,12 +38,15 @@ func MakeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxCon
 func makeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	return &shadowDbValidator{
 		cfg: cfg,
+		log: log.NewLogger("info", "shadow-validator"),
 	}
 }
 
 type shadowDbValidator struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg *utils.Config
+	cfg   *utils.Config
+	error error
+	log   log.Logger
 }
 
 func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -54,8 +59,21 @@ func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext
 	// Todo move to state_hash_validator in different PR
 	want := s.Data.GetStateHash()
 	if got != want {
-		return fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
+		err = fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
+		if !e.cfg.ContinueOnFailure {
+			return err
+		}
+		e.log.Error(err)
+		e.error = errors.Join(e.error, err)
 	}
 
-	return ctx.State.Error()
+	if err = ctx.State.Error(); err != nil {
+		if !e.cfg.ContinueOnFailure {
+			return err
+		}
+		e.log.Error(err)
+		e.error = errors.Join(e.error, err)
+	}
+
+	return nil
 }
