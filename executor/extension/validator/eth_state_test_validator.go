@@ -25,7 +25,10 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -60,6 +63,11 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 }
 
 func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	// todo add total counter
+
+	// todo add log rlpHash validation in separate PR
+	//e.log.Notice(rlpHash(ctx.State.GetLogs(common.Hash{}, 0, common.Hash{})))
+
 	var err error
 	_, got := ctx.ExecutionResult.GetRawResult()
 	_, want := state.Data.GetResult().GetRawResult()
@@ -100,4 +108,11 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	}
 
 	return nil
+}
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewLegacyKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
 }

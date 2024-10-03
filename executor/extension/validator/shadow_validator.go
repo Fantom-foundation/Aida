@@ -72,7 +72,7 @@ func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext
 		if !e.cfg.ContinueOnFailure {
 			return err
 		}
-		e.error = errors.Join(e.error, err)
+		e.error = errors.Join(e.error, fmt.Errorf("TEST INFO: %s\nERR: %w", s.Data, err))
 	}
 
 	//if err := ctx.State.Error(); err != nil {
