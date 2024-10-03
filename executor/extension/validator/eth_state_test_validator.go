@@ -25,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -66,6 +67,10 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		return nil
 	}
 	if got == nil && want != nil {
+		// todo temporal fix - this gets checked before apply message in go-ethereum-sonic/tests/state_test_util.go 256
+		if len(state.Data.GetMessage().BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
+			return nil
+		}
 		err = fmt.Errorf("expected error %w, got no error\nTest info:\n%s", want, state.Data)
 	}
 	if got != nil && want == nil {

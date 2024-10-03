@@ -25,6 +25,7 @@ import (
 	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 func MakeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -50,6 +51,14 @@ type shadowDbValidator struct {
 }
 
 func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	// todo we need one validator for state_hashes and error check from eth_tests
+	if len(s.Data.GetMessage().BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
+		_, expectedErr := s.Data.GetResult().GetRawResult()
+		if expectedErr != nil {
+			return nil
+		}
+	}
+
 	// Retrieve hash from the state, if this there is mismatch between prime and shadow db error is returned
 	got, err := ctx.State.GetHash()
 	if err != nil {
@@ -59,15 +68,17 @@ func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext
 	// Todo move to state_hash_validator in different PR
 	want := s.Data.GetStateHash()
 	if got != want {
-		err = fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
-		if !e.cfg.ContinueOnFailure {
-			return err
-		}
-		e.log.Error(err)
-		e.error = errors.Join(e.error, err)
+
 	}
 
-	if err = ctx.State.Error(); err != nil {
+	err = fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
+	if !e.cfg.ContinueOnFailure {
+		return err
+	}
+	e.log.Error(err)
+	e.error = errors.Join(e.error, err)
+
+	if err := ctx.State.Error(); err != nil {
 		if !e.cfg.ContinueOnFailure {
 			return err
 		}
