@@ -77,3 +77,7 @@ func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext
 
 	return nil
 }
+
+func (e *shadowDbValidator) PostRun(s executor.State[txcontext.TxContext], ctx *executor.Context, err error) error {
+	return errors.Unwrap(e.error)
+}
