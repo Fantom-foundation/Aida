@@ -68,15 +68,13 @@ func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext
 	// Todo move to state_hash_validator in different PR
 	want := s.Data.GetStateHash()
 	if got != want {
-
+		err = fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
+		if !e.cfg.ContinueOnFailure {
+			return err
+		}
+		e.log.Error(err)
+		e.error = errors.Join(e.error, err)
 	}
-
-	err = fmt.Errorf("unexpected state root hash, got: %v, want: %v", got, want)
-	if !e.cfg.ContinueOnFailure {
-		return err
-	}
-	e.log.Error(err)
-	e.error = errors.Join(e.error, err)
 
 	if err := ctx.State.Error(); err != nil {
 		if !e.cfg.ContinueOnFailure {
