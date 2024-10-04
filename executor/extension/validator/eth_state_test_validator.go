@@ -110,6 +110,10 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	return nil
 }
 
+func (e *ethStateTestValidator) PostRun(executor.State[txcontext.TxContext], *executor.Context, error) error {
+	return e.finalErr
+}
+
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, x)
