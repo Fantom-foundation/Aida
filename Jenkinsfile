@@ -8,7 +8,6 @@ pipeline {
     }
 
     environment {
-        GOROOT = '/usr/lib/go-1.21/'
         STORAGE = '--db-impl carmen --db-variant go-file --carmen-schema 3'
         PRIME = '--update-buffer-size 4000'
         VM = '--vm-impl lfvm'
