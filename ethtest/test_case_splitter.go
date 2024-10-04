@@ -78,7 +78,7 @@ type TestCaseSplitter struct {
 // 2) tests cases. Each file contains 1..N enabledForks, one block environment (marked as 'env') and one
 // input alloc (marked as 'env'). Each fork within a file contains 1..N tests (marked as 'post').
 func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err error) {
-	var overall uint32
+	var overall int
 
 	// Iterate all JSONs
 	for _, stJson := range s.jsons {
@@ -113,7 +113,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 				if fork == "Paris" {
 					fork = "Merge"
 				}
-				txCtx := newStateTestTxContext(stJson, msg, post, chainCfg, fork, postNumber)
+				txCtx := newStateTestTxContext(stJson, msg, post, chainCfg, fork, overall)
 				dividedTests = append(dividedTests, Transaction{
 					fork,
 					txCtx,

@@ -31,7 +31,6 @@ func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chain
 		fork:          fork,
 		path:          stJson.path,
 		postNumber:    postNumber,
-		description:   stJson.description,
 		env:           stJson.CreateEnv(chainCfg, fork),
 		inputState:    stJson.Pre,
 		msg:           msg,
@@ -44,7 +43,6 @@ type stateTestContext struct {
 	txcontext.NilTxContext
 	fork          string // which fork is the test running
 	path          string // path to file from which is the test
-	description   string // description from JSON test file
 	postNumber    int    // the post number within one 'fork' within one JSON file
 	env           *stBlockEnvironment
 	inputState    types.GenesisAlloc
@@ -79,5 +77,5 @@ func (s *stateTestContext) GetResult() txcontext.Result {
 }
 
 func (s *stateTestContext) String() string {
-	return fmt.Sprintf("Test path: %v\nDescription: %v\nFork: %v\nPost number: %v", s.path, s.description, s.fork, s.postNumber)
+	return fmt.Sprintf("Test path: %v\nFork: %v\nTest number: %v", s.path, s.fork, s.postNumber)
 }
