@@ -167,7 +167,6 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		if evm == nil {
 			available := maps.Keys(tosca.GetAllRegisteredProcessorFactories())
 			available = append(available, "aida")
-			available = append(available, "aida-geth")
 			slices.Sort(available)
 			return nil, fmt.Errorf("unknown EVM implementation: %s, supported: %v", cfg.EvmImpl, available)
 		}
