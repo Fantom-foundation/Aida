@@ -17,7 +17,6 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -43,10 +42,8 @@ func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Ex
 
 type ethStateTestValidator struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg            *utils.Config
-	log            logger.Logger
-	numberOfErrors int
-	finalErr       error
+	cfg *utils.Config
+	log logger.Logger
 }
 
 func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -76,23 +73,33 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		return nil
 	}
 
-	if !e.cfg.ContinueOnFailure {
-		return err
-	}
+	return e.checkFatality(err, ctx.ErrorInput)
+}
 
-	ctx.ErrorInput <- err
-	e.finalErr = errors.Join(e.finalErr, err)
-	e.numberOfErrors++
-
-	// endless run
-	if e.cfg.MaxNumErrors == 0 {
+// PostBlock validates state root hash.
+// This needs to be done here instead of PostTransaction because EndBlock is being called in PostTransaction in
+// executor/extension/statedb/eth_state_test_scope_event_emitter.go, and it needs to be called before GetHash.
+func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	if ctx.State == nil {
 		return nil
 	}
 
-	// too many errors
-	if e.numberOfErrors >= e.cfg.MaxNumErrors {
-		return e.finalErr
+	got, err := ctx.State.GetHash()
+	if err != nil {
+		return err
+	}
+	want := state.Data.GetStateHash()
+	if got != want {
+		err = fmt.Errorf("unexpected root hash, got: %s, want: %s", got, want)
 	}
 
+	return e.checkFatality(err, ctx.ErrorInput)
+}
+
+func (e *ethStateTestValidator) checkFatality(err error, errChan chan error) error {
+	if !e.cfg.ContinueOnFailure {
+		return err
+	}
+	errChan <- err
 	return nil
 }
