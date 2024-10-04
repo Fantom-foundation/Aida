@@ -79,10 +79,10 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		if len(state.Data.GetMessage().BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
 			return nil
 		}
-		err = fmt.Errorf("expected error %w, got no error\nTest info:\n%s", want, state.Data)
+		err = fmt.Errorf("expected error %w, got no error", want)
 	}
 	if got != nil && want == nil {
-		err = fmt.Errorf("unexpected error: %w\nTest info:\n%s", got, state.Data)
+		err = fmt.Errorf("unexpected error: %w", got)
 	}
 	if want != nil && got != nil {
 		// TODO check error string - requires somewhat complex string parsing
@@ -94,7 +94,7 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	}
 
 	ctx.ErrorInput <- err
-	e.finalErr = errors.Join(e.finalErr, err)
+	e.finalErr = errors.Join(e.finalErr, fmt.Errorf("ERROR VALIDATION FAILED: %s\n\tERR: \n\t%w", state.Data, err))
 	e.numberOfErrors++
 
 	// endless run

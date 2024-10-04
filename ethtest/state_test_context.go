@@ -79,5 +79,5 @@ func (s *stateTestContext) GetResult() txcontext.Result {
 }
 
 func (s *stateTestContext) String() string {
-	return fmt.Sprintf("Test path: %v\nDescription: %v\nFork: %v\nPost number: %v", s.path, s.description, s.fork, s.postNumber)
+	return fmt.Sprintf("Test path: %v", s.path)
 }
