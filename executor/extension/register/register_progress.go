@@ -42,7 +42,7 @@ const (
 )
 
 const (
-	archiveDbDirectoryName = "archive"
+	archiveDbDirectoryName        = "archive"
 	defaultReportFrequency uint64 = 100_000
 
 	registerProgressCreateTableIfNotExist = `
