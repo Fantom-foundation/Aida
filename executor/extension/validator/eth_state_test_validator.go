@@ -50,7 +50,7 @@ type ethStateTestValidator struct {
 }
 
 func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
+	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), true, e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
 	}

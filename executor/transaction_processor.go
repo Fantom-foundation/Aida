@@ -333,7 +333,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 
 	// inform about failing transaction
 	if msgResult != nil && msgResult.Failed() {
-		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
+		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed; %v", block, tx, msgResult.GetError().Error())
 	}
 
 	// check whether getHash func produced an error
