@@ -19,7 +19,9 @@ package validator
 import (
 	"bytes"
 	"fmt"
+	"slices"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -27,8 +29,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
 )
+
+// ethereumLfvmBlockExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
+// Starting with the Shanghai revision and eip-3860 this was fixed
+var ethereumLfvmBlockExceptions = []int{13803456, 14340503, 14953169, 15025981, 15427798, 15445481}
 
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
@@ -37,7 +44,7 @@ func validateWorldState(cfg *utils.Config, db state.VmStateDB, expectedAlloc txc
 	var err error
 	switch cfg.StateValidationMode {
 	case utils.SubsetCheck:
-		err = doSubsetValidation(expectedAlloc, db, cfg.UpdateOnFailure)
+		err = doSubsetValidation(expectedAlloc, db)
 	case utils.EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)
@@ -148,45 +155,32 @@ func printAccountDiffSummary(label string, want, have txcontext.Account, log log
 
 // doSubsetValidation validates whether the given alloc is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOnFail bool) error {
+func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB) error {
 	var err string
 
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
-			if updateOnFail {
-				db.CreateAccount(addr)
-			}
 		}
 		accBalance := acc.GetBalance()
-
-		if balance := db.GetBalance(addr); accBalance.Cmp(balance) != 0 {
+		balance := db.GetBalance(addr)
+		if accBalance.Cmp(balance) != 0 {
 			err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
 				addr.Hex(), balance, accBalance)
-			if updateOnFail {
-				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
-				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
-			}
 		}
 		if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {
 			err += fmt.Sprintf("  Failed to validate nonce for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
 				addr.Hex(), nonce, acc.GetNonce())
-			if updateOnFail {
-				db.SetNonce(addr, acc.GetNonce())
-			}
 		}
 		if code := db.GetCode(addr); bytes.Compare(code, acc.GetCode()) != 0 {
 			err += fmt.Sprintf("  Failed to validate code for account %v\n"+
 				"    have len %v\n"+
 				"    want len %v\n",
 				addr.Hex(), len(code), len(acc.GetCode()))
-			if updateOnFail {
-				db.SetCode(addr, acc.GetCode())
-			}
 		}
 
 		// validate Storage
@@ -196,9 +190,6 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 					"    have %v\n"+
 					"    want %v\n",
 					addr.Hex(), keyHash.Hex(), db.GetState(addr, keyHash).Hex(), valueHash.Hex())
-				if updateOnFail {
-					db.SetState(addr, keyHash, valueHash)
-				}
 			}
 		})
 
@@ -207,5 +198,96 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 	if len(err) > 0 {
 		return fmt.Errorf(err)
 	}
+	return nil
+}
+
+// updateWorldState updates the state-db with the expected state.
+func updateWorldState(cfg *utils.Config, db state.VmStateDB, alloc txcontext.WorldState) error {
+	if cfg.StateValidationMode != utils.SubsetCheck {
+		return nil
+	}
+
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		if !db.Exist(addr) {
+			db.CreateAccount(addr)
+		}
+		accBalance := acc.GetBalance()
+		balance := db.GetBalance(addr)
+		if accBalance.Cmp(balance) != 0 {
+			db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
+			db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
+		}
+		if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {
+			db.SetNonce(addr, acc.GetNonce())
+
+		}
+		if code := db.GetCode(addr); bytes.Compare(code, acc.GetCode()) != 0 {
+			db.SetCode(addr, acc.GetCode())
+		}
+
+		// validate Storage
+		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+			if db.GetState(addr, keyHash) != valueHash {
+				db.SetState(addr, keyHash, valueHash)
+			}
+		})
+
+	})
+
+	return nil
+}
+
+// updateEthereumDb is used to fix exceptions in ethereum dataset inconsistencies
+func updateEthereumDb(s executor.State[txcontext.TxContext], db state.VmStateDB, isPreTransaction bool) error {
+	var overwriteEverything = false
+	var alloc txcontext.WorldState
+	if isPreTransaction {
+		alloc = s.Data.GetInputState()
+	} else {
+		alloc = s.Data.GetOutputState()
+
+		// only post alloc is diverging for these ethereum block exceptions
+		if slices.Contains(ethereumLfvmBlockExceptions, s.Block) {
+			overwriteEverything = true
+		}
+	}
+
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		if !db.Exist(addr) {
+			db.CreateAccount(addr)
+		}
+
+		accBalance := acc.GetBalance()
+		balance := db.GetBalance(addr)
+		// balance increments covers block rewards
+		// or zero balance exception for slashed accounts - dao fork
+		if overwriteEverything ||
+			balance.Cmp(accBalance) < 0 ||
+			(slices.Contains(params.DAODrainList(), addr) && accBalance.Eq(uint256.NewInt(0))) {
+			if accBalance.Cmp(balance) != 0 {
+				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
+				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
+			}
+		}
+
+		if overwriteEverything {
+			if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {
+				db.SetNonce(addr, acc.GetNonce())
+			}
+			if code := db.GetCode(addr); bytes.Compare(code, acc.GetCode()) != 0 {
+				db.SetCode(addr, acc.GetCode())
+			}
+		}
+
+		// BeaconRootsAddress is a special case where the storage is diverging
+		if overwriteEverything || addr == params.BeaconRootsAddress {
+			acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+				if db.GetState(addr, keyHash) != valueHash {
+					db.SetState(addr, keyHash, valueHash)
+				}
+			})
+		}
+	})
+
 	return nil
 }
