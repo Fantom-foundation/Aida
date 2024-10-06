@@ -391,10 +391,10 @@ var (
 		Usage: "maximum number of errors when ContinueOnFailure is enabled, 0 is endless",
 		Value: 10,
 	}
-	UpdateOnFailure = cli.BoolFlag{
+	UpdateOnFailure = cli.StringFlag{
 		Name:  "update-on-failure",
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
-		Value: true,
+		Value: "none",
 	}
 	SkipStateHashScrappingFlag = cli.BoolFlag{
 		Name:  "skip-state-hash-scrapping",
