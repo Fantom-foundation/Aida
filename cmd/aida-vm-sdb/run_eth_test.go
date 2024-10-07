@@ -109,13 +109,14 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
-			// Block 2
+			// Tx 1
 			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: data})
-			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: data})
-			//// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: data})
+			// Tx 2
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 2, Data: data})
+			// Tx 3
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 3, Data: data})
+			// Tx 4
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 5, Transaction: utils.PseudoTx, Data: data})
 			return nil
 		})
 
@@ -126,8 +127,8 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	gomock.InOrder(
 		ext.EXPECT().PreRun(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 
-		// Block 2
 		// Tx 1
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](2, 0), gomock.Any()),
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(1)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
@@ -135,32 +136,37 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		// Tx 2
-		db.EXPECT().BeginBlock(uint64(2)),
-		db.EXPECT().BeginTransaction(uint32(2)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		db.EXPECT().EndTransaction(),
-		db.EXPECT().EndBlock(),
-		//
-		//// Block 3
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		db.EXPECT().BeginBlock(uint64(3)),
-		db.EXPECT().BeginTransaction(uint32(1)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		db.EXPECT().BeginTransaction(uint32(2)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
-		//
-		//// Block 4
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		// Tx 3
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](4, 2), gomock.Any()),
 		db.EXPECT().BeginBlock(uint64(4)),
-		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
+		db.EXPECT().BeginTransaction(uint32(3)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		// Tx 4
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](5, 3), gomock.Any()),
+		db.EXPECT().BeginBlock(uint64(5)),
+		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		db.EXPECT().EndTransaction(),
+		db.EXPECT().EndBlock(),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil),
 	)
 
