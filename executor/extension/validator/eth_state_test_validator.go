@@ -79,6 +79,7 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		if len(state.Data.GetMessage().BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
 			return nil
 		}
+
 		err = fmt.Errorf("expected error %w, got no error", want)
 	}
 	if got != nil && want == nil {
@@ -90,6 +91,7 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	}
 
 	if !e.cfg.ContinueOnFailure {
+		e.log.Errorf("\n%s\n", state.Data)
 		return err
 	}
 
