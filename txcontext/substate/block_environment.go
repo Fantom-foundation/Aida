@@ -34,7 +34,12 @@ type blockEnvironment struct {
 }
 
 func (e *blockEnvironment) GetRandom() *common.Hash {
-	return nil
+	if e.Random == nil {
+		return nil
+	}
+
+	h := common.Hash(e.Random.Bytes())
+	return &h
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
