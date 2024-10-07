@@ -118,5 +118,80 @@ func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestEthStateTestValidator_PreTransactionEthereumReturnsSuccessBalanceFix(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.ContinueOnFailure = true
+	cfg.ChainID = 1
+	cfg.UpdateOnFailure = true
+
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	data := ethtest.CreateTestTransaction(t)
+	ctx := new(executor.Context)
+	ctx.State = db
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
+		// incorrect balance value is fixed
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(10)),
+		db.EXPECT().SubBalance(gomock.Any(), uint256.NewInt(10), gomock.Any()),
+		db.EXPECT().AddBalance(gomock.Any(), uint256.NewInt(1000), gomock.Any()),
+		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
+		db.EXPECT().GetCode(common.HexToAddress("0x1")),
+	)
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(2000)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
+		db.EXPECT().GetCode(common.HexToAddress("0x2")),
+	)
+
+	ext := makeEthStateTestValidator(cfg, log)
+	err := ext.PreTransaction(st, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction must return success; %v", err)
+	}
+}
+
+func TestEthStateTestValidator_PreTransactionEthereumReturnsErrorOverflowingBalanceNotFixed(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.ContinueOnFailure = true
+	cfg.ChainID = 1
+	cfg.UpdateOnFailure = true
+
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	data := ethtest.CreateTestTransaction(t)
+	ctx := new(executor.Context)
+	ctx.State = db
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
+		// incorrect balance value is fixed
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1001)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
+		db.EXPECT().GetCode(common.HexToAddress("0x1")),
+	)
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(2000)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
+		db.EXPECT().GetCode(common.HexToAddress("0x2")),
+	)
+
+	ext := makeEthStateTestValidator(cfg, log)
+	err := ext.PreTransaction(st, ctx)
+	if err == nil {
+		t.Fatalf("pre-transaction must return error")
+	}
 }
