@@ -82,8 +82,12 @@ func (l *errorLogger[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ e
 		}
 	}
 
+	for i, e := range l.errors {
+		l.log.Errorf("#%v: %v", i+1, e)
+	}
+
 	if len(l.errors) != 0 {
-		return fmt.Errorf("total %v errors occurred: %v", len(l.errors), errors.Join(l.errors...))
+		return errors.New("run failed")
 	}
 
 	return nil
