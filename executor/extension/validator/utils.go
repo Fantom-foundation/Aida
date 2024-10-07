@@ -232,7 +232,9 @@ func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, 
 		accBalance := acc.GetBalance()
 		balance := db.GetBalance(addr)
 		if accBalance.Cmp(balance) != 0 {
-			if isPreTransaction && balance.Cmp(accBalance) < 0 {
+			// db balance should always be equal or lower because of miner rewards
+			// zero balance exception for slashed accounts
+			if isPreTransaction && balance.Cmp(accBalance) < 0 || accBalance.Eq(uint256.NewInt(0)) {
 				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
 				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
 			} else {
