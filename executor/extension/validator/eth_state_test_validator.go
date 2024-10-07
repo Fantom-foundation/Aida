@@ -46,7 +46,8 @@ type ethStateTestValidator struct {
 	log logger.Logger
 }
 
-func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+// PreBlock validates world state.
+func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -55,7 +56,8 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+// PostBlock validates error returned by the transaction processor.
+func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	_, got := ctx.ExecutionResult.GetRawResult()
 	_, want := state.Data.GetResult().GetRawResult()
@@ -71,22 +73,6 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	if want != nil && got != nil {
 		// TODO check error string - requires somewhat complex string parsing
 		return nil
-	}
-
-	return e.checkFatality(err, ctx.ErrorInput)
-}
-
-// PostBlock validates state root hash.
-// This needs to be done here instead of PostTransaction because EndBlock is being called in PostTransaction in
-// executor/extension/statedb/eth_state_test_scope_event_emitter.go, and it needs to be called before GetHash.
-func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	got, err := ctx.State.GetHash()
-	if err != nil {
-		return err
-	}
-	want := state.Data.GetStateHash()
-	if got != want {
-		err = fmt.Errorf("unexpected root hash, got: %s, want: %s", got, want)
 	}
 
 	return e.checkFatality(err, ctx.ErrorInput)

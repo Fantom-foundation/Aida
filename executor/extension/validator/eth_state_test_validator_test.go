@@ -33,7 +33,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
+func TestEthStateTestValidator_PreBlockReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = true
 
@@ -61,13 +61,13 @@ func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
 	)
 
 	ext := makeEthStateTestValidator(cfg, log)
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err == nil {
 		t.Fatal("pre-transaction must return error")
 	}
 }
 
-func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
+func TestEthStateTestValidator_PostBlockChecksError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = false
 	ext := makeEthStateTestValidator(cfg, nil)
@@ -109,57 +109,12 @@ func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
 			ctx := &executor.Context{ExecutionResult: test.expect}
 			st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: test.get}
 
-			err := ext.PostTransaction(st, ctx)
+			err := ext.PostBlock(st, ctx)
 			if err == nil && test.wantError == nil {
 				return
 			}
 			if !strings.Contains(err.Error(), test.wantError.Error()) {
 				t.Errorf("unexpected error;\ngot: %v\nwant: %v", err, test.wantError)
-			}
-		})
-	}
-}
-
-func TestEthStateTestValidator_PostBlockCheckStateRoot(t *testing.T) {
-	cfg := &utils.Config{}
-	cfg.ContinueOnFailure = false
-	ext := makeEthStateTestValidator(cfg, nil)
-
-	ctrl := gomock.NewController(t)
-	db := state.NewMockStateDB(ctrl)
-
-	tests := []struct {
-		name          string
-		ctx           txcontext.TxContext
-		gotHash       common.Hash
-		expectedError error
-	}{
-		{
-			name:          "same_hashes",
-			ctx:           ethtest.CreateTestTransactionWithHash(t, common.Hash{1}),
-			gotHash:       common.Hash{1},
-			expectedError: nil,
-		},
-		{
-			name:          "different_hashes",
-			ctx:           ethtest.CreateTestTransactionWithHash(t, common.Hash{1}),
-			gotHash:       common.Hash{2},
-			expectedError: fmt.Errorf("unexpected root hash, got: %s, want: %s", common.Hash{2}, common.Hash{1}),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db.EXPECT().GetHash().Return(test.gotHash, nil)
-			ctx := &executor.Context{State: db}
-			st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: test.ctx}
-
-			err := ext.PostBlock(st, ctx)
-			if err == nil && test.expectedError == nil {
-				return
-			}
-			if got, want := err, test.expectedError; !strings.EqualFold(got.Error(), want.Error()) {
-				t.Errorf("unexpected error, got: %v, want: %v", got, want)
 			}
 		})
 	}

@@ -29,7 +29,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
+func TestShadowDbValidator_PostBlockPass(t *testing.T) {
 	cfg := &utils.Config{}
 
 	ctrl := gomock.NewController(t)
@@ -47,13 +47,13 @@ func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
 
 	ext := makeShadowDbValidator(cfg)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("post-transaction cannot return error; %v", err)
 	}
 }
 
-func TestShadowDbValidator_PostTransactionReturnsError(t *testing.T) {
+func TestShadowDbValidator_PostBlockReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 
 	ctrl := gomock.NewController(t)
@@ -73,7 +73,7 @@ func TestShadowDbValidator_PostTransactionReturnsError(t *testing.T) {
 
 	ext := makeShadowDbValidator(cfg)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err == nil {
 		t.Fatalf("post-transaction must return error; %v", err)
 	}
