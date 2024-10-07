@@ -25,7 +25,6 @@ import (
 	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
-	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params"
 	"golang.org/x/exp/maps"
@@ -198,7 +197,14 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
-	case "", "aida", "aida-geth":
+	case "", "aida", "opera", "sonic":
+		processor = makeAidaProcessor(cfg, vmCfg)
+	case "ethereum":
+		// for the ethereum mode, Fantom specific modifications are disabled
+		vmCfg.ChargeExcessGas = false
+		vmCfg.IgnoreGasFeeCap = false
+		vmCfg.InsufficientBalanceIsNotAnError = false
+		vmCfg.SkipTipPaymentToCoinbase = false
 		processor = makeAidaProcessor(cfg, vmCfg)
 	default:
 		interpreter, err := tosca.NewInterpreter(cfg.VmImpl)
@@ -209,8 +215,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		evm := tosca.GetProcessor(cfg.EvmImpl, interpreter)
 		if evm == nil {
 			available := maps.Keys(tosca.GetAllRegisteredProcessorFactories())
-			available = append(available, "aida")
-			available = append(available, "aida-geth")
+			available = append(available, "aida", "opera", "sonic", "ethereum")
 			slices.Sort(available)
 			return nil, fmt.Errorf("unknown EVM implementation: %s, supported: %v", cfg.EvmImpl, available)
 		}
@@ -260,28 +265,22 @@ type processor interface {
 	processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (transactionResult, error)
 }
 
+type aidaProcessorMode int
+
 type aidaProcessor struct {
-	vmCfg        vm.Config
-	cfg          *utils.Config
-	log          logger.Logger
-	applyMessage applyMessage
+	vmCfg vm.Config
+	cfg   *utils.Config
+	log   logger.Logger
 }
 
 // for testing purposes
 func makeAidaProcessor(cfg *utils.Config, vmCfg vm.Config) *aidaProcessor {
 	evmImpl := strings.ToLower(cfg.EvmImpl)
 
-	amf := applyMessageUsingSonic
-	switch evmImpl {
-	case "aida-geth":
-		amf = applyMessageUsingGeth
-	}
-
 	return &aidaProcessor{
-		vmCfg:        vmCfg,
-		cfg:          cfg,
-		log:          logger.NewLogger(cfg.LogLevel, fmt.Sprintf("AidaProcessor(%s)", evmImpl)),
-		applyMessage: amf,
+		vmCfg: vmCfg,
+		cfg:   cfg,
+		log:   logger.NewLogger(cfg.LogLevel, fmt.Sprintf("AidaProcessor(%s)", evmImpl)),
 	}
 }
 
@@ -318,38 +317,6 @@ func (w messageResult) GetError() error {
 	return w.err
 }
 
-type applyMessage func(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig, vmCfg vm.Config) (executionResult, error)
-
-// applyMessageUsingGeth applies message using the go-ethereum implementation of ApplyMessage using 'core' package.
-func applyMessageUsingGeth(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig, vmCfg vm.Config) (executionResult, error) {
-	// Here we use the geth implementation
-	txCtx := core.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, vmCfg)
-
-	var gasPool = new(core.GasPool)
-	gasPool.AddGas(inputEnv.GetGasLimit())
-	r, err := core.ApplyMessage(evm, msg, gasPool)
-	if err != nil {
-		return nil, err
-	}
-	return messageResult{r.Failed(), r.Return(), r.UsedGas, r.Err}, nil
-}
-
-// applyMessageUsingSonic applies message using the sonic implementation of ApplyMessage using 'evmcore' package.
-func applyMessageUsingSonic(db state.VmStateDB, msg *core.Message, blockCtx *vm.BlockContext, inputEnv txcontext.BlockEnvironment, chainCfg *params.ChainConfig, vmCfg vm.Config) (executionResult, error) {
-	// Here we use the sonic implementation
-	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, vmCfg)
-
-	var gasPool = new(evmcore.GasPool)
-	gasPool.AddGas(inputEnv.GetGasLimit())
-	r, err := evmcore.ApplyMessage(evm, msg, gasPool)
-	if err != nil {
-		return nil, err
-	}
-	return messageResult{r.Failed(), r.Return(), r.UsedGas, r.Err}, nil
-}
-
 // processRegularTx executes VM on a chosen storage system.
 func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	var (
@@ -368,7 +335,24 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	db.SetTxContext(txHash, tx)
 	snapshot := db.Snapshot()
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
-	msgResult, err := s.applyMessage(db, msg, blockCtx, inputEnv, chainCfg, s.vmCfg)
+
+	txCtx := core.NewEVMTxContext(msg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
+
+	var gasPool = new(core.GasPool)
+	gasPool.AddGas(inputEnv.GetGasLimit())
+	executionResult, err := core.ApplyMessage(evm, msg, gasPool)
+	if err != nil {
+		return res, fmt.Errorf("failed to execute transaction: %w", err)
+	}
+
+	msgResult := messageResult{
+		failed:     executionResult.Failed(),
+		returnData: executionResult.Return(),
+		gasUsed:    executionResult.UsedGas,
+		err:        executionResult.Err,
+	}
+
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
@@ -376,7 +360,7 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	}
 
 	// inform about failing transaction
-	if msgResult != nil && msgResult.Failed() {
+	if msgResult.Failed() {
 		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
 	}
 

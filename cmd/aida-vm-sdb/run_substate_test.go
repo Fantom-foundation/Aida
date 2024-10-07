@@ -222,7 +222,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().GetBalance(common.Address{}).Return(new(uint256.Int).Mul(uint256.NewInt(uint64(testTx.Message.Gas)), uint256.MustFromBig(testTx.Message.GasPrice))),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
@@ -296,6 +296,7 @@ var emptyTx = &substate.Substate{
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
 		Value:    big.NewInt(1),
+		Gas:      10_000,
 	},
 	Result: &substate.Result{
 		GasUsed: 1,
@@ -309,6 +310,7 @@ var testTx = &substate.Substate{
 	Message: &substate.Message{
 		GasPrice: big.NewInt(12),
 		Value:    big.NewInt(1),
+		Gas:      1_000_000,
 	},
 	Result: &substate.Result{
 		GasUsed: 1,

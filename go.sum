@@ -8,8 +8,8 @@ github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4 h1:vtziTKo
 github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4/go.mod h1:NLvaNtS7elcJ9Q/Ypz7ZzA2DuQqd+UC+Bccue2EVRWk=
 github.com/Fantom-foundation/Substate v0.0.0-20240930092859-d12af8cad7ef h1:rHHIBI4zwNQQF592CL5qnzdhaaGNA+OSKjiV4OhjmyY=
 github.com/Fantom-foundation/Substate v0.0.0-20240930092859-d12af8cad7ef/go.mod h1:VoWe+PUzAaH8je6Yj+QQz2u7cfQbOxnGE3Tu8EN4prc=
-github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240916105249-e7951db0c00b h1:RkK1XUuFi2z0A2XGMgRsI9Cd1+v70Da8jzEPeqnZ+vI=
-github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20240916105249-e7951db0c00b/go.mod h1:p4knNH76zBuqbEfc6CbZTOnaQNU0WvhzW5f0qq6aMoU=
+github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20241010144554-28e21b08ad3b h1:UeUsYty6xs+JnVghm9sCTTwj2569q2FZ0wBvWWKy9r4=
+github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20241010144554-28e21b08ad3b/go.mod h1:p4knNH76zBuqbEfc6CbZTOnaQNU0WvhzW5f0qq6aMoU=
 github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240823114058-cda038e6d40b h1:oggmwdVb9tJiUJrcFvs5A3JOC1t2I231N4/RW2YXr8w=
 github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240823114058-cda038e6d40b/go.mod h1:YaNcYnDsDooGLKqsrTt+tafplgorZ0l8C1IwmryrIWs=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=

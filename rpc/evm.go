@@ -156,16 +156,16 @@ func (e *EvmExecutor) newEVM(msg *core.Message, hashErr *error) *vm.EVM {
 }
 
 // sendCall executes the call method in the EvmExecutor with given archive
-func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
+func (e *EvmExecutor) sendCall() (*core.ExecutionResult, error) {
 	var (
-		gp              *evmcore.GasPool
-		executionResult *evmcore.ExecutionResult
+		gp              *core.GasPool
+		executionResult *core.ExecutionResult
 		err             error
 		msg             *core.Message
 		evm             *vm.EVM
 	)
 
-	gp = new(evmcore.GasPool).AddGas(math.MaxUint64) // based in opera
+	gp = new(core.GasPool).AddGas(math.MaxUint64) // based in opera
 	msg, err = e.args.ToMessage(globalGasCap, e.rules.MinGasPrice)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 	var hashErr *error
 	evm = e.newEVM(msg, hashErr)
 
-	executionResult, err = evmcore.ApplyMessage(evm, msg, gp)
+	executionResult, err = core.ApplyMessage(evm, msg, gp)
 	if executionResult.Err != nil {
 		return nil, fmt.Errorf("execution returned err; %w", executionResult.Err)
 	}
@@ -240,7 +240,7 @@ func (e *EvmExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 }
 
 // executable tries to execute call with given gas into EVM. This func is used for estimateGas calculation
-func (e *EvmExecutor) executable(gas uint64) (bool, *evmcore.ExecutionResult, error) {
+func (e *EvmExecutor) executable(gas uint64) (bool, *core.ExecutionResult, error) {
 	e.args.Gas = (*hexutil.Uint64)(&gas)
 
 	result, err := e.sendCall()

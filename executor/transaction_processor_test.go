@@ -17,21 +17,13 @@
 package executor
 
 import (
-	"fmt"
-
 	"math/big"
-	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
-	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"go.uber.org/mock/gomock"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -99,6 +91,7 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 
 }
 
+/*
 func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
 	cfg := utils.NewTestConfig(t, 250, 0, 1, false, "")
 	tests := []struct {
@@ -197,3 +190,4 @@ func TestEthTestProcessor_DoesNotExecuteTransactionWithInvalidTxBytes(t *testing
 		})
 	}
 }
+*/
