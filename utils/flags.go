@@ -67,7 +67,7 @@ var (
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
-		Value: 5,
+		Value: 3,
 	}
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
