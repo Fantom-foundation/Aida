@@ -48,7 +48,7 @@ type ethStateTestErrorValidator struct {
 
 // PreBlock validates world state.
 func (e *ethStateTestErrorValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
+	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.cfg.UpdateOnFailure, e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
 	}

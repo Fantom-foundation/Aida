@@ -133,16 +133,16 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 		return nil
 	}
 
-	err := validateWorldState(v.cfg, db, state.Data.GetInputState(), true, v.log)
+	err := validateWorldState(v.cfg, db, state.Data.GetInputState(), v.cfg.UpdateOnFailure, v.log)
 	if err == nil {
 		return nil
 	}
 
 	err = fmt.Errorf("%v err:\nblock %v tx %v\n world-state input is not contained in the state-db\n %v\n", tool, state.Block, state.Transaction, err)
 
-	//if v.isErrFatal(err, errOutput) {
-	//	return err
-	//}
+	if v.isErrFatal(err, errOutput) {
+		return err
+	}
 
 	return nil
 }
@@ -151,11 +151,9 @@ func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, 
 	if v.target.WorldState {
 		if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), false, v.log); err != nil {
 			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
-			//if v.isErrFatal(err, errOutput) {
-			if err != nil {
+			if v.isErrFatal(err, errOutput) {
 				return err
 			}
-			//}
 		}
 	}
 
@@ -163,12 +161,9 @@ func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, 
 	if v.target.Receipt && state.Transaction < 99999 {
 		if err := v.validateReceipt(res.GetReceipt(), state.Data.GetResult().GetReceipt()); err != nil {
 			err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
-			if err != nil {
+			if v.isErrFatal(err, errOutput) {
 				return err
 			}
-			//if v.isErrFatal(err, errOutput) {
-			//	return err
-			//}
 		}
 	}
 
