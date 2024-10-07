@@ -56,11 +56,11 @@ func TestStBlockEnvironment_GetBaseFee(t *testing.T) {
 }
 
 func TestStBlockEnvironment_GetBlockHash_Correctly_Converts(t *testing.T) {
-	blockNum := uint64(10)
-	want := common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(blockNum)).String())))
-	env := &stBlockEnvironment{blockNumber: blockNum}
+	blockNum := int64(10)
+	want := common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(blockNum).String())))
+	env := &stBlockEnvironment{Number: newBigInt(blockNum)}
 
-	got, err := env.GetBlockHash(blockNum)
+	got, err := env.GetBlockHash(uint64(blockNum))
 	if err != nil {
 		t.Fatalf("cannot get block hash: %v", err)
 	}
