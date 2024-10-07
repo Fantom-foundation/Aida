@@ -49,6 +49,7 @@ var RecordCommand = cli.Command{
 		&utils.AidaDbFlag,
 		&log.LogLevelFlag,
 		&utils.TrackerGranularityFlag,
+		&utils.EvmImplementation,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -72,7 +73,11 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	}
 	defer aidaDb.Close()
 
-	substateIterator := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	substateIterator, err := executor.OpenSubstateProvider(cfg, ctx, aidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot open substate provider; %w", err)
+	}
+
 	defer substateIterator.Close()
 
 	processor, err := executor.MakeLiveDbTxProcessor(cfg)

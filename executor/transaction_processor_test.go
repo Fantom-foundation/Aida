@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -52,21 +54,22 @@ func TestPrepareBlockCtx(t *testing.T) {
 }
 
 func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) {
-	isAida := func(t *testing.T, p processor) {
+	isAida := func(t *testing.T, p processor, name string) {
 		if _, ok := p.(*aidaProcessor); !ok {
-			t.Fatalf("Expected aidaProcessor, got %T", p)
+			t.Fatalf("Expected aidaProcessor from '%s', got %T", name, p)
 		}
 	}
-	isTosca := func(t *testing.T, p processor) {
+	isTosca := func(t *testing.T, p processor, name string) {
 		if _, ok := p.(*toscaProcessor); !ok {
-			t.Fatalf("Expected toscaProcessor, got %T", p)
+			t.Fatalf("Expected toscaProcessor from '%s', got %T", name, p)
 		}
 	}
 
-	tests := map[string]func(*testing.T, processor){
-		"":     isAida,
-		"aida": isAida,
-		"Aida": isAida,
+	tests := map[string]func(*testing.T, processor, string){
+		"":          isAida,
+		"aida":      isAida,
+		"Aida":      isAida,
+		"aida-geth": isAida,
 	}
 
 	for name := range tosca.GetAllRegisteredProcessorFactories() {
@@ -84,8 +87,44 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 			if err != nil {
 				t.Fatalf("Failed to create tx processor; %v", err)
 			}
-			check(t, p.processor)
+			check(t, p.processor, name)
 		})
 	}
 
+}
+
+func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
+	cfg := utils.NewTestConfig(t, 250, 0, 1, false, "")
+	tests := []struct {
+		name    string
+		evmImpl string
+		want    applyMessage
+	}{
+		{
+			name:    "expect_applyMessageUsingGeth",
+			evmImpl: "aida-geth",
+			want:    applyMessageUsingGeth,
+		},
+		{
+			name:    "expect_applyMessageUsingSonic",
+			evmImpl: "aida",
+			want:    applyMessageUsingSonic,
+		},
+		{
+			name:    "expect_defaultsToApplyMessageUsingSonic",
+			evmImpl: "",
+			want:    applyMessageUsingSonic,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg.EvmImpl = test.evmImpl
+			aidaProcessor := makeAidaProcessor(cfg, vm.Config{})
+
+			if got, want := fmt.Sprintf("%p", aidaProcessor.applyMessage), fmt.Sprintf("%p", test.want); got != want {
+				t.Errorf("unexpected apply func")
+			}
+
+		})
+	}
 }

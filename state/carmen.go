@@ -128,10 +128,7 @@ func (s *carmenStateDB) CreateAccount(addr common.Address) {
 }
 
 func (s *carmenStateDB) CreateContract(addr common.Address) {
-	// This features is only needed with Cancun. Once implemented,
-	// in Carmen, this call should be updated to call the respective
-	// Carmen function. Pre-Cancun, this call is a no-op.
-	// TODO: call CreateContract in Carmen once implemented
+	s.txCtx.CreateContract(carmen.Address(addr))
 }
 
 func (s *carmenStateDB) Exist(addr common.Address) bool {

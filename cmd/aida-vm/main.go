@@ -57,6 +57,7 @@ func main() {
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbLoggingFlag,
 			&utils.CacheFlag,
+			&utils.SubstateEncodingFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
