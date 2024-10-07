@@ -9,7 +9,7 @@ pipeline {
 
     environment {
         // Aida CLI options
-        STORAGE = '--db-impl carmen --db-variant go-file --carmen-schema 5'
+        STATEDB = '--db-impl carmen --db-variant go-file --carmen-schema 5'
         ARCHIVE = '--archive --archive-variant s5'
         PRIME = '--update-buffer-size 4000'
         VM = '--vm-impl lfvm'
@@ -81,7 +81,7 @@ pipeline {
                 stage('aida-fuzzing') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-stochastic-sdb replay ${STORAGE} ${TMPDB} --db-shadow-impl geth 50 stochastic/data/simulation_uniform.json"
+                            sh "build/aida-stochastic-sdb replay ${STATEDB} ${TMPDB} --db-shadow-impl geth 50 stochastic/data/simulation_uniform.json"
                         }
                     }
                 }
@@ -101,8 +101,8 @@ pipeline {
                 stage('aida-sdb replay') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} ${PROFILE} --shadow-db --db-shadow-impl geth --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
-                            sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} ${PROFILE} --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
+                            sh "build/aida-sdb replay ${VM} ${STATEDB} ${TMPDB} ${AIDADB} ${PRIME} ${PROFILE} --shadow-db --db-shadow-impl geth --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
+                            sh "build/aida-sdb replay ${VM} ${STATEDB} ${TMPDB} ${AIDADB} ${PRIME} ${PROFILE} --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
                         }
                         sh "rm -rf ${TRACEDIR}"
                     }
@@ -111,7 +111,7 @@ pipeline {
                 stage('aida-vm-sdb live mode') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STORAGE} --validate-tx --validate-state-hash --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} --validate-tx --validate-state-hash --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
@@ -120,7 +120,7 @@ pipeline {
                 stage('aida-vm-sdb archive mode') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STORAGE} ${ARCHIVE} ${PROFILE} --keep-db --validate-tx --validate-state-hash --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} ${ARCHIVE} ${PROFILE} --keep-db --validate-tx --validate-state-hash --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
@@ -129,7 +129,7 @@ pipeline {
                 stage('aida-vm-sdb archive-inquirer') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${ARCHIVE} ${PROFILE} --archive-query-rate 5000 --validate-tx --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} ${ARCHIVE} ${PROFILE} --archive-query-rate 5000 --validate-tx --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
