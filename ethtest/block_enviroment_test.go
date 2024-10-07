@@ -186,3 +186,14 @@ func TestStBlockEnvironment_GetBlobBaseFee(t *testing.T) {
 		})
 	}
 }
+
+func TestStBlockEnvironment_CorrectBlockNumberIsReturned(t *testing.T) {
+	blkNumber := uint64(1)
+	env := &stBlockEnvironment{
+		Number: newBigInt(int64(blkNumber)),
+	}
+
+	if got, want := env.GetNumber(), blkNumber; got != want {
+		t.Errorf("unexpected block number, got: %v, want: %v", got, want)
+	}
+}
