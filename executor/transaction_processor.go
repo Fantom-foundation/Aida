@@ -378,6 +378,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 		BlockNumber: new(big.Int).SetUint64(inputEnv.GetNumber()),
 		Time:        inputEnv.GetTimestamp(),
 		Difficulty:  inputEnv.GetDifficulty(),
+		Random:      inputEnv.GetRandom(),
 		GasLimit:    inputEnv.GetGasLimit(),
 		GetHash:     getHash,
 	}
