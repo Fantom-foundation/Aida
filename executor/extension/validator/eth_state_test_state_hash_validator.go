@@ -57,11 +57,11 @@ func (e *ethStateTestStateHashValidator) PostBlock(state executor.State[txcontex
 	want := state.Data.GetStateHash()
 	if got != want {
 		err = fmt.Errorf("unexpected root hash, got: %s, want: %s", got, want)
+		if !e.cfg.ContinueOnFailure {
+			return err
+		}
+		ctx.ErrorInput <- err
 	}
 
-	if !e.cfg.ContinueOnFailure {
-		return err
-	}
-	ctx.ErrorInput <- err
 	return nil
 }
