@@ -105,7 +105,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, false, "Cancun")
 	data := ethtest.CreateTestTransaction(t)
 
-	// Simulate the execution of three transactions in two blocks.
+	// Simulate the execution of 4 transactions
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
