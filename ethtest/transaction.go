@@ -47,12 +47,16 @@ type stTransaction struct {
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
 	BlobGasFeeCap        *BigInt             `json:"maxFeePerBlobGas"`
 	BlobHashes           []common.Hash       `json:"blobVersionedHashes"`
+	Sender               *common.Address     `json:"sender"`
 }
 
 func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, error) {
-	// Derive sender from private key if present.
 	var from common.Address
-	if len(tx.PrivateKey) > 0 {
+	// If 'sender' field is present, use that
+	if tx.Sender != nil {
+		from = *tx.Sender
+	} else if len(tx.PrivateKey) > 0 {
+		// Derive sender from private key if needed.
 		key, err := crypto.ToECDSA(tx.PrivateKey)
 		if err != nil {
 			return nil, fmt.Errorf("invalid private key: %v", err)
@@ -118,19 +122,19 @@ func (tx *stTransaction) toMessage(ps stPost, baseFee *BigInt) (*core.Message, e
 	}
 
 	msg := &core.Message{
-		to,
-		from,
-		tx.Nonce.Uint64(),
-		value,
-		gasLimit.Uint64(),
-		gasPrice.Convert(),
-		tx.MaxFeePerGas.Convert(),
-		tx.MaxPriorityFeePerGas.Convert(),
-		data,
-		accessList,
-		tx.BlobGasFeeCap.Convert(),
-		tx.BlobHashes,
-		false,
+		To:                to,
+		From:              from,
+		Nonce:             tx.Nonce.Uint64(),
+		Value:             value,
+		GasLimit:          gasLimit.Uint64(),
+		GasPrice:          gasPrice.Convert(),
+		GasFeeCap:         tx.MaxFeePerGas.Convert(),
+		GasTipCap:         tx.MaxPriorityFeePerGas.Convert(),
+		Data:              data,
+		AccessList:        accessList,
+		BlobGasFeeCap:     tx.BlobGasFeeCap.Convert(),
+		BlobHashes:        tx.BlobHashes,
+		SkipAccountChecks: false,
 	}
 	return msg, nil
 }
