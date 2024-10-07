@@ -33,11 +33,15 @@ import (
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func validateWorldState(cfg *utils.Config, db state.VmStateDB, expectedAlloc txcontext.WorldState, updateOnFailure bool, log logger.Logger) error {
+func validateWorldState(cfg *utils.Config, db state.VmStateDB, expectedAlloc txcontext.WorldState, isPreTransaction bool, log logger.Logger) error {
 	var err error
 	switch cfg.StateValidationMode {
 	case utils.SubsetCheck:
-		err = doSubsetValidation(expectedAlloc, db, updateOnFailure)
+		if cfg.ChainID == utils.EthereumChainID {
+			err = doSubsetValidationEthereum(expectedAlloc, db, isPreTransaction)
+		} else {
+			err = doSubsetValidation(expectedAlloc, db, cfg.UpdateOnFailure)
+		}
 	case utils.EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)
@@ -159,8 +163,8 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 			}
 		}
 		accBalance := acc.GetBalance()
-
-		if balance := db.GetBalance(addr); accBalance.Cmp(balance) != 0 {
+		balance := db.GetBalance(addr)
+		if accBalance.Cmp(balance) != 0 {
 			err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
@@ -199,6 +203,65 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 				if updateOnFail {
 					db.SetState(addr, keyHash, valueHash)
 				}
+			}
+		})
+
+	})
+
+	if len(err) > 0 {
+		return fmt.Errorf(err)
+	}
+	return nil
+}
+
+// doSubsetValidationEthereum validates whether the given alloc is contained in the db object.
+// NB: We can only check what must be in the db (but cannot check whether db stores more).
+// Ethereum version of this function assumes that the input substate doesn't have miner rewards therefore all errors
+// in preTransaction regarding account existence and account having lower balance (caused by missing miner rewards) are ignored.
+func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, isPreTransaction bool) error {
+	var err string
+
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		if !db.Exist(addr) {
+			if isPreTransaction {
+				db.CreateAccount(addr)
+			} else {
+				err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
+			}
+		}
+		accBalance := acc.GetBalance()
+		balance := db.GetBalance(addr)
+		if accBalance.Cmp(balance) != 0 {
+			if isPreTransaction && balance.Cmp(accBalance) < 0 {
+				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
+				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
+			} else {
+				err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
+					"    have %v\n"+
+					"    want %v\n",
+					addr.Hex(), balance, accBalance)
+			}
+		}
+		if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {
+			err += fmt.Sprintf("  Failed to validate nonce for account %v\n"+
+				"    have %v\n"+
+				"    want %v\n",
+				addr.Hex(), nonce, acc.GetNonce())
+		}
+		if code := db.GetCode(addr); bytes.Compare(code, acc.GetCode()) != 0 {
+			err += fmt.Sprintf("  Failed to validate code for account %v\n"+
+				"    have len %v\n"+
+				"    want len %v\n",
+				addr.Hex(), len(code), len(acc.GetCode()))
+		}
+
+		// validate Storage
+		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+			if db.GetState(addr, keyHash) != valueHash {
+				err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
+					"    have %v\n"+
+					"    want %v\n",
+					addr.Hex(), keyHash.Hex(), db.GetState(addr, keyHash).Hex(), valueHash.Hex())
 			}
 		})
 
