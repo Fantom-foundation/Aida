@@ -44,8 +44,6 @@ type ethStateTestStateHashValidator struct {
 }
 
 // PostBlock validates state root hash.
-// This needs to be done here instead of PostTransaction because EndBlock is being called in PostTransaction in
-// executor/extension/statedb/eth_state_test_scope_event_emitter.go, and it needs to be called before GetHash.
 func (e *ethStateTestStateHashValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	got, err := ctx.State.GetHash()
 	if err != nil {
