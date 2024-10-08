@@ -90,6 +90,6 @@ func (s *stateTestContext) String() string {
 	return fmt.Sprintf(
 		"Test path: %v\n"+
 			"Test label: %v\n"+
-			"Fork: %v\n"+
-			"PostNumber: %v\n", s.path, s.testLabel, s.fork, s.postNumber)
+			"PostNumber: %v\n"+
+			"Fork: %v\n", s.path, s.testLabel, s.fork, s.postNumber)
 }

@@ -64,10 +64,10 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		return nil
 	}
 	if got == nil && want != nil {
-		err = fmt.Errorf("expected error %w, got no error\ntest-info: %s", want, state.Data)
+		err = fmt.Errorf("expected error %w, got no error\ntest-info:\n%s", want, state.Data)
 	}
 	if got != nil && want == nil {
-		err = fmt.Errorf("unexpected error: %w\ntest-info: %s", got, state.Data)
+		err = fmt.Errorf("unexpected error: %w\ntest-info:\n%s", got, state.Data)
 	}
 	if want != nil && got != nil {
 		// TODO check error string - requires somewhat complex string parsing
