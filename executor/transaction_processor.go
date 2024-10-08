@@ -120,6 +120,14 @@ type ethTestProcessor struct {
 
 // Process transaction inside state into given LIVE StateDb
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+	msg := state.Data.GetMessage()
+	if len(msg.BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
+		txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
+		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", state.Transaction))
+		ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+		return nil
+	}
+
 	// We ignore error in this case, because some tests require the processor to fail,
 	// ethStateTestValidator decides whether error is fatal.
 	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
