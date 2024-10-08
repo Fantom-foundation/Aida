@@ -10,7 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateTestLogger_PreTransactionLogsProgress(t *testing.T) {
+func TestEthStateTestLogger_PreBlockLogsProgress(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 	ext := makeEthStateTestLogger(log, 2)
@@ -22,12 +22,12 @@ func TestEthStateTestLogger_PreTransactionLogsProgress(t *testing.T) {
 		log.EXPECT().Noticef("%v tests has been processed so far...", 2),
 	)
 
-	err := ext.PreTransaction(s, &executor.Context{})
+	err := ext.PreBlock(s, &executor.Context{})
 	if err != nil {
 		t.Fatalf("pre-tx failed: %v", err)
 	}
 
-	err = ext.PreTransaction(s, &executor.Context{})
+	err = ext.PreBlock(s, &executor.Context{})
 	if err != nil {
 		t.Fatalf("pre-tx failed: %v", err)
 	}

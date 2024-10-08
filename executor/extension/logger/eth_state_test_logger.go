@@ -48,8 +48,8 @@ func makeEthStateTestLogger(log logger.Logger, frequency int) *ethStateTestLogge
 	}
 }
 
-// PreTransaction reports test name and fork.
-func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext], _ *executor.Context) error {
+// PreBlock reports test name and fork.
+func (l *ethStateTestLogger) PreBlock(s executor.State[txcontext.TxContext], _ *executor.Context) error {
 	l.log.Infof("Currently running:\n%s", s.Data)
 	l.overall++
 	if l.overall%l.reportFrequency == 0 {

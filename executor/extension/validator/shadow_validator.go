@@ -42,7 +42,7 @@ type shadowDbValidator struct {
 	cfg *utils.Config
 }
 
-func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *shadowDbValidator) PostBlock(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	// Retrieve hash from the state, if this there is mismatch between prime and shadow db error is returned
 	_, err := ctx.State.GetHash()
 	if err != nil {
