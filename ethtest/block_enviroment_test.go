@@ -56,11 +56,11 @@ func TestStBlockEnvironment_GetBaseFee(t *testing.T) {
 }
 
 func TestStBlockEnvironment_GetBlockHash_Correctly_Converts(t *testing.T) {
-	blockNum := uint64(10)
-	want := common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(blockNum)).String())))
-	env := &stBlockEnvironment{blockNumber: blockNum}
+	blockNum := int64(10)
+	want := common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(blockNum).String())))
+	env := &stBlockEnvironment{Number: newBigInt(blockNum)}
 
-	got, err := env.GetBlockHash(blockNum)
+	got, err := env.GetBlockHash(uint64(blockNum))
 	if err != nil {
 		t.Fatalf("cannot get block hash: %v", err)
 	}
@@ -184,5 +184,16 @@ func TestStBlockEnvironment_GetBlobBaseFee(t *testing.T) {
 
 			t.Errorf("incorrect gas limit, got: %d, want: %d", got, want)
 		})
+	}
+}
+
+func TestStBlockEnvironment_CorrectBlockNumberIsReturned(t *testing.T) {
+	blkNumber := uint64(1)
+	env := &stBlockEnvironment{
+		Number: newBigInt(int64(blkNumber)),
+	}
+
+	if got, want := env.GetNumber(), blkNumber; got != want {
+		t.Errorf("unexpected block number, got: %v, want: %v", got, want)
 	}
 }
