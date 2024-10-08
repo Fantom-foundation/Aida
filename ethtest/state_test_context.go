@@ -26,10 +26,19 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chainCfg *params.ChainConfig, fork string, postNumber int) txcontext.TxContext {
+func newStateTestTxContext(
+	stJson *stJSON,
+	msg *core.Message,
+	post stPost,
+	chainCfg *params.ChainConfig,
+	testLabel string,
+	fork string,
+	postNumber int,
+) txcontext.TxContext {
 	return &stateTestContext{
-		fork:          fork,
 		path:          stJson.path,
+		testLabel:     testLabel,
+		fork:          fork,
 		postNumber:    postNumber,
 		env:           stJson.CreateEnv(chainCfg, fork),
 		inputState:    stJson.Pre,
@@ -41,8 +50,9 @@ func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chain
 
 type stateTestContext struct {
 	txcontext.NilTxContext
-	fork          string // which fork is the test running
 	path          string // path to file from which is the test
+	testLabel     string // the test label within one JSON file (key to the JSON)
+	fork          string // which fork is the test running
 	postNumber    int    // the post number within one 'fork' within one JSON file
 	env           *stBlockEnvironment
 	inputState    types.GenesisAlloc
@@ -77,5 +87,9 @@ func (s *stateTestContext) GetResult() txcontext.Result {
 }
 
 func (s *stateTestContext) String() string {
-	return fmt.Sprintf("Test path: %v\nFork: %v\nTest number: %v", s.path, s.fork, s.postNumber)
+	return fmt.Sprintf(
+		"Test path: %v\n"+
+			"Test label: %v\n"+
+			"Fork: %v\n"+
+			"PostNumber: %v\n", s.path, s.testLabel, s.fork, s.postNumber)
 }

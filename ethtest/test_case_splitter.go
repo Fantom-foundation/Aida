@@ -91,7 +91,6 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 
 		// Iterate all usable forks within one JSON file
 		for _, fork := range s.enabledForks {
-			postNumber := 0
 			posts, ok := stJson.Post[fork]
 			if !ok {
 				continue
@@ -101,8 +100,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 				return nil, err
 			}
 			// Iterate all tests within one fork
-			for _, post := range posts {
-				postNumber++
+			for postNumber, post := range posts {
 				msg, err := stJson.Tx.toMessage(post, baseFee)
 				if err != nil {
 					s.log.Warningf("Path: %v, fork: %v, test postNumber: %v\n"+
@@ -113,7 +111,7 @@ func (s *TestCaseSplitter) SplitStateTests() (dividedTests []Transaction, err er
 				if fork == "Paris" {
 					fork = "Merge"
 				}
-				txCtx := newStateTestTxContext(stJson, msg, post, chainCfg, fork, overall)
+				txCtx := newStateTestTxContext(stJson, msg, post, chainCfg, stJson.testLabel, fork, postNumber)
 				dividedTests = append(dividedTests, Transaction{
 					fork,
 					txCtx,
