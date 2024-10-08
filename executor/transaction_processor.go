@@ -135,8 +135,8 @@ func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Contex
 		var ttx types.Transaction
 		err := ttx.UnmarshalBinary(txBytes)
 		if err != nil {
-			// This must be returned as this is unexpected behaviour
-			return err
+			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+			return nil
 		}
 
 		chainCfg, err := p.cfg.GetChainConfig(state.Data.GetBlockEnvironment().GetFork())
