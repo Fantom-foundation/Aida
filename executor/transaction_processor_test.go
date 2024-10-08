@@ -140,16 +140,18 @@ func TestEthTestProcessor_DoesNotExecuteTransactionWhenBlobGasCouldExceed(t *tes
 		t.Fatalf("cannot make eth test processor: %v", err)
 	}
 	ctrl := gomock.NewController(t)
-	// Process is returned early - no calls are expected
+	// Process is returned early - only get logs is expected
 	stateDb := state.NewMockStateDB(ctrl)
+	stateDb.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any())
 
-	got := p.Process(State[txcontext.TxContext]{Data: ethtest.CreateTransactionThatFailsBlobGasExceedCheck(t)}, &Context{State: stateDb})
-	want := "blob gas exceeds maximum"
-
-	if got == nil {
-		t.Error("run must fail")
+	ctx := &Context{State: stateDb}
+	err = p.Process(State[txcontext.TxContext]{Data: ethtest.CreateTransactionThatFailsBlobGasExceedCheck(t)}, ctx)
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
 	}
 
+	_, got := ctx.ExecutionResult.GetRawResult()
+	want := "blob gas exceeds maximum"
 	if !strings.EqualFold(got.Error(), want) {
 		t.Errorf("unexpected error, got: %v, want: %v", got, want)
 	}
