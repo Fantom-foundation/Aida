@@ -17,7 +17,6 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -43,13 +42,12 @@ func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Ex
 
 type ethStateTestValidator struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg            *utils.Config
-	log            logger.Logger
-	numberOfErrors int
-	finalErr       error
+	cfg *utils.Config
+	log logger.Logger
 }
 
-func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+// PreBlock validates world state.
+func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -58,7 +56,8 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+// PostBlock validates error returned by the transaction processor.
+func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	_, got := ctx.ExecutionResult.GetRawResult()
 	_, want := state.Data.GetResult().GetRawResult()
@@ -76,23 +75,13 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		return nil
 	}
 
+	return e.checkFatality(err, ctx.ErrorInput)
+}
+
+func (e *ethStateTestValidator) checkFatality(err error, errChan chan error) error {
 	if !e.cfg.ContinueOnFailure {
 		return err
 	}
-
-	ctx.ErrorInput <- err
-	e.finalErr = errors.Join(e.finalErr, err)
-	e.numberOfErrors++
-
-	// endless run
-	if e.cfg.MaxNumErrors == 0 {
-		return nil
-	}
-
-	// too many errors
-	if e.numberOfErrors >= e.cfg.MaxNumErrors {
-		return e.finalErr
-	}
-
+	errChan <- err
 	return nil
 }
