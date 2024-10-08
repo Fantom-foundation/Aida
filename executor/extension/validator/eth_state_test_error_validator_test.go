@@ -33,7 +33,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
+func TestEthStateTestErrorValidator_PreTransactionReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = true
 
@@ -60,17 +60,17 @@ func TestEthStateTestValidator_PreTransactionReturnsError(t *testing.T) {
 		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
-	ext := makeEthStateTestValidator(cfg, log)
+	ext := makeEthStateTestErrorValidator(cfg, log)
 	err := ext.PreTransaction(st, ctx)
 	if err == nil {
 		t.Fatal("pre-transaction must return error")
 	}
 }
 
-func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
+func TestEthStateTestErrorValidator_PostTransactionCheckError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = false
-	ext := makeEthStateTestValidator(cfg, nil)
+	ext := makeEthStateTestErrorValidator(cfg, nil)
 
 	tests := []struct {
 		name      string
@@ -118,5 +118,4 @@ func TestEthStateTestValidator_PostTransactionCheckError(t *testing.T) {
 			}
 		})
 	}
-
 }

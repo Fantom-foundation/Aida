@@ -116,7 +116,7 @@ type ValidateTxTarget struct {
 	Receipt    bool // validate content of transaction receipt
 }
 
-// PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
+// PreRun informs the user that stateDbValidator is enabled and that they should data slower processing speed.
 func (v *stateDbValidator) PreRun(executor.State[txcontext.TxContext], *executor.Context) error {
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 

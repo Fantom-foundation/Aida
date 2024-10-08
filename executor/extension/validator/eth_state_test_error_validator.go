@@ -25,23 +25,26 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
-func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeEthStateTestErrorValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	if !cfg.Validate {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
-	return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
+	return makeEthStateTestErrorValidator(cfg, logger.NewLogger(cfg.LogLevel, "ethStateTestErrorValidator"))
 }
 
-func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
-	return &ethStateTestValidator{
+func makeEthStateTestErrorValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+	return &ethStateTestErrorValidator{
 		cfg: cfg,
 		log: log,
 	}
 }
 
-type ethStateTestValidator struct {
+type ethStateTestErrorValidator struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg            *utils.Config
 	log            logger.Logger
@@ -49,7 +52,7 @@ type ethStateTestValidator struct {
 	finalErr       error
 }
 
-func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestErrorValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -58,7 +61,7 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestErrorValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	_, got := ctx.ExecutionResult.GetRawResult()
 	_, want := state.Data.GetResult().GetRawResult()
@@ -66,10 +69,10 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 		return nil
 	}
 	if got == nil && want != nil {
-		err = fmt.Errorf("expected error %w, got no error\nTest info:\n%s", want, state.Data)
+		err = errors.Join(err, fmt.Errorf("expected error %w, got no error\nTest info:\n%s", want, state.Data))
 	}
 	if got != nil && want == nil {
-		err = fmt.Errorf("unexpected error: %w\nTest info:\n%s", got, state.Data)
+		err = errors.Join(err, fmt.Errorf("unexpected error: %w\nTest info:\n%s", got, state.Data))
 	}
 	if want != nil && got != nil {
 		// TODO check error string - requires somewhat complex string parsing
@@ -95,4 +98,11 @@ func (e *ethStateTestValidator) PostTransaction(state executor.State[txcontext.T
 	}
 
 	return nil
+}
+
+func (e *ethStateTestErrorValidator) rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewLegacyKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
 }

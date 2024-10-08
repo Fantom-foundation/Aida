@@ -64,4 +64,8 @@ type OutputState interface {
 	// GetStateHash returns expected State Hash. This is only used
 	// by Eth JSON tests and can be ignored for most implementations.
 	GetStateHash() common.Hash
+
+	// GetLogsHash returns expected rlp-encoded Logs Hash. This is only used
+	// by Eth JSON tests and can be ignored for most implementations.
+	GetLogsHash() common.Hash
 }
