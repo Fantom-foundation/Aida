@@ -41,7 +41,7 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 		t.Fatalf("cannot get chain config: %v", err)
 	}
 	to := common.HexToAddress("0x10")
-	return &stateTestContext{
+	return &StateTestContext{
 		env: &stBlockEnvironment{
 			Coinbase:   common.Address{},
 			Difficulty: newBigInt(1),
@@ -143,18 +143,18 @@ func CreateTestStJson(*testing.T) *stJSON {
 }
 
 func CreateErrorTestTransaction(*testing.T) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		expectedError: "err",
 	}
 }
 
 func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		expectedError: "",
 	}
 }
 func CreateTestTransactionWithHash(_ *testing.T, hash common.Hash) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		rootHash: hash,
 	}
 }
