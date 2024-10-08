@@ -8,12 +8,17 @@ pipeline {
     }
 
     environment {
-        STORAGE = '--db-impl carmen --db-variant go-file --carmen-schema 3'
+        // Aida CLI options
+        STATEDB = '--db-impl carmen --db-variant go-file --carmen-schema 5'
+        ARCHIVE = '--archive --archive-variant s5'
         PRIME = '--update-buffer-size 4000'
         VM = '--vm-impl lfvm'
-        AIDADB = '--aida-db=/mnt/aida-db-central/aida-db'
-        TMPDB = '--db-tmp=/mnt/tmp-disk'
+        AIDADB = '--aida-db /mnt/aida-db-central/aida-db'
+        TMPDB = '--db-tmp /mnt/tmp-disk'
         DBSRC = '/mnt/tmp-disk/state_db_carmen_go-file_${TOBLOCK}'
+        PROFILE = '--cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown'
+
+        // Other parameters
         TRACEDIR = 'tracefiles'
         FROMBLOCK = 'opera'
         TOBLOCK = '4600000'
@@ -76,7 +81,7 @@ pipeline {
                 stage('aida-fuzzing') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-stochastic-sdb replay ${STORAGE} ${TMPDB} --db-shadow-impl geth 50 stochastic/data/simulation_uniform.json"
+                            sh "build/aida-stochastic-sdb replay ${STATEDB} ${TMPDB} --db-shadow-impl geth 50 stochastic/data/simulation_uniform.json"
                         }
                     }
                 }
@@ -96,26 +101,26 @@ pipeline {
                 stage('aida-sdb replay') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --shadow-db --db-shadow-impl geth --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
-                            sh "build/aida-sdb replay ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
+                            sh "build/aida-sdb replay ${VM} ${STATEDB} ${TMPDB} ${AIDADB} ${PRIME} ${PROFILE} --shadow-db --db-shadow-impl geth --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
+                            sh "build/aida-sdb replay ${VM} ${STATEDB} ${TMPDB} ${AIDADB} ${PRIME} ${PROFILE} --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
                         }
                         sh "rm -rf ${TRACEDIR}"
                     }
                 }
 
-                stage('aida-vm-sdb s5-archive+validate-state-hash') {
+                stage('aida-vm-sdb live mode') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} --db-impl carmen --validate-state-hash --archive --archive-variant s5 --carmen-schema 5 --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} --validate-tx --validate-state-hash --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
                 }
 
-                stage('aida-vm-sdb validate-tx') {
+                stage('aida-vm-sdb archive mode') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} --db-impl carmen --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} ${ARCHIVE} ${PROFILE} --keep-db --validate-tx --validate-state-hash --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
@@ -124,17 +129,7 @@ pipeline {
                 stage('aida-vm-sdb archive-inquirer') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} --archive --archive-query-rate 5000 --db-impl carmen --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
-                        }
-                        sh "rm -rf *.dat"
-                    }
-                }
-
-                stage('aida-vm-sdb keep-db') {
-                    steps {
-                        sh "rm -rf ${DBSRC}"
-                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --db-impl carmen --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} ${ARCHIVE} ${PROFILE} --archive-query-rate 5000 --validate-tx --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
