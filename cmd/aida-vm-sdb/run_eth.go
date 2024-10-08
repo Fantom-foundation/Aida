@@ -129,6 +129,7 @@ func runEth(
 		validator.MakeShadowDbValidator(cfg),
 		statedb.MakeEthStateScopeTestEventEmitter(),
 		validator.MakeEthStateTestValidator(cfg),
+		validator.MakeEthStateTestStateHashValidator(cfg),
 	)
 
 	extensionList = append(extensionList, extra...)
