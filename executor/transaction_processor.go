@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params"
@@ -121,11 +122,31 @@ type ethTestProcessor struct {
 // Process transaction inside state into given LIVE StateDb
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	msg := state.Data.GetMessage()
+	txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
+	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", state.Transaction))
+
 	if len(msg.BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
-		txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
-		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", state.Transaction))
 		ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
 		return nil
+	}
+	txBytes := state.Data.(*ethtest.StateTestContext).GetTxBytes()
+
+	if len(txBytes) != 0 {
+		var ttx types.Transaction
+		err := ttx.UnmarshalBinary(txBytes)
+		if err != nil {
+			// This must be returned as this is unexpected behaviour
+			return err
+		}
+
+		chainCfg, err := p.cfg.GetChainConfig(state.Data.GetBlockEnvironment().GetFork())
+		if err != nil {
+			return err
+		}
+		if _, err = types.Sender(types.LatestSigner(chainCfg), &ttx); err != nil {
+			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+			return nil
+		}
 	}
 
 	// We ignore error in this case, because some tests require the processor to fail,
