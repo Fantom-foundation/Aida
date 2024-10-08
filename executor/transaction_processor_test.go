@@ -19,13 +19,18 @@ package executor
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"go.uber.org/mock/gomock"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -126,5 +131,26 @@ func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestEthTestProcessor_DoesNotExecuteTransactionWhenBlobGasCouldExceed(t *testing.T) {
+	p, err := MakeEthTestProcessor(&utils.Config{})
+	if err != nil {
+		t.Fatalf("cannot make eth test processor: %v", err)
+	}
+	ctrl := gomock.NewController(t)
+	// Process is returned early - no calls are expected
+	stateDb := state.NewMockStateDB(ctrl)
+
+	got := p.Process(State[txcontext.TxContext]{Data: ethtest.CreateTransactionThatFailsBlobGasExceedCheck(t)}, &Context{State: stateDb})
+	want := "blob gas exceeds maximum"
+
+	if got == nil {
+		t.Error("run must fail")
+	}
+
+	if !strings.EqualFold(got.Error(), want) {
+		t.Errorf("unexpected error, got: %v, want: %v", got, want)
 	}
 }

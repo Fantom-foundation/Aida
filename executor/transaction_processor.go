@@ -120,6 +120,10 @@ type ethTestProcessor struct {
 
 // Process transaction inside state into given LIVE StateDb
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+	// This check needs to be done before ApplyMessage is called, otherwise different state-root hash is produced
+	if len(state.Data.GetMessage().BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
+		return errors.New("blob gas exceeds maximum")
+	}
 	// We ignore error in this case, because some tests require the processor to fail,
 	// ethStateTestValidator decides whether error is fatal.
 	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)

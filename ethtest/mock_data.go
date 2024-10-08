@@ -153,3 +153,12 @@ func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
 		expectedError: "",
 	}
 }
+
+func CreateTransactionThatFailsBlobGasExceedCheck(*testing.T) txcontext.TxContext {
+	return &stateTestContext{
+		msg: &core.Message{BlobHashes: []common.Hash{
+			// add many blob hashes to fail the check
+			{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+		}},
+	}
+}
