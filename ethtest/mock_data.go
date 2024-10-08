@@ -153,3 +153,8 @@ func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
 		expectedError: "",
 	}
 }
+func CreateTestTransactionWithHash(_ *testing.T, hash common.Hash) txcontext.TxContext {
+	return &stateTestContext{
+		rootHash: hash,
+	}
+}
