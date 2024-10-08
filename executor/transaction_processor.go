@@ -197,7 +197,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 
 	var processor processor
 	switch strings.ToLower(cfg.EvmImpl) {
-	case "", "aida", "opera", "sonic":
+	case "", "opera":
 		processor = makeAidaProcessor(cfg, vmCfg)
 	case "ethereum":
 		// for the ethereum mode, Fantom specific modifications are disabled
@@ -215,7 +215,7 @@ func MakeTxProcessor(cfg *utils.Config) (*TxProcessor, error) {
 		evm := tosca.GetProcessor(cfg.EvmImpl, interpreter)
 		if evm == nil {
 			available := maps.Keys(tosca.GetAllRegisteredProcessorFactories())
-			available = append(available, "aida", "opera", "sonic", "ethereum")
+			available = append(available, "opera", "ethereum")
 			slices.Sort(available)
 			return nil, fmt.Errorf("unknown EVM implementation: %s, supported: %v", cfg.EvmImpl, available)
 		}

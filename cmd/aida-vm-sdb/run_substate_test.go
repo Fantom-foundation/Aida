@@ -35,8 +35,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-var testingAddress = common.Address{1}
-
 func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
@@ -69,9 +67,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy).Return(),
 		db.EXPECT().EndTransaction(),
 		// Tx 2
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
@@ -79,9 +75,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().SetTxContext(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(17),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(17),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy).Return(),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Block 3
@@ -91,9 +85,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(19),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(19),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy).Return(),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Pseudo transaction do not use snapshots.
@@ -210,41 +202,53 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 			return consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx)})
 		})
 
+	testSender := common.Address(testTx.Message.From)
+	testRecipient := common.Address(*testTx.Message.To)
+
+	gasCosts := new(uint256.Int).Mul(uint256.NewInt(uint64(testTx.Message.Gas)), uint256.MustFromBig(testTx.Message.GasPrice))
+	transferValue := uint256.MustFromBig(testTx.Message.Value)
+
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(1)),
 
 		// we return correct expected data so tx does not fail
-		db.EXPECT().Exist(testingAddress).Return(true),
-		db.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
-		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
-		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		// Pre-check and Gas buying
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(common.Address{}).Return(new(uint256.Int).Mul(uint256.NewInt(uint64(testTx.Message.Gas)), uint256.MustFromBig(testTx.Message.GasPrice))),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetBalance(testSender).Return(gasCosts),
+		db.EXPECT().SubBalance(testSender, gasCosts, tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()),
+		db.EXPECT().GetNonce(testSender).Return(uint64(1)),
+		db.EXPECT().SetNonce(testSender, uint64(2)),
+		db.EXPECT().GetBalance(testSender).Return(new(uint256.Int).SetUint64(1)),
+
+		// Actual contract call
+		db.EXPECT().Snapshot().Return(16),
+		db.EXPECT().Exist(testRecipient).Return(true),
+		db.EXPECT().SubBalance(testSender, transferValue, tracing.BalanceChangeTransfer),
+		db.EXPECT().AddBalance(testRecipient, transferValue, tracing.BalanceChangeTransfer),
+		db.EXPECT().GetCode(testRecipient).Return([]byte{}),
+		db.EXPECT().AddBalance(testSender, gomock.Any(), tracing.BalanceIncreaseGasReturn),
+
+		// Post-transaction operations
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		// EndTransaction does not get called because execution fails
+		db.EXPECT().EndTransaction(),
+		db.EXPECT().EndBlock(),
 	)
+
+	db.EXPECT().Witness().AnyTimes()
+	db.EXPECT().GetRefund().Return(uint64(0)).AnyTimes()
 
 	processor, err := executor.MakeLiveDbTxProcessor(cfg)
 	if err != nil {
 		t.Fatalf("failed to create processor: %v", err)
 	}
 
-	// run fails but not on validation
 	err = runSubstates(cfg, provider, db, processor, nil, nil)
-	if err == nil {
-		t.Errorf("run must fail")
-	}
-
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
-	returnedErr := strings.TrimSpace(err.Error())
-
-	if strings.Compare(returnedErr, expectedErr) != 0 {
-		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
+	if err != nil {
+		t.Errorf("run failed: %v", err)
 	}
 }
 
@@ -260,14 +264,18 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 			return consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: substatecontext.NewTxContext(testTx)})
 		})
 
+	testSender := common.Address(testTx.Message.From)
+
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Exist(testingAddress).Return(false), // address does not exist
-		db.EXPECT().GetBalance(testingAddress).Return(new(uint256.Int).SetUint64(1)),
-		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
-		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+
+		// to make the transaction fail, wo do not provide enough balance to pay for the gas
+		// Pre-check and Gas buying
+		db.EXPECT().SetTxContext(gomock.Any(), 1),
+		db.EXPECT().Snapshot().Return(15),
+		db.EXPECT().GetBalance(testSender).Return(uint256.NewInt(0)), // < this is not enough for the gas
 		// EndTransaction does not get called because validation fails
 	)
 
@@ -281,22 +289,24 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n world-state input is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := "insufficient funds for gas * price + value"
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
-
 }
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.Env{},
+	Env: &substate.Env{
+		GasLimit: 100_000_000,
+	},
 	Message: &substate.Message{
-		GasPrice: big.NewInt(12),
-		Value:    big.NewInt(1),
-		Gas:      10_000,
+		GasPrice:  big.NewInt(12),
+		Gas:       1,
+		GasFeeCap: big.NewInt(1_000_000),
+		GasTipCap: big.NewInt(1_000_000),
 	},
 	Result: &substate.Result{
 		GasUsed: 1,
@@ -305,14 +315,20 @@ var emptyTx = &substate.Substate{
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:           &substate.Env{},
+	Env: &substate.Env{
+		GasLimit: 100_000_000,
+	},
 	Message: &substate.Message{
-		GasPrice: big.NewInt(12),
-		Value:    big.NewInt(1),
-		Gas:      1_000_000,
+		From:      substatetypes.Address{0x01},
+		To:        &substatetypes.Address{0x02},
+		GasPrice:  big.NewInt(12),
+		Value:     big.NewInt(1),
+		Gas:       1_000_000,
+		GasFeeCap: big.NewInt(1_000_000),
+		GasTipCap: big.NewInt(1_000_000),
 	},
 	Result: &substate.Result{
-		GasUsed: 1,
+		Status:  1,
+		GasUsed: 118900,
 	},
 }

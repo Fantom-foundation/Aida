@@ -52,9 +52,32 @@ func TestPrepareBlockCtx(t *testing.T) {
 }
 
 func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) {
-	isAida := func(t *testing.T, p processor, name string) {
-		if _, ok := p.(*aidaProcessor); !ok {
+	isOpera := func(t *testing.T, p processor, name string) {
+		processor, ok := p.(*aidaProcessor)
+		if !ok {
 			t.Fatalf("Expected aidaProcessor from '%s', got %T", name, p)
+		}
+
+		cfg := processor.vmCfg
+		if !cfg.ChargeExcessGas ||
+			!cfg.IgnoreGasFeeCap ||
+			!cfg.InsufficientBalanceIsNotAnError ||
+			!cfg.SkipTipPaymentToCoinbase {
+			t.Fatalf("Expected Opera features to be enabled")
+		}
+	}
+	isEthereum := func(t *testing.T, p processor, name string) {
+		processor, ok := p.(*aidaProcessor)
+		if !ok {
+			t.Fatalf("Expected aidaProcessor from '%s', got %T", name, p)
+		}
+
+		cfg := processor.vmCfg
+		if cfg.ChargeExcessGas ||
+			cfg.IgnoreGasFeeCap ||
+			cfg.InsufficientBalanceIsNotAnError ||
+			cfg.SkipTipPaymentToCoinbase {
+			t.Fatalf("Expected Opera features to be disabled")
 		}
 	}
 	isTosca := func(t *testing.T, p processor, name string) {
@@ -64,14 +87,15 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 	}
 
 	tests := map[string]func(*testing.T, processor, string){
-		"":          isAida,
-		"aida":      isAida,
-		"Aida":      isAida,
-		"aida-geth": isAida,
+		"":         isOpera,
+		"opera":    isOpera,
+		"ethereum": isEthereum,
 	}
 
 	for name := range tosca.GetAllRegisteredProcessorFactories() {
-		tests[name] = isTosca
+		if _, present := tests[name]; !present {
+			tests[name] = isTosca
+		}
 	}
 
 	for name, check := range tests {

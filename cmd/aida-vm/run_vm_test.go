@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -69,24 +68,18 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		// Tx 2
 		db.EXPECT().BeginTransaction(uint32(2)),
 		db.EXPECT().SetTxContext(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(17),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(17),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		// Block 3
 		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(19),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(19),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
 		// Pseudo Tx
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
@@ -256,8 +249,6 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
 	processor, err := executor.MakeLiveDbTxProcessor(cfg)
@@ -272,10 +263,10 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	}
 
 	// we expected error with low gas, which means the validation passed
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("intrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
 }
@@ -305,8 +296,6 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 	)
 
 	processor, err := executor.MakeLiveDbTxProcessor(cfg)
@@ -321,10 +310,10 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	}
 
 	// we expected error with low gas, which means the validation passed
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("intrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
 }
