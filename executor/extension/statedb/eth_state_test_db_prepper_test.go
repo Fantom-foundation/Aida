@@ -27,7 +27,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func Test_ethStateTestDbPrepper_PreTransactionPreparesAStateDB(t *testing.T) {
+func Test_ethStateTestDbPrepper_PreBlockPreparesStateDB(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
@@ -38,7 +38,7 @@ func Test_ethStateTestDbPrepper_PreTransactionPreparesAStateDB(t *testing.T) {
 	testData := ethtest.CreateTestTransaction(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
@@ -48,7 +48,7 @@ func Test_ethStateTestDbPrepper_PreTransactionPreparesAStateDB(t *testing.T) {
 	}
 }
 
-func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
+func Test_ethStateTestDbPrepper_PostBlockCleansTmpDir(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
@@ -59,7 +59,7 @@ func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
 	testData := ethtest.CreateTestTransaction(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
@@ -69,7 +69,10 @@ func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
 		t.Fatalf("tmp dir not found")
 	}
 
-	err = ext.PostTransaction(st, ctx)
+	err = ext.PostBlock(st, ctx)
+	if err != nil {
+		t.Fatalf("unexpected err; %v", err)
+	}
 
 	// check if tmp dir is removed
 	if _, err := os.Stat(dirPath); !os.IsNotExist(err) {
