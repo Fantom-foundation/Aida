@@ -18,7 +18,6 @@ package logger
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -81,6 +80,7 @@ func TestErrorLogger_LoggingHappens(t *testing.T) {
 		log.EXPECT().Noticef(gomock.Any(), gomock.Any()),
 		log.EXPECT().Errorf("New error: \n\t%v", e),
 		log.EXPECT().Warningf("Total number of errors %v", 1),
+		log.EXPECT().Errorf("#%v: %v", 1, e),
 	)
 
 	ctx := new(executor.Context)
@@ -97,7 +97,7 @@ func TestErrorLogger_LoggingHappens(t *testing.T) {
 		t.Fatalf("post-run must return err")
 	}
 
-	expectedErr := fmt.Sprintf("total 1 errors occurred: %v", e)
+	expectedErr := errors.New("run failed").Error()
 	got := err.Error()
 
 	if strings.Compare(got, expectedErr) != 0 {
