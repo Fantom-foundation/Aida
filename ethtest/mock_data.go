@@ -18,6 +18,7 @@ package ethtest
 
 import (
 	"encoding/hex"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"testing"
 
@@ -41,7 +42,7 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 		t.Fatalf("cannot get chain config: %v", err)
 	}
 	to := common.HexToAddress("0x10")
-	return &stateTestContext{
+	return &StateTestContext{
 		env: &stBlockEnvironment{
 			Coinbase:   common.Address{},
 			Difficulty: newBigInt(1),
@@ -143,18 +144,42 @@ func CreateTestStJson(*testing.T) *stJSON {
 }
 
 func CreateErrorTestTransaction(*testing.T) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		expectedError: "err",
 	}
 }
 
 func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		expectedError: "",
 	}
 }
 func CreateTestTransactionWithHash(_ *testing.T, hash common.Hash) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		rootHash: hash,
+	}
+}
+
+func CreateTransactionWithInvalidTxBytes(t *testing.T) txcontext.TxContext {
+	// specific tx bytes that fail the unmarshalling
+	txBytes, err := hexutil.Decode("0x03f8d601800285012a05f200833d090080830186a000f85bf85994095e7baea6a6c7c4c2dfeb977efac326af552d87f842a00000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000010ae1a001a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d880a0fc12b67159a3567f8bdbc49e0be369a2e20e09d57a51c41310543a4128409464a02de0cfe5495c4f58ff60645ceda0afd67a4c90a70bc89fe207269435b35e5b67")
+	if err != nil {
+		t.Fatalf("cannot decode tx bytes: %v", err)
+	}
+	return &StateTestContext{
+		txBytes: txBytes,
+		msg:     &core.Message{},
+	}
+}
+func CreateTransactionThatFailsSenderValidation(t *testing.T) txcontext.TxContext {
+	// specific tx bytes that fail the validation
+	txBytes, err := hexutil.Decode("0x03f864018080078252089400000000000000000000000000000000000001000180c001c080a0de3ecf0321e2d26c34d6b9bd1ffb5a30167abafd5ecacd477049544c23d402cda06c56b464881a4af7bb8216d47c6c5e3286395027af44044b3d7d31a2d24901f2")
+	if err != nil {
+		t.Fatalf("cannot decode tx bytes: %v", err)
+	}
+	return &StateTestContext{
+		txBytes: txBytes,
+		msg:     &core.Message{},
+		env:     &stBlockEnvironment{fork: "Shanghai"}, // FORK MUST BE Shanghai
 	}
 }
