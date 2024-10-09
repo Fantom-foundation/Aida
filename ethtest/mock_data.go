@@ -160,7 +160,7 @@ func CreateTransactionThatFailsBlobGasExceedCheck(*testing.T) txcontext.TxContex
 			// add many blob hashes to fail the check
 			{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 		}},
-  }
+	}
 }
 
 func CreateTestTransactionWithHash(_ *testing.T, hash common.Hash) txcontext.TxContext {
