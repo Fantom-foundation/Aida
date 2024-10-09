@@ -18,6 +18,10 @@ package executor
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	"go.uber.org/mock/gomock"
 	"math/big"
 	"strings"
 	"testing"
@@ -153,5 +157,46 @@ func TestEthTestProcessor_DoesNotExecuteTransactionWhenBlobGasCouldExceed(t *tes
 	want := "blob gas exceeds maximum"
 	if !strings.EqualFold(got.Error(), want) {
 		t.Errorf("unexpected error, got: %v, want: %v", got, want)
+	}
+}
+
+func TestEthTestProcessor_DoesNotExecuteTransactionWithInvalidTxBytes(t *testing.T) {
+	tests := []struct {
+		name          string
+		expectedError string
+		data          txcontext.TxContext
+	}{
+		{
+			name:          "fails_unmarshal",
+			expectedError: "cannot unmarshal tx-bytes",
+			data:          ethtest.CreateTransactionWithInvalidTxBytes(t),
+		},
+		{
+			name:          "fails_validation",
+			expectedError: "cannot validate sender",
+			data:          ethtest.CreateTransactionThatFailsSenderValidation(t),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p, err := MakeEthTestProcessor(&utils.Config{ChainID: utils.EthTestsChainID})
+			if err != nil {
+				t.Fatalf("cannot make eth test processor: %v", err)
+			}
+			ctrl := gomock.NewController(t)
+			// Process is returned early - no calls are expected
+			stateDb := state.NewMockStateDB(ctrl)
+
+			ctx := &Context{State: stateDb}
+			err = p.Process(State[txcontext.TxContext]{Data: test.data}, ctx)
+			if err != nil {
+				t.Fatalf("run failed: %v", err)
+			}
+
+			_, got := ctx.ExecutionResult.GetRawResult()
+			if !strings.Contains(got.Error(), test.expectedError) {
+				t.Errorf("unexpected error, got: %v, want: %v", got, test.expectedError)
+			}
+		})
 	}
 }
