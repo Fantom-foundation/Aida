@@ -27,7 +27,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateTestLogHashValidator_PostTransactionChecksLogsHash(t *testing.T) {
+func TestEthStateTestLogHashValidator_PostBlockChecksLogsHash(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = false
 	ext := makeEthStateTestLogHashValidator(cfg)
@@ -63,7 +63,7 @@ func TestEthStateTestLogHashValidator_PostTransactionChecksLogsHash(t *testing.T
 			ctx := &executor.Context{ExecutionResult: res}
 			st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: test.data}
 
-			err := ext.PostTransaction(st, ctx)
+			err := ext.PostBlock(st, ctx)
 			if err == nil && test.wantError == "" {
 				return
 			}

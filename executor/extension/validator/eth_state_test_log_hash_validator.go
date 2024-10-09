@@ -43,7 +43,7 @@ type ethStateTestLogHashValidator struct {
 	cfg *utils.Config
 }
 
-func (e *ethStateTestLogHashValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestLogHashValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	if got, want := utils.RlpHash(ctx.ExecutionResult.GetReceipt().GetLogs()), state.Data.GetLogsHash(); got != want {
 		err = fmt.Errorf("unexpected logs hash, got %x, want %x", got, want)

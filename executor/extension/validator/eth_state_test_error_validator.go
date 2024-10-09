@@ -24,9 +24,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 func MakeEthStateTestErrorValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -50,7 +47,7 @@ type ethStateTestErrorValidator struct {
 }
 
 // PreBlock validates world state.
-func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestErrorValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -60,7 +57,7 @@ func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], 
 }
 
 // PostBlock validates error returned by the transaction processor.
-func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestErrorValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	_, got := ctx.ExecutionResult.GetRawResult()
 	_, want := state.Data.GetResult().GetRawResult()
@@ -81,17 +78,10 @@ func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxConte
 	return e.checkFatality(err, ctx.ErrorInput)
 }
 
-func (e *ethStateTestValidator) checkFatality(err error, errChan chan error) error {
+func (e *ethStateTestErrorValidator) checkFatality(err error, errChan chan error) error {
 	if !e.cfg.ContinueOnFailure {
 		return err
 	}
 	errChan <- err
 	return nil
-}
-
-func (e *ethStateTestErrorValidator) rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewLegacyKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
 }

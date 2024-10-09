@@ -60,7 +60,7 @@ func TestEthStateTestValidator_PreBlockReturnsError(t *testing.T) {
 		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
-	ext := makeEthStateTestErrorValidator(cfg, log)(cfg, log)
+	ext := makeEthStateTestErrorValidator(cfg, log)
 	err := ext.PreBlock(st, ctx)
 	if err == nil {
 		t.Fatal("pre-transaction must return error")
