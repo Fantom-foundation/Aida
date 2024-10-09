@@ -17,16 +17,12 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 func MakeEthStateTestLogHashValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -49,9 +45,8 @@ type ethStateTestLogHashValidator struct {
 
 func (e *ethStateTestLogHashValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
-
-	if got, want := e.rlpHash(ctx.ExecutionResult.GetReceipt().GetLogs()), state.Data.GetLogsHash(); got != want {
-		err = errors.Join(err, fmt.Errorf("unexpected logs hash, got %x, want %x", got, want))
+	if got, want := utils.RlpHash(ctx.ExecutionResult.GetReceipt().GetLogs()), state.Data.GetLogsHash(); got != want {
+		err = fmt.Errorf("unexpected logs hash, got %x, want %x", got, want)
 	}
 
 	if !e.cfg.ContinueOnFailure {
@@ -60,11 +55,4 @@ func (e *ethStateTestLogHashValidator) PostTransaction(state executor.State[txco
 
 	ctx.ErrorInput <- err
 	return nil
-}
-
-func (e *ethStateTestLogHashValidator) rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewLegacyKeccak256()
-	rlp.Encode(hw, x)
-	hw.Sum(h[:0])
-	return h
 }

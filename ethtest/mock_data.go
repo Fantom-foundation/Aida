@@ -18,6 +18,7 @@ package ethtest
 
 import (
 	"encoding/hex"
+	"github.com/Fantom-foundation/Aida/utils"
 	"math/big"
 	"testing"
 
@@ -42,7 +43,7 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 	}
 	to := common.HexToAddress("0x10")
 	return &stateTestContext{
-		logHash: common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"), // empty logs rlp hash
+		logHash: utils.RlpHash([]*types.Log{}), // empty logs rlp hash
 		env: &stBlockEnvironment{
 			blockNumber: 1,
 			Coinbase:    common.Address{},
