@@ -19,6 +19,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"slices"
 	"strings"
@@ -131,7 +132,7 @@ func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Contex
 		var ttx types.Transaction
 		err := ttx.UnmarshalBinary(txBytes)
 		if err != nil {
-			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, fmt.Errorf("cannot unmarshal tx-bytes: %w", err), msg.From)
 			return nil
 		}
 
@@ -140,7 +141,8 @@ func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Contex
 			return err
 		}
 		if _, err = types.Sender(types.LatestSigner(chainCfg), &ttx); err != nil {
-			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+			fmt.Printf("%s\n", hexutil.Encode(txBytes))
+			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, fmt.Errorf("cannot validate sender: %w", err), msg.From)
 			return nil
 		}
 	}
