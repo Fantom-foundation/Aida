@@ -26,14 +26,13 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateScopeEventEmitter_PreBlockCallsBeginBlockAndBeginTransaction(t *testing.T) {
+func TestEthStateScopeEventEmitter_PreBlockCallsBeginBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
 	ext := ethStateScopeEventEmitter{}
 
 	db.EXPECT().BeginBlock(uint64(1))
-	db.EXPECT().BeginTransaction(uint32(1))
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
 	ctx := &executor.Context{State: db}
@@ -43,13 +42,44 @@ func TestEthStateScopeEventEmitter_PreBlockCallsBeginBlockAndBeginTransaction(t 
 	}
 }
 
-func TestEthStateScopeEventEmitter_PostBlockCallsEndBlockAndEndTransaction(t *testing.T) {
+func TestEthStateScopeEventEmitter_PreTransactionCallsBeginTransaction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	ext := ethStateScopeEventEmitter{}
+
+	db.EXPECT().BeginTransaction(uint32(1))
+
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
+	ctx := &executor.Context{State: db}
+	err := ext.PreTransaction(st, ctx)
+	if err != nil {
+		t.Fatalf("unexpected err; %v", err)
+	}
+}
+
+func TestEthStateScopeEventEmitter_PostTransactionCallsEndTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
 	ext := ethStateScopeEventEmitter{}
 
 	db.EXPECT().EndTransaction()
+
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
+	ctx := &executor.Context{State: db}
+	err := ext.PostTransaction(st, ctx)
+	if err != nil {
+		t.Fatalf("unexpected err; %v", err)
+	}
+}
+
+func TestEthStateScopeEventEmitter_PostBlockCallsEndBlock(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	ext := ethStateScopeEventEmitter{}
+
 	db.EXPECT().EndBlock()
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
