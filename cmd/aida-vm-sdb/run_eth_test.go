@@ -46,15 +46,28 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: data})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 0, Data: data})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: data})
 			return nil
 		})
 
 	gomock.InOrder(
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(2)),
-		db.EXPECT().BeginTransaction(uint32(1)),
+		db.EXPECT().BeginTransaction(uint32(0)),
+		db.EXPECT().SetTxContext(gomock.Any(), 0),
+		db.EXPECT().Snapshot().Return(15),
+		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
+		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 0)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().EndTransaction(),
+		db.EXPECT().EndBlock(),
+
+		db.EXPECT().BeginBlock(uint64(3)),
+		db.EXPECT().BeginTransaction(uint32(0)),
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
@@ -62,20 +75,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		db.EXPECT().EndTransaction(),
-		db.EXPECT().EndBlock(),
-
-		db.EXPECT().BeginBlock(uint64(2)),
-		db.EXPECT().BeginTransaction(uint32(2)),
-		db.EXPECT().SetTxContext(gomock.Any(), 2),
-		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
-		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
-		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 	)
@@ -105,17 +105,18 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	cfg := utils.NewTestConfig(t, utils.EthTestsChainID, 2, 4, false, "Cancun")
 	data := ethtest.CreateTestTransaction(t)
 
-	// Simulate the execution of three transactions in two blocks.
+	// Simulate the execution of 4 transactions
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
-			// Block 2
+			// Tx 1
 			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: data})
-			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: data})
-			//// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: data})
+			// Tx 2
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 2, Data: data})
+			// Tx 3
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 3, Data: data})
+			// Tx 4
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 5, Transaction: utils.PseudoTx, Data: data})
 			return nil
 		})
 
@@ -126,39 +127,44 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	gomock.InOrder(
 		ext.EXPECT().PreRun(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 
-		// Block 2
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(2)),
-		db.EXPECT().BeginTransaction(uint32(1)),
+		db.EXPECT().BeginTransaction(uint32(0)),
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](2, 0), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Tx 2
-		db.EXPECT().BeginBlock(uint64(2)),
-		db.EXPECT().BeginTransaction(uint32(2)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		db.EXPECT().EndTransaction(),
-		db.EXPECT().EndBlock(),
-		//
-		//// Block 3
 		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(1)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
-		//
-		//// Block 4
+		// Tx 3
 		db.EXPECT().BeginBlock(uint64(4)),
-		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
+		db.EXPECT().BeginTransaction(uint32(2)),
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](4, 2), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, 3), gomock.Any()),
+		db.EXPECT().EndTransaction(),
+		db.EXPECT().EndBlock(),
+		// Tx 4
+		db.EXPECT().BeginBlock(uint64(5)),
+		db.EXPECT().BeginTransaction(uint32(3)),
+		ext.EXPECT().PreBlock(executor.AtTransaction[txcontext.TxContext](5, 3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil),
@@ -200,7 +206,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	gomock.InOrder(
 		// Tx execution
 		db.EXPECT().BeginBlock(uint64(2)),
-		db.EXPECT().BeginTransaction(uint32(1)),
+		db.EXPECT().BeginTransaction(uint32(0)),
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
@@ -211,6 +217,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
+		db.EXPECT().GetHash(),
 		// EndTransaction is not called because execution fails
 	)
 
@@ -262,7 +269,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
 	)
 	db.EXPECT().BeginBlock(uint64(2))
-	db.EXPECT().BeginTransaction(uint32(1))
+	db.EXPECT().BeginTransaction(uint32(0))
 
 	processor, err := executor.MakeEthTestProcessor(cfg)
 	if err != nil {

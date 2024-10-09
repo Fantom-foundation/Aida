@@ -33,7 +33,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateTestErrorValidator_PreTransactionReturnsError(t *testing.T) {
+func TestEthStateTestValidator_PreBlockReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = true
 
@@ -60,14 +60,14 @@ func TestEthStateTestErrorValidator_PreTransactionReturnsError(t *testing.T) {
 		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
-	ext := makeEthStateTestErrorValidator(cfg, log)
-	err := ext.PreTransaction(st, ctx)
+	ext := makeEthStateTestErrorValidator(cfg, log)(cfg, log)
+	err := ext.PreBlock(st, ctx)
 	if err == nil {
 		t.Fatal("pre-transaction must return error")
 	}
 }
 
-func TestEthStateTestErrorValidator_PostTransactionCheckError(t *testing.T) {
+func TestEthStateTestValidator_PostBlockChecksError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = false
 	ext := makeEthStateTestErrorValidator(cfg, nil)
@@ -109,7 +109,7 @@ func TestEthStateTestErrorValidator_PostTransactionCheckError(t *testing.T) {
 			ctx := &executor.Context{ExecutionResult: test.expect}
 			st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: test.get}
 
-			err := ext.PostTransaction(st, ctx)
+			err := ext.PostBlock(st, ctx)
 			if err == nil && test.wantError == nil {
 				return
 			}

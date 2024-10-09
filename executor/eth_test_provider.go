@@ -46,7 +46,7 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 	for i, tx := range tests {
 		err = consumer(TransactionInfo[txcontext.TxContext]{
 			// Blocks 0 and 1 are used by priming
-			Block:       2,
+			Block:       2 + i,
 			Transaction: i,
 			Data:        tx.Ctx,
 		})

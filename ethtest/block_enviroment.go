@@ -26,7 +26,6 @@ import (
 )
 
 type stBlockEnvironment struct {
-	blockNumber   uint64
 	Coinbase      common.Address `json:"currentCoinbase"   gencodec:"required"`
 	Random        *BigInt        `json:"currentRandom"        gencodec:"optional"`
 	Difficulty    *BigInt        `json:"currentDifficulty" gencodec:"optional"`
@@ -74,7 +73,7 @@ func (s *stBlockEnvironment) GetGasLimit() uint64 {
 }
 
 func (s *stBlockEnvironment) GetNumber() uint64 {
-	return s.blockNumber
+	return s.Number.Uint64()
 }
 
 func (s *stBlockEnvironment) GetTimestamp() uint64 {

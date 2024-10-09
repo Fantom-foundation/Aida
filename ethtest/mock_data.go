@@ -45,14 +45,13 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 	return &stateTestContext{
 		logHash: utils.RlpHash([]*types.Log{}), // empty logs rlp hash
 		env: &stBlockEnvironment{
-			blockNumber: 1,
-			Coinbase:    common.Address{},
-			Difficulty:  newBigInt(1),
-			GasLimit:    newBigInt(1),
-			Number:      newBigInt(1),
-			Timestamp:   newBigInt(1),
-			BaseFee:     newBigInt(1),
-			chainCfg:    chainCfg,
+			Coinbase:   common.Address{},
+			Difficulty: newBigInt(1),
+			GasLimit:   newBigInt(1),
+			Number:     newBigInt(1),
+			Timestamp:  newBigInt(1),
+			BaseFee:    newBigInt(1),
+			chainCfg:   chainCfg,
 		},
 		inputState: types.GenesisAlloc{
 			common.HexToAddress("0x1"): core.GenesisAccount{
@@ -85,13 +84,12 @@ func CreateTestStJson(*testing.T) *stJSON {
 	return &stJSON{
 		path: "test/path",
 		Env: stBlockEnvironment{
-			blockNumber: 1,
-			Coinbase:    common.Address{0x1},
-			Difficulty:  newBigInt(1),
-			GasLimit:    newBigInt(1),
-			Number:      newBigInt(1),
-			Timestamp:   newBigInt(1),
-			BaseFee:     newBigInt(1),
+			Coinbase:   common.Address{0x1},
+			Difficulty: newBigInt(1),
+			GasLimit:   newBigInt(1),
+			Number:     newBigInt(1),
+			Timestamp:  newBigInt(1),
+			BaseFee:    newBigInt(1),
 		},
 		Pre: types.GenesisAlloc{common.Address{0x2}: types.Account{
 			Code:       []byte{1},
@@ -155,5 +153,10 @@ func CreateErrorTestTransaction(*testing.T) txcontext.TxContext {
 func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
 	return &stateTestContext{
 		expectedError: "",
+	}
+}
+func CreateTestTransactionWithHash(_ *testing.T, hash common.Hash) txcontext.TxContext {
+	return &stateTestContext{
+		rootHash: hash,
 	}
 }
