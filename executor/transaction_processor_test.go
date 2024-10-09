@@ -158,9 +158,8 @@ func TestEthTestProcessor_DoesNotExecuteTransactionWithInvalidTxBytes(t *testing
 				t.Fatalf("cannot make eth test processor: %v", err)
 			}
 			ctrl := gomock.NewController(t)
-			// Process is returned early - only get logs is expected
+			// Process is returned early - no calls are expected
 			stateDb := state.NewMockStateDB(ctrl)
-			stateDb.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any())
 
 			ctx := &Context{State: stateDb}
 			err = p.Process(State[txcontext.TxContext]{Data: test.data}, ctx)

@@ -19,7 +19,6 @@ package executor
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"slices"
 	"strings"
@@ -124,15 +123,19 @@ type ethTestProcessor struct {
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	// This check needs to be done before ApplyMessage is called, otherwise different state-root hash is produced
 	msg := state.Data.GetMessage()
-	txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
-	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", state.Transaction))
 	txBytes := state.Data.(*ethtest.StateTestContext).GetTxBytes()
 
 	if len(txBytes) != 0 {
 		var ttx types.Transaction
 		err := ttx.UnmarshalBinary(txBytes)
 		if err != nil {
-			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, fmt.Errorf("cannot unmarshal tx-bytes: %w", err), msg.From)
+			ctx.ExecutionResult = newTransactionResult(
+				[]*types.Log{},
+				msg,
+				nil,
+				fmt.Errorf("cannot unmarshal tx-bytes: %w", err),
+				msg.From,
+			)
 			return nil
 		}
 
@@ -141,8 +144,13 @@ func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Contex
 			return err
 		}
 		if _, err = types.Sender(types.LatestSigner(chainCfg), &ttx); err != nil {
-			fmt.Printf("%s\n", hexutil.Encode(txBytes))
-			ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, fmt.Errorf("cannot validate sender: %w", err), msg.From)
+			ctx.ExecutionResult = newTransactionResult(
+				[]*types.Log{},
+				msg,
+				nil,
+				fmt.Errorf("cannot validate sender: %w", err),
+				msg.From,
+			)
 			return nil
 		}
 	}
