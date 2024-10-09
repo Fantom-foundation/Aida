@@ -17,7 +17,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -113,12 +112,8 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
 	err = runSubstates(cfg, provider, db, processor, nil, nil)
-	if err != nil {
-		errors.Unwrap(err)
-		if strings.Contains(err.Error(), "intrinsic gas too low") {
-			return
-		}
-		t.Fatalf("run failed; %v", err)
+	if err == nil {
+		t.Fatal("run should fail")
 	}
 }
 
