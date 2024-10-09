@@ -62,7 +62,7 @@ func (s *StateTestContext) GetTxBytes() hexutil.Bytes {
 	return s.txBytes
 }
 
-func (s *stateTestContext) GetLogsHash() common.Hash {
+func (s *StateTestContext) GetLogsHash() common.Hash {
 	return s.logHash
 }
 
