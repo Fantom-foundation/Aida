@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
@@ -42,9 +44,9 @@ func OpenRpcRecording(cfg *utils.Config, ctx *cli.Context) (Provider[*rpc.Reques
 		return openRpcRecording(iter, cfg, log, ctx, []string{cfg.RpcRecordingPath}), nil
 	}
 
-	files, err := utils.GetFilesWithinDirectories("", []string{cfg.RpcRecordingPath})
+	files, err := getRpcRecordingFiles(cfg.RpcRecordingPath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get files from dir %v; %w", cfg.RpcRecordingPath, err)
+		return nil, err
 	}
 
 	iter, err := rpc.NewFileReader(ctx.Context, files[0])
@@ -53,6 +55,20 @@ func OpenRpcRecording(cfg *utils.Config, ctx *cli.Context) (Provider[*rpc.Reques
 	}
 	return openRpcRecording(iter, cfg, log, ctx, files), nil
 
+}
+
+func getRpcRecordingFiles(path string) ([]string, error) {
+	files, err := utils.GetFilesWithinDirectories("", []string{path})
+	if err != nil {
+		return nil, fmt.Errorf("cannot get files from dir %v; %w", path, err)
+	}
+
+	return slices.DeleteFunc(files, func(s string) bool {
+		if strings.Contains(s, "lost+found") {
+			return true
+		}
+		return false
+	}), nil
 }
 
 func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, log logger.Logger, ctxt *cli.Context, files []string) Provider[*rpc.RequestAndResults] {

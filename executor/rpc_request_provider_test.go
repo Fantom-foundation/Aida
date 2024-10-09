@@ -19,6 +19,8 @@ package executor
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -191,6 +193,56 @@ func TestRPCRequestProvider_ReportsAboutRun(t *testing.T) {
 
 	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err == nil {
 		t.Fatal("run must fail")
+	}
+}
+
+func TestGetRpcRecordingFiles_IgnoreLostAndFound(t *testing.T) {
+	temp := t.TempDir()
+
+	included := filepath.Join(temp, "included")
+	err := os.Mkdir(included, 0777)
+	if err != nil {
+		t.Fatalf("cannot create dir: %v", err)
+	}
+
+	f, err := os.Create(filepath.Join(included, "file.txt"))
+	if err != nil {
+		t.Fatalf("cannot create file: %v", err)
+	}
+	f.Close()
+
+	f, err = os.Create(filepath.Join(temp, "file.txt"))
+	if err != nil {
+		t.Fatalf("cannot create file: %v", err)
+	}
+	f.Close()
+
+	lostFound := filepath.Join(temp, "lost+found")
+	err = os.Mkdir(lostFound, 0777)
+	if err != nil {
+		t.Fatal("cannot create dir")
+	}
+
+	// Create two files to prove deleting item from iterated slice works here
+	f, err = os.Create(filepath.Join(lostFound, "file1.txt"))
+	if err != nil {
+		t.Fatal("cannot create file")
+	}
+	f.Close()
+
+	f, err = os.Create(filepath.Join(lostFound, "file2.txt"))
+	if err != nil {
+		t.Fatal("cannot create file")
+	}
+	f.Close()
+
+	files, err := getRpcRecordingFiles(temp)
+	if err != nil {
+		t.Fatalf("cannot get rpc recording files: %v", err)
+	}
+
+	if got, want := len(files), 2; got != want {
+		t.Errorf("unexpected number of files, got: %v, want: %v", got, want)
 	}
 }
 
