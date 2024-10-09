@@ -18,10 +18,7 @@ package executor
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/ethtest"
-	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/txcontext"
-	"go.uber.org/mock/gomock"
+
 	"math/big"
 	"strings"
 	"testing"

@@ -156,7 +156,7 @@ func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
 }
 
 func CreateTransactionThatFailsBlobGasExceedCheck(*testing.T) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		msg: &core.Message{BlobHashes: []common.Hash{
 			// add many blob hashes to fail the check
 			{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
