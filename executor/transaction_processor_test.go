@@ -140,9 +140,8 @@ func TestEthTestProcessor_DoesNotExecuteTransactionWhenBlobGasCouldExceed(t *tes
 		t.Fatalf("cannot make eth test processor: %v", err)
 	}
 	ctrl := gomock.NewController(t)
-	// Process is returned early - only get logs is expected
+	// Process is returned early - nothing is expected
 	stateDb := state.NewMockStateDB(ctrl)
-	stateDb.EXPECT().GetLogs(gomock.Any(), gomock.Any(), gomock.Any())
 
 	ctx := &Context{State: stateDb}
 	err = p.Process(State[txcontext.TxContext]{Data: ethtest.CreateTransactionThatFailsBlobGasExceedCheck(t)}, ctx)

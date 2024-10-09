@@ -123,9 +123,7 @@ func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Contex
 	// This check needs to be done before ApplyMessage is called, otherwise different state-root hash is produced
 	msg := state.Data.GetMessage()
 	if len(msg.BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
-		txHash := common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
-		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", state.Transaction))
-		ctx.ExecutionResult = newTransactionResult(ctx.State.GetLogs(txHash, uint64(state.Block), blockHash), msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+		ctx.ExecutionResult = newTransactionResult([]*types.Log{}, msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
 		return nil
 	}
 
