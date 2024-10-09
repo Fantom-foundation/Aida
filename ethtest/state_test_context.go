@@ -21,13 +21,14 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 )
 
 func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chainCfg *params.ChainConfig, fork string, postNumber int) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		fork:          fork,
 		path:          stJson.path,
 		postNumber:    postNumber,
@@ -37,11 +38,12 @@ func newStateTestTxContext(stJson *stJSON, msg *core.Message, post stPost, chain
 		msg:           msg,
 		rootHash:      post.RootHash,
 		expectedError: post.ExpectException,
+		txBytes:       post.TxBytes,
 		logHash:       post.LogsHash,
 	}
 }
 
-type stateTestContext struct {
+type StateTestContext struct {
 	txcontext.NilTxContext
 	fork          string // which fork is the test running
 	path          string // path to file from which is the test
@@ -52,38 +54,43 @@ type stateTestContext struct {
 	msg           *core.Message
 	rootHash      common.Hash // expected root hash
 	expectedError string      // expected error by processor
-	logHash       common.Hash
+	logHash       common.Hash // expected rlp log hash
+	txBytes       hexutil.Bytes
+}
+
+func (s *StateTestContext) GetTxBytes() hexutil.Bytes {
+	return s.txBytes
 }
 
 func (s *stateTestContext) GetLogsHash() common.Hash {
 	return s.logHash
 }
 
-func (s *stateTestContext) GetStateHash() common.Hash {
+func (s *StateTestContext) GetStateHash() common.Hash {
 	return s.rootHash
 }
 
-func (s *stateTestContext) GetOutputState() txcontext.WorldState {
+func (s *StateTestContext) GetOutputState() txcontext.WorldState {
 	// we dont execute pseudo transactions here
 	return nil
 }
 
-func (s *stateTestContext) GetInputState() txcontext.WorldState {
+func (s *StateTestContext) GetInputState() txcontext.WorldState {
 	return NewWorldState(s.inputState)
 }
 
-func (s *stateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
+func (s *StateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return s.env
 }
 
-func (s *stateTestContext) GetMessage() *core.Message {
+func (s *StateTestContext) GetMessage() *core.Message {
 	return s.msg
 }
 
-func (s *stateTestContext) GetResult() txcontext.Result {
+func (s *StateTestContext) GetResult() txcontext.Result {
 	return stateTestResult{s.expectedError}
 }
 
-func (s *stateTestContext) String() string {
+func (s *StateTestContext) String() string {
 	return fmt.Sprintf("Test path: %v\nDescription: %v\nFork: %v\nPost number: %v", s.path, s.description, s.fork, s.postNumber)
 }

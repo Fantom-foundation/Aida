@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params"
@@ -120,6 +121,43 @@ type ethTestProcessor struct {
 
 // Process transaction inside state into given LIVE StateDb
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+	// This check needs to be done before ApplyMessage is called to identify invalid transactions. Invalid
+	// transactions are expected to be filtered out before running them (via ApplyMessage). If they
+	// got processed, they would at least update the nonce of the transaction sender, thereby influencing
+	// the resulting state hash. This would be detected as a failed test case.
+	msg := state.Data.GetMessage()
+	txBytes := state.Data.(*ethtest.StateTestContext).GetTxBytes()
+
+	if len(txBytes) != 0 {
+		var ttx types.Transaction
+		err := ttx.UnmarshalBinary(txBytes)
+		if err != nil {
+			ctx.ExecutionResult = newTransactionResult(
+				[]*types.Log{},
+				msg,
+				nil,
+				fmt.Errorf("cannot unmarshal tx-bytes: %w", err),
+				msg.From,
+			)
+			return nil
+		}
+
+		chainCfg, err := p.cfg.GetChainConfig(state.Data.GetBlockEnvironment().GetFork())
+		if err != nil {
+			return err
+		}
+		if _, err = types.Sender(types.LatestSigner(chainCfg), &ttx); err != nil {
+			ctx.ExecutionResult = newTransactionResult(
+				[]*types.Log{},
+				msg,
+				nil,
+				fmt.Errorf("cannot validate sender: %w", err),
+				msg.From,
+			)
+			return nil
+		}
+	}
+
 	// We ignore error in this case, because some tests require the processor to fail,
 	// ethStateTestValidator decides whether error is fatal.
 	ctx.ExecutionResult, _ = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
