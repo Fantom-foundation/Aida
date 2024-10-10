@@ -265,8 +265,6 @@ type processor interface {
 	processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (transactionResult, error)
 }
 
-type aidaProcessorMode int
-
 type aidaProcessor struct {
 	vmCfg vm.Config
 	cfg   *utils.Config

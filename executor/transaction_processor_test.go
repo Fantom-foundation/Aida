@@ -18,12 +18,17 @@ package executor
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
+	"go.uber.org/mock/gomock"
 )
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -214,4 +219,3 @@ func TestEthTestProcessor_DoesNotExecuteTransactionWithInvalidTxBytes(t *testing
 		})
 	}
 }
-*/
