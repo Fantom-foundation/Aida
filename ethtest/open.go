@@ -30,7 +30,7 @@ import (
 type ethTest interface {
 	*stJSON
 	setPath(path string)
-	setDescription(desc string)
+	setTestLabel(testLabel string)
 }
 
 // getTestsWithinPath returns all tests in given directory (and subdirectories)
@@ -113,9 +113,9 @@ func readTestsFromFile[T ethTest](path string) ([]T, error) {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)
 	}
 
-	for desc, t := range b {
+	for label, t := range b {
 		t.setPath(path)
-		t.setDescription(desc)
+		t.setTestLabel(label)
 		tests = append(tests, t)
 	}
 	return tests, nil
