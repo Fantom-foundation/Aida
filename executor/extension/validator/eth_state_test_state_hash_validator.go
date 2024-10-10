@@ -17,36 +17,46 @@
 package validator
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func MakeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if cfg.ShadowDb {
-		return makeShadowDbValidator(cfg)
+func MakeEthStateTestStateHashValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	if !cfg.Validate {
+		return extension.NilExtension[txcontext.TxContext]{}
 	}
-
-	return extension.NilExtension[txcontext.TxContext]{}
+	return makeEthStateTestStateHashValidator(cfg)
 }
 
-func makeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	return &shadowDbValidator{
+func makeEthStateTestStateHashValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	return &ethStateTestStateHashValidator{
 		cfg: cfg,
 	}
 }
 
-type shadowDbValidator struct {
+type ethStateTestStateHashValidator struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 }
 
-func (e *shadowDbValidator) PostBlock(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	// Retrieve hash from the state, if this there is mismatch between prime and shadow db error is returned
-	_, err := ctx.State.GetHash()
+// PostBlock validates state root hash.
+func (e *ethStateTestStateHashValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	got, err := ctx.State.GetHash()
 	if err != nil {
 		return err
 	}
-	return ctx.State.Error()
+	want := state.Data.GetStateHash()
+	if got != want {
+		err = fmt.Errorf("unexpected root hash, got: %s, want: %s", got, want)
+		if !e.cfg.ContinueOnFailure {
+			return err
+		}
+		ctx.ErrorInput <- err
+	}
+
+	return nil
 }

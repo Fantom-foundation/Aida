@@ -112,11 +112,8 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
 	err = run(cfg, provider, db, processor, nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "intrinsic gas too low") {
-			return
-		}
-		t.Fatal("run failed")
+	if err == nil {
+		t.Fatal("run should fail")
 	}
 }
 
@@ -205,11 +202,8 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
 	err = run(cfg, provider, db, processor, nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "intrinsic gas too low") {
-			return
-		}
-		t.Fatal("run failed")
+	if err == nil {
+		t.Fatal("run should fail")
 	}
 }
 

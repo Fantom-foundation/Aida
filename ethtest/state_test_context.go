@@ -21,6 +21,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -35,7 +36,7 @@ func newStateTestTxContext(
 	fork string,
 	postNumber int,
 ) txcontext.TxContext {
-	return &stateTestContext{
+	return &StateTestContext{
 		path:          stJson.path,
 		testLabel:     testLabel,
 		fork:          fork,
@@ -45,10 +46,11 @@ func newStateTestTxContext(
 		msg:           msg,
 		rootHash:      post.RootHash,
 		expectedError: post.ExpectException,
+		txBytes:       post.TxBytes,
 	}
 }
 
-type stateTestContext struct {
+type StateTestContext struct {
 	txcontext.NilTxContext
 	path          string // path to file from which is the test
 	testLabel     string // the test label within one JSON file (key to the JSON)
@@ -59,34 +61,39 @@ type stateTestContext struct {
 	msg           *core.Message
 	rootHash      common.Hash
 	expectedError string
+	txBytes       hexutil.Bytes
 }
 
-func (s *stateTestContext) GetStateHash() common.Hash {
+func (s *StateTestContext) GetTxBytes() hexutil.Bytes {
+	return s.txBytes
+}
+
+func (s *StateTestContext) GetStateHash() common.Hash {
 	return s.rootHash
 }
 
-func (s *stateTestContext) GetOutputState() txcontext.WorldState {
+func (s *StateTestContext) GetOutputState() txcontext.WorldState {
 	// we dont execute pseudo transactions here
 	return nil
 }
 
-func (s *stateTestContext) GetInputState() txcontext.WorldState {
+func (s *StateTestContext) GetInputState() txcontext.WorldState {
 	return NewWorldState(s.inputState)
 }
 
-func (s *stateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
+func (s *StateTestContext) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return s.env
 }
 
-func (s *stateTestContext) GetMessage() *core.Message {
+func (s *StateTestContext) GetMessage() *core.Message {
 	return s.msg
 }
 
-func (s *stateTestContext) GetResult() txcontext.Result {
+func (s *StateTestContext) GetResult() txcontext.Result {
 	return stateTestResult{s.expectedError}
 }
 
-func (s *stateTestContext) String() string {
+func (s *StateTestContext) String() string {
 	return fmt.Sprintf(
 		"Test path: %v\n"+
 			"Test label: %v\n"+

@@ -26,7 +26,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStateScopeEventEmitter_PreTransactionCallsBeginBlockAndBeginTransaction(t *testing.T) {
+func TestEthStateScopeEventEmitter_PreBlockCallsBeginBlockAndBeginTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
@@ -37,13 +37,13 @@ func TestEthStateScopeEventEmitter_PreTransactionCallsBeginBlockAndBeginTransact
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
 	ctx := &executor.Context{State: db}
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
 }
 
-func TestEthStateScopeEventEmitter_PostTransactionCallsEndBlockAndEndTransaction(t *testing.T) {
+func TestEthStateScopeEventEmitter_PostBlockCallsEndBlockAndEndTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
@@ -54,7 +54,7 @@ func TestEthStateScopeEventEmitter_PostTransactionCallsEndBlockAndEndTransaction
 
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestTransaction(t)}
 	ctx := &executor.Context{State: db}
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}

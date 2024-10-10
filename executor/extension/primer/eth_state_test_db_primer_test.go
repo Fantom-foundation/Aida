@@ -29,7 +29,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func Test_EthStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
+func Test_EthStateTestDbPrimer_PreBlockPriming(t *testing.T) {
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 
@@ -57,13 +57,13 @@ func Test_EthStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 
 	ctx.State = mockState
 
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
 }
 
-func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t *testing.T) {
+func Test_EthStateTestDbPrimer_PreBlockPrimingWorksWithPreExistedStateDb(t *testing.T) {
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 
@@ -92,7 +92,7 @@ func Test_EthStateTestDbPrimer_PreTransactionPrimingWorksWithPreExistedStateDb(t
 
 	ctx.State = mockState
 
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
