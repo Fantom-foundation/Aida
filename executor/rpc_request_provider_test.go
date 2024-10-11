@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -37,7 +38,7 @@ func TestRPCRequestProvider_WorksWithValidResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
+	provider := openRpcRecording(nil, i, cfg, logger.NewLogger("critical", "rpc-provider-test"), []string{"testfile"})
 
 	defer provider.Close()
 
@@ -62,7 +63,7 @@ func TestRPCRequestProvider_WorksWithErrorResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
+	provider := openRpcRecording(nil, i, cfg, logger.NewLogger("critical", "rpc-provider-test"), []string{"testfile"})
 
 	defer provider.Close()
 
@@ -87,7 +88,7 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
+	provider := openRpcRecording(nil, i, cfg, logger.NewLogger("critical", "rpc-provider-test"), []string{"testfile"})
 
 	defer provider.Close()
 
@@ -119,7 +120,7 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
+	provider := openRpcRecording(nil, i, cfg, logger.NewLogger("critical", "rpc-provider-test"), []string{"testfile"})
 
 	defer provider.Close()
 
@@ -145,7 +146,7 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
+	provider := openRpcRecording(nil, i, cfg, logger.NewLogger("critical", "rpc-provider-test"), []string{"testfile"})
 
 	defer provider.Close()
 
@@ -174,7 +175,7 @@ func TestRPCRequestProvider_ReportsAboutRun(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.RpcRecordingPath = "test_file"
 
-	provider := openRpcRecording(i, cfg, log, nil, []string{cfg.RpcRecordingPath})
+	provider := openRpcRecording(nil, i, cfg, log, []string{cfg.RpcRecordingPath})
 
 	defer provider.Close()
 
@@ -236,12 +237,12 @@ func TestGetRpcRecordingFiles_IgnoreLostAndFound(t *testing.T) {
 	}
 	f.Close()
 
-	files, err := getRpcRecordingFiles(temp)
+	rec, err := OpenRpcRecording(context.Background(), &utils.Config{RpcRecordingPath: temp})
 	if err != nil {
 		t.Fatalf("cannot get rpc recording files: %v", err)
 	}
 
-	if got, want := len(files), 2; got != want {
+	if got, want := len(rec.(*rpcRequestProvider).files), 2; got != want {
 		t.Errorf("unexpected number of files, got: %v, want: %v", got, want)
 	}
 }

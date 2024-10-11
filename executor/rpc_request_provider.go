@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -26,54 +27,51 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/urfave/cli/v2"
 )
 
-func OpenRpcRecording(cfg *utils.Config, ctx *cli.Context) (Provider[*rpc.RequestAndResults], error) {
-	fileInfo, err := os.Stat(cfg.RpcRecordingPath)
+func OpenRpcRecording(ctx context.Context, cfg *utils.Config) (Provider[*rpc.RequestAndResults], error) {
+	path := cfg.RpcRecordingPath
+	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot stat the rpc path; %w", err)
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "rpc-provider")
 	if !fileInfo.IsDir() {
-		iter, err := rpc.NewFileReader(ctx.Context, cfg.RpcRecordingPath)
+		iter, err := rpc.NewFileReader(ctx, path)
 		if err != nil {
 			return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
 		}
-		return openRpcRecording(iter, cfg, log, ctx, []string{cfg.RpcRecordingPath}), nil
+		return openRpcRecording(ctx, iter, cfg, log, []string{}), nil
 	}
 
-	files, err := getRpcRecordingFiles(cfg.RpcRecordingPath)
-	if err != nil {
-		return nil, err
-	}
-
-	iter, err := rpc.NewFileReader(ctx.Context, files[0])
-	if err != nil {
-		return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
-	}
-	return openRpcRecording(iter, cfg, log, ctx, files), nil
-
-}
-
-func getRpcRecordingFiles(path string) ([]string, error) {
 	files, err := utils.GetFilesWithinDirectories("", []string{path})
 	if err != nil {
 		return nil, fmt.Errorf("cannot get files from dir %v; %w", path, err)
 	}
 
-	return slices.DeleteFunc(files, func(s string) bool {
+	// Filter out lost+found folder
+	files, err = slices.DeleteFunc(files, func(s string) bool {
 		if strings.Contains(s, "lost+found") {
 			return true
 		}
 		return false
 	}), nil
+	if err != nil {
+		return nil, err
+	}
+
+	iter, err := rpc.NewFileReader(ctx, files[0])
+	if err != nil {
+		return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
+	}
+	return openRpcRecording(ctx, iter, cfg, log, files), nil
+
 }
 
-func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, log logger.Logger, ctxt *cli.Context, files []string) Provider[*rpc.RequestAndResults] {
+func openRpcRecording(ctx context.Context, iter rpc.Iterator, cfg *utils.Config, log logger.Logger, files []string) Provider[*rpc.RequestAndResults] {
 	return &rpcRequestProvider{
-		ctxt:     ctxt,
+		ctx:      ctx,
 		fileName: cfg.RpcRecordingPath,
 		iter:     iter,
 		files:    files,
@@ -82,7 +80,7 @@ func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, log logger.Logger, c
 }
 
 type rpcRequestProvider struct {
-	ctxt     *cli.Context
+	ctx      context.Context
 	fileName string
 	iter     rpc.Iterator
 	log      logger.Logger
@@ -136,7 +134,7 @@ func (r *rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Reques
 
 	if r.nextFile < len(r.files) {
 		var err error
-		r.iter, err = rpc.NewFileReader(r.ctxt.Context, r.files[r.nextFile])
+		r.iter, err = rpc.NewFileReader(r.ctx, r.files[r.nextFile])
 		if err != nil {
 			return fmt.Errorf("cannot open rpc recording file %v; %w", r.files[r.nextFile], err)
 		}
