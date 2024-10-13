@@ -121,11 +121,16 @@ type ethTestProcessor struct {
 
 // Process transaction inside state into given LIVE StateDb
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
-	// This check needs to be done before ApplyMessage is called to identify invalid transactions. Invalid
+	// These checks need to be done before ApplyMessage is called to identify invalid transactions. Invalid
 	// transactions are expected to be filtered out before running them (via ApplyMessage). If they
 	// got processed, they would at least update the nonce of the transaction sender, thereby influencing
 	// the resulting state hash. This would be detected as a failed test case.
 	msg := state.Data.GetMessage()
+	if len(msg.BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
+		ctx.ExecutionResult = newTransactionResult([]*types.Log{}, msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
+		return nil
+	}
+
 	txBytes := state.Data.(*ethtest.StateTestContext).GetTxBytes()
 
 	if len(txBytes) != 0 {
