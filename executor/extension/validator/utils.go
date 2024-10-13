@@ -30,6 +30,9 @@ import (
 	"github.com/holiman/uint256"
 )
 
+// DaoFOrkAddr - address in ethereum, which got slashed
+const DaoForkAddr = "0x304a554a310C7e546dfe434669C62820b7D83490"
+
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
@@ -233,8 +236,8 @@ func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, 
 		balance := db.GetBalance(addr)
 		if accBalance.Cmp(balance) != 0 {
 			// db balance should always be equal or lower because of miner rewards
-			// zero balance exception for slashed accounts
-			if isPreTransaction && balance.Cmp(accBalance) < 0 || accBalance.Eq(uint256.NewInt(0)) {
+			// zero balance exception for slashed accounts - dao fork
+			if isPreTransaction && balance.Cmp(accBalance) < 0 || (accBalance.Eq(uint256.NewInt(0)) && addr.Hex() == DaoForkAddr) {
 				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
 				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
 			} else {
