@@ -18,8 +18,8 @@ package ethtest
 
 import (
 	"encoding/hex"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"testing"
 
