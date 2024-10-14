@@ -18,6 +18,7 @@ package ethtest
 
 import (
 	"encoding/hex"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"testing"
@@ -43,6 +44,7 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 	}
 	to := common.HexToAddress("0x10")
 	return &StateTestContext{
+		logHash: utils.RlpHash([]*types.Log{}), // empty logs rlp hash
 		env: &stBlockEnvironment{
 			Coinbase:   common.Address{},
 			Difficulty: newBigInt(1),
@@ -154,6 +156,16 @@ func CreateNoErrorTestTransaction(*testing.T) txcontext.TxContext {
 		expectedError: "",
 	}
 }
+
+func CreateTransactionThatFailsBlobGasExceedCheck(*testing.T) txcontext.TxContext {
+	return &StateTestContext{
+		msg: &core.Message{BlobHashes: []common.Hash{
+			// add many blob hashes to fail the check
+			{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+		}},
+	}
+}
+
 func CreateTestTransactionWithHash(_ *testing.T, hash common.Hash) txcontext.TxContext {
 	return &StateTestContext{
 		rootHash: hash,
