@@ -47,6 +47,7 @@ func newStateTestTxContext(
 		rootHash:      post.RootHash,
 		expectedError: post.ExpectException,
 		txBytes:       post.TxBytes,
+		logHash:       post.LogsHash,
 	}
 }
 
@@ -59,13 +60,18 @@ type StateTestContext struct {
 	env           *stBlockEnvironment
 	inputState    types.GenesisAlloc
 	msg           *core.Message
-	rootHash      common.Hash
-	expectedError string
+	rootHash      common.Hash // expected root hash
+	expectedError string      // expected error by processor
+	logHash       common.Hash // expected rlp log hash
 	txBytes       hexutil.Bytes
 }
 
 func (s *StateTestContext) GetTxBytes() hexutil.Bytes {
 	return s.txBytes
+}
+
+func (s *StateTestContext) GetLogsHash() common.Hash {
+	return s.logHash
 }
 
 func (s *StateTestContext) GetStateHash() common.Hash {

@@ -26,28 +26,28 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeEthStateTestErrorValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	if !cfg.Validate {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
-	return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
+	return makeEthStateTestErrorValidator(cfg, logger.NewLogger(cfg.LogLevel, "ethStateTestErrorValidator"))
 }
 
-func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
-	return &ethStateTestValidator{
+func makeEthStateTestErrorValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+	return &ethStateTestErrorValidator{
 		cfg: cfg,
 		log: log,
 	}
 }
 
-type ethStateTestValidator struct {
+type ethStateTestErrorValidator struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 	log logger.Logger
 }
 
 // PreBlock validates world state.
-func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestErrorValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -57,7 +57,7 @@ func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], 
 }
 
 // PostBlock validates error returned by the transaction processor.
-func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestErrorValidator) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	_, got := ctx.ExecutionResult.GetRawResult()
 	_, want := state.Data.GetResult().GetRawResult()
@@ -78,7 +78,7 @@ func (e *ethStateTestValidator) PostBlock(state executor.State[txcontext.TxConte
 	return e.checkFatality(err, ctx.ErrorInput)
 }
 
-func (e *ethStateTestValidator) checkFatality(err error, errChan chan error) error {
+func (e *ethStateTestErrorValidator) checkFatality(err error, errChan chan error) error {
 	if !e.cfg.ContinueOnFailure {
 		return err
 	}
