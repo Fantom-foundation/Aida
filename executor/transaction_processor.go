@@ -26,7 +26,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/params"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -120,16 +119,11 @@ type ethTestProcessor struct {
 
 // Process transaction inside state into given LIVE StateDb
 func (p *ethTestProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
-	// These checks need to be done before ApplyMessage is called to identify invalid transactions. Invalid
+	// This check needs to be done before ApplyMessage is called to identify invalid transactions. Invalid
 	// transactions are expected to be filtered out before running them (via ApplyMessage). If they
 	// got processed, they would at least update the nonce of the transaction sender, thereby influencing
 	// the resulting state hash. This would be detected as a failed test case.
 	msg := state.Data.GetMessage()
-	if len(msg.BlobHashes)*params.BlobTxBlobGasPerBlob > params.MaxBlobGasPerBlock {
-		ctx.ExecutionResult = newTransactionResult([]*types.Log{}, msg, nil, errors.New("blob gas exceeds maximum"), msg.From)
-		return nil
-	}
-
 	txBytes := state.Data.(*ethtest.StateTestContext).GetTxBytes()
 
 	if len(txBytes) != 0 {
@@ -337,24 +331,22 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 
+	var msgResult messageResult
 	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	executionResult, err := core.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
-		return res, fmt.Errorf("failed to execute transaction: %w", err)
-	}
-
-	msgResult := messageResult{
-		failed:     executionResult.Failed(),
-		returnData: executionResult.Return(),
-		gasUsed:    executionResult.UsedGas,
-		err:        executionResult.Err,
-	}
-
-	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+	} else {
+		// result should only be created if error was not returned
+		msgResult = messageResult{
+			failed:     executionResult.Failed(),
+			returnData: executionResult.Return(),
+			gasUsed:    executionResult.UsedGas,
+			err:        executionResult.Err,
+		}
 	}
 
 	// inform about failing transaction
