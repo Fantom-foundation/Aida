@@ -120,43 +120,6 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 
 }
 
-/*
-func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
-	cfg := utils.NewTestConfig(t, 250, 0, 1, false, "")
-	tests := []struct {
-		name    string
-		evmImpl string
-		want    applyMessage
-	}{
-		{
-			name:    "expect_applyMessageUsingGeth",
-			evmImpl: "aida-geth",
-			want:    applyMessageUsingGeth,
-		},
-		{
-			name:    "expect_applyMessageUsingSonic",
-			evmImpl: "aida",
-			want:    applyMessageUsingSonic,
-		},
-		{
-			name:    "expect_defaultsToApplyMessageUsingSonic",
-			evmImpl: "",
-			want:    applyMessageUsingSonic,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			cfg.EvmImpl = test.evmImpl
-			aidaProcessor := makeAidaProcessor(cfg, vm.Config{})
-
-			if got, want := fmt.Sprintf("%p", aidaProcessor.applyMessage), fmt.Sprintf("%p", test.want); got != want {
-				t.Errorf("unexpected apply func")
-			}
-
-		})
-	}
-}
-
 func TestEthTestProcessor_DoesNotExecuteTransactionWhenBlobGasCouldExceed(t *testing.T) {
 	p, err := MakeEthTestProcessor(&utils.Config{})
 	if err != nil {
