@@ -265,7 +265,7 @@ var (
 	EvmImplementation = cli.StringFlag{
 		Name:  "evm-impl",
 		Usage: "select EVM implementation",
-		Value: "aida",
+		Value: "opera",
 	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
