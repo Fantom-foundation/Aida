@@ -68,6 +68,8 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		// Tx 2
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
@@ -76,6 +78,8 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().Snapshot().Return(17),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(17),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Block 3
@@ -86,6 +90,8 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().Snapshot().Return(19),
 		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(19),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Pseudo transaction do not use snapshots.
@@ -276,6 +282,8 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().SetTxContext(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(testSender).Return(uint256.NewInt(0)), // < this is not enough for the gas
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		// EndTransaction does not get called because validation fails
 	)
 

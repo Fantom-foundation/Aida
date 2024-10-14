@@ -76,7 +76,6 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 			Data:          []byte{0x1},
 			AccessList:    make(types.AccessList, 0),
 			BlobGasFeeCap: big.NewInt(1),
-			BlobHashes:    make([]common.Hash, 0),
 		},
 	}
 }

@@ -18,6 +18,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"strings"
 	"testing"
 
@@ -57,6 +59,10 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
 		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 0)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
@@ -66,6 +72,10 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
 		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), uint64(3), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 	)
@@ -201,6 +211,10 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetNonce(data.GetMessage().From).Return(uint64(1)),
 		db.EXPECT().GetCodeHash(data.GetMessage().From).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(uint256.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any(), tracing.BalanceDecreaseGasBuy),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), uint64(2), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		db.EXPECT().GetHash(),
