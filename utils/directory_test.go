@@ -56,3 +56,23 @@ func TestGetFilesWithinDirectories(t *testing.T) {
 		})
 	}
 }
+
+func TestGetFilesWithinDirectories_IgnoresLostFoundErr(t *testing.T) {
+	tmp := t.TempDir()
+	lostFound := filepath.Join(tmp, "lost+found")
+	err := os.Mkdir(lostFound, 0777)
+	if err != nil {
+		t.Fatalf("cannot create lost+found dir: %v", err)
+	}
+
+	// remove ability to read from dir
+	err = os.Chmod(lostFound, 0000)
+	if err != nil {
+		t.Fatalf("cannot chmod: %v", err)
+	}
+
+	_, err = GetFilesWithinDirectories("", []string{tmp})
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}

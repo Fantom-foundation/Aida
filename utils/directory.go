@@ -18,6 +18,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,7 +62,7 @@ func GetFilesWithinDirectories(suffix string, paths []string) ([]string, error) 
 	for _, path := range paths {
 		err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				return err
+				return fmt.Errorf("path: %s, err: %w", path, err)
 			}
 			// Check if the path represents a regular file (not a directory)
 			if !info.IsDir() {
@@ -72,6 +73,9 @@ func GetFilesWithinDirectories(suffix string, paths []string) ([]string, error) 
 			return nil
 		})
 		if err != nil {
+			if errors.Is(err, os.ErrPermission) && strings.Contains(err.Error(), "lost+found") {
+				continue
+			}
 			return nil, err
 		}
 	}
