@@ -32,6 +32,10 @@ type txData struct {
 	Message *core.Message
 }
 
+func (t *txData) GetLogsHash() common.Hash {
+	return common.Hash{}
+}
+
 func (t *txData) GetStateHash() common.Hash {
 	// ignored
 	return common.Hash{}

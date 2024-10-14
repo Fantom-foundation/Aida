@@ -32,6 +32,10 @@ type substateData struct {
 	*substate.Substate
 }
 
+func (t *substateData) GetLogsHash() common.Hash {
+	return common.Hash{}
+}
+
 func (t *substateData) GetStateHash() common.Hash {
 	return common.Hash{}
 }
