@@ -19,6 +19,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"slices"
 	"strings"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/params"
 	"golang.org/x/exp/maps"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -337,24 +337,22 @@ func (s *aidaProcessor) processRegularTx(db state.VmStateDB, block int, tx int, 
 	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainCfg, s.vmCfg)
 
+	var msgResult messageResult
 	var gasPool = new(core.GasPool)
 	gasPool.AddGas(inputEnv.GetGasLimit())
 	executionResult, err := core.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
-		return res, fmt.Errorf("failed to execute transaction: %w", err)
-	}
-
-	msgResult := messageResult{
-		failed:     executionResult.Failed(),
-		returnData: executionResult.Return(),
-		gasUsed:    executionResult.UsedGas,
-		err:        executionResult.Err,
-	}
-
-	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+	} else {
+		// result should only be created if error was not returned
+		msgResult = messageResult{
+			failed:     executionResult.Failed(),
+			returnData: executionResult.Return(),
+			gasUsed:    executionResult.UsedGas,
+			err:        executionResult.Err,
+		}
 	}
 
 	// inform about failing transaction
