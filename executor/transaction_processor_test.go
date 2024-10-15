@@ -17,8 +17,6 @@
 package executor
 
 import (
-	"fmt"
-
 	"math/big"
 	"strings"
 	"testing"
@@ -30,7 +28,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/Tosca/go/tosca"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"go.uber.org/mock/gomock"
 )
 
@@ -60,9 +57,32 @@ func TestPrepareBlockCtx(t *testing.T) {
 }
 
 func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) {
-	isAida := func(t *testing.T, p processor, name string) {
-		if _, ok := p.(*aidaProcessor); !ok {
+	isOpera := func(t *testing.T, p processor, name string) {
+		processor, ok := p.(*aidaProcessor)
+		if !ok {
 			t.Fatalf("Expected aidaProcessor from '%s', got %T", name, p)
+		}
+
+		cfg := processor.vmCfg
+		if !cfg.ChargeExcessGas ||
+			!cfg.IgnoreGasFeeCap ||
+			!cfg.InsufficientBalanceIsNotAnError ||
+			!cfg.SkipTipPaymentToCoinbase {
+			t.Fatalf("Expected Opera features to be enabled")
+		}
+	}
+	isEthereum := func(t *testing.T, p processor, name string) {
+		processor, ok := p.(*aidaProcessor)
+		if !ok {
+			t.Fatalf("Expected aidaProcessor from '%s', got %T", name, p)
+		}
+
+		cfg := processor.vmCfg
+		if cfg.ChargeExcessGas ||
+			cfg.IgnoreGasFeeCap ||
+			cfg.InsufficientBalanceIsNotAnError ||
+			cfg.SkipTipPaymentToCoinbase {
+			t.Fatalf("Expected Opera features to be disabled")
 		}
 	}
 	isTosca := func(t *testing.T, p processor, name string) {
@@ -72,14 +92,15 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 	}
 
 	tests := map[string]func(*testing.T, processor, string){
-		"":          isAida,
-		"aida":      isAida,
-		"Aida":      isAida,
-		"aida-geth": isAida,
+		"":         isOpera,
+		"opera":    isOpera,
+		"ethereum": isEthereum,
 	}
 
 	for name := range tosca.GetAllRegisteredProcessorFactories() {
-		tests[name] = isTosca
+		if _, present := tests[name]; !present {
+			tests[name] = isTosca
+		}
 	}
 
 	for name, check := range tests {
@@ -97,42 +118,6 @@ func TestMakeTxProcessor_CanSelectBetweenProcessorImplementations(t *testing.T) 
 		})
 	}
 
-}
-
-func TestMakeAidaProcessor_CanChooseDifferentApplyMessage(t *testing.T) {
-	cfg := utils.NewTestConfig(t, 250, 0, 1, false, "")
-	tests := []struct {
-		name    string
-		evmImpl string
-		want    applyMessage
-	}{
-		{
-			name:    "expect_applyMessageUsingGeth",
-			evmImpl: "aida-geth",
-			want:    applyMessageUsingGeth,
-		},
-		{
-			name:    "expect_applyMessageUsingSonic",
-			evmImpl: "aida",
-			want:    applyMessageUsingSonic,
-		},
-		{
-			name:    "expect_defaultsToApplyMessageUsingSonic",
-			evmImpl: "",
-			want:    applyMessageUsingSonic,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			cfg.EvmImpl = test.evmImpl
-			aidaProcessor := makeAidaProcessor(cfg, vm.Config{})
-
-			if got, want := fmt.Sprintf("%p", aidaProcessor.applyMessage), fmt.Sprintf("%p", test.want); got != want {
-				t.Errorf("unexpected apply func")
-			}
-
-		})
-	}
 }
 
 func TestEthTestProcessor_DoesNotExecuteTransactionWhenBlobGasCouldExceed(t *testing.T) {

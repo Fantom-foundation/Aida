@@ -17,6 +17,7 @@
 package statedb
 
 import (
+	"math"
 	"math/big"
 	"slices"
 	"testing"
@@ -129,6 +130,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	archive.EXPECT().GetStorageRoot(gomock.Any()).AnyTimes()
 	archive.EXPECT().Exist(gomock.Any()).AnyTimes()
 	archive.EXPECT().CreateContract(gomock.Any()).AnyTimes()
+	archive.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	ext, err := makeArchiveInquirer(cfg, log)
 	if err != nil {
@@ -168,9 +170,11 @@ func makeValidSubstate() txcontext.TxContext {
 			GasLimit: 100_000_000,
 		},
 		Message: &substate.Message{
-			Gas:      100_000,
-			GasPrice: big.NewInt(0),
-			Value:    big.NewInt(0),
+			Gas:       100_000,
+			GasPrice:  big.NewInt(0),
+			Value:     big.NewInt(0),
+			GasFeeCap: big.NewInt(math.MaxInt64),
+			GasTipCap: big.NewInt(math.MaxInt64),
 		},
 		Result: &substate.Result{
 			GasUsed: 1,

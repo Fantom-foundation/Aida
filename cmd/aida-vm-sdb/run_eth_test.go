@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/tracing"
 	"strings"
 	"testing"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/holiman/uint256"
 	"go.uber.org/mock/gomock"
 )

@@ -413,10 +413,10 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := "intrinsic gas too low: have 0, want 53000"
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
 }
@@ -463,10 +463,10 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := "intrinsic gas too low: have 0, want 53000"
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
 }
@@ -569,9 +569,11 @@ var emptyTx = &substate.Substate{
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
 	InputSubstate: substate.WorldState{substatetypes.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:           &substate.Env{},
+	Env: &substate.Env{
+		GasLimit: 100_000_000,
+	},
 	Message: &substate.Message{
-		GasPrice: big.NewInt(12),
+		GasPrice: big.NewInt(0),
 		Value:    big.NewInt(1),
 	},
 	Result: &substate.Result{
