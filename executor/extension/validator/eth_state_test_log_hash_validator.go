@@ -47,12 +47,12 @@ func (e *ethStateTestLogHashValidator) PostBlock(state executor.State[txcontext.
 	var err error
 	if got, want := utils.RlpHash(ctx.ExecutionResult.GetReceipt().GetLogs()), state.Data.GetLogsHash(); got != want {
 		err = fmt.Errorf("unexpected logs hash, got %x, want %x", got, want)
+		if !e.cfg.ContinueOnFailure {
+			return err
+		}
+
+		ctx.ErrorInput <- err
 	}
 
-	if !e.cfg.ContinueOnFailure {
-		return err
-	}
-
-	ctx.ErrorInput <- err
 	return nil
 }
