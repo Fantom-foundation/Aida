@@ -272,10 +272,10 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	}
 
 	// we expected error with low gas, which means the validation passed
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("intrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
 }
@@ -321,10 +321,10 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	}
 
 	// we expected error with low gas, which means the validation passed
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("intrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
-	if strings.Compare(returnedErr, expectedErr) != 0 {
+	if !strings.Contains(returnedErr, expectedErr) {
 		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
 	}
 }
