@@ -841,3 +841,26 @@ func TestShadowState_GetHash_FailWithValidate(t *testing.T) {
 		t.Fatal("Expect a mistach of state hashes")
 	}
 }
+
+func TestShadowState_GetStorageRoot_CallsBothMethods_And_ReturnsPrimaryResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb, true)
+
+	addr := common.Address{1}
+	primaryHash := common.Hash{1}
+	shadowHash := common.Hash{2}
+
+	// both databases must be called
+	pdb.EXPECT().GetStorageRoot(addr).Return(primaryHash)
+	sdb.EXPECT().GetStorageRoot(addr).Return(shadowHash)
+
+	if got, want := db.GetStorageRoot(addr), primaryHash; got != want {
+		if got == shadowHash {
+			t.Error("proxy returned shadow-db hash but must return primary-db hash")
+		} else {
+			t.Errorf("unexpected hash, got: %s, want: %s", got, want)
+		}
+	}
+}

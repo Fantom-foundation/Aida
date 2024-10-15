@@ -332,14 +332,10 @@ func (s *shadowVmStateDb) GetLogs(hash common.Hash, block uint64, blockHash comm
 }
 
 func (s *shadowVmStateDb) GetStorageRoot(addr common.Address) common.Hash {
-	primeRoot := s.prime.GetStorageRoot(addr)
-	shadowRoot := s.shadow.GetStorageRoot(addr)
-
-	if shadowRoot != (common.Hash{}) {
-		return shadowRoot
-	}
-
-	return primeRoot
+	// call must be done onto both databases but result must not be compared
+	_ = s.shadow.GetStorageRoot(addr)
+	// prime must be returned
+	return s.prime.GetStorageRoot(addr)
 }
 
 func (s *shadowVmStateDb) CreateContract(addr common.Address) {
