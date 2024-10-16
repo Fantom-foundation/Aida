@@ -438,6 +438,9 @@ func (s *carmenHeadState) GetArchiveBlockHeight() (uint64, bool, error) {
 }
 
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
+	if s.db == nil {
+		return &MemoryUsage{uint64(0), nil}
+	}
 	usage := s.db.GetMemoryFootprint()
 	if usage == nil {
 		return &MemoryUsage{uint64(0), nil}
