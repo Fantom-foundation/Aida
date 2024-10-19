@@ -133,7 +133,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 		return nil
 	}
 
-	err := validateWorldState(v.cfg, db, state.Data.GetInputState(), v.log)
+	err := validateWorldState(v.cfg, db, state.Data.GetInputState(), v.cfg.UpdateOnFailure, v.log)
 	if err == nil {
 		return nil
 	}
@@ -149,7 +149,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 
 func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Result, errOutput chan error) error {
 	if v.target.WorldState {
-		if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), v.log); err != nil {
+		if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), false, v.log); err != nil {
 			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 			if v.isErrFatal(err, errOutput) {
 				return err
