@@ -96,6 +96,7 @@ func (r *RequestAndResults) findRequestedBlock() {
 		// we cannot guarantee block correctness - skip validation
 		r.SkipValidation = true
 		r.RequestedBlock = r.RecordedBlock
+		return
 	}
 	switch str {
 	case "pending":
