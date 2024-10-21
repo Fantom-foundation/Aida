@@ -89,10 +89,14 @@ func (r *RequestAndResults) findRequestedBlock() {
 	l := len(r.Query.Params)
 	if l < 2 {
 		r.RequestedBlock = r.RecordedBlock
-		return
 	}
 
-	str := r.Query.Params[l-1].(string)
+	str, ok := r.Query.Params[l-1].(string)
+	if !ok {
+		// we cannot guarantee block correctness - skip validation
+		r.SkipValidation = true
+		r.RequestedBlock = r.RecordedBlock
+	}
 	switch str {
 	case "pending":
 		// validation for pending requests does not work, skip them
