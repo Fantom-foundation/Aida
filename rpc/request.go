@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -86,6 +87,13 @@ func (r *RequestAndResults) DecodeInfo() {
 }
 
 func (r *RequestAndResults) findRequestedBlock() {
+	defer func() {
+		rec := recover()
+		if rec != nil {
+			fmt.Println(r.Query.Params)
+			panic(rec)
+		}
+	}()
 	l := len(r.Query.Params)
 	if l < 2 {
 		r.RequestedBlock = r.RecordedBlock
