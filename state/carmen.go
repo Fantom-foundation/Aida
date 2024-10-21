@@ -186,12 +186,17 @@ func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value com
 }
 
 func (s *carmenStateDB) GetStorageRoot(addr common.Address) common.Hash {
-	// Until Carmen offers a way to determine whether
-	// the storage of an account is empty or not, we return a zero hash here
-	// indicating that the storage is empty -- which corresponds to pre EIP-7610
-	// behavior.
-	// TODO: use Carmen's GetStorageRoot function once available.
-	return common.Hash{}
+	empty := s.txCtx.HasEmptyStorage(carmen.Address(addr))
+	var h common.Hash
+	if !empty {
+		// Carmen does not provide a method to get the storage root for performance reasons
+		// as getting a storage root needs computation of hashes in the trie.
+		// In practice, the method GetStorageRoot here is used in the EVM only to assess
+		// if the storage is empty. For this reason, this method returns a dummy hash here just
+		// not to equal to the empty hash when the storage is not empty.
+		h[0] = 1
+	}
+	return h
 }
 
 func (s *carmenStateDB) SetTransientState(addr common.Address, key common.Hash, value common.Hash) {
