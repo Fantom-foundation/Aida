@@ -152,7 +152,7 @@ func TestEthStateTestValidator_PreBlockEthereumReturnsSuccessBalanceFix(t *testi
 		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
-	ext := makeEthStateTestValidator(cfg, log)
+	ext := makeEthStateTestErrorValidator(cfg, log)
 	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("pre-transaction must return success; %v", err)
@@ -189,7 +189,7 @@ func TestEthStateTestValidator_PreBlockEthereumReturnsErrorOverflowingBalanceNot
 		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
-	ext := makeEthStateTestValidator(cfg, log)
+	ext := makeEthStateTestErrorValidator(cfg, log)
 	err := ext.PreBlock(st, ctx)
 	if err == nil {
 		t.Fatalf("pre-transaction must return error")
