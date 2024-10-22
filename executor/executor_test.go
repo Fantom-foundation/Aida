@@ -951,8 +951,12 @@ func TestProcessor_ProcessErrorAbortsProcessing_TransactionLevelParallelism(t *t
 		})
 
 	stop := fmt.Errorf("stop!")
-	processor.EXPECT().Process(AtBlock[any](4), gomock.Any()).Return(stop)
-	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(200)
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).DoAndReturn(func(state State[any], ctx *Context) error {
+		if state.Block == 4 {
+			return stop
+		}
+		return nil
+	}).AnyTimes()
 
 	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
