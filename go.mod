@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.4
 
 require (
-	github.com/Fantom-foundation/Carmen/go v0.0.0-20240919111317-5c737f72628f
+	github.com/Fantom-foundation/Carmen/go v0.0.0-20241021085109-e8dc12374917
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
 	github.com/Fantom-foundation/Substate v0.0.0-20240930092859-d12af8cad7ef
 	github.com/Fantom-foundation/Tosca v0.0.0-20241009135726-aa99babe0a10
@@ -131,7 +131,7 @@ replace github.com/ethereum/evmc/v11 => ./tosca/third_party/evmc
 
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-sonic v0.0.0-20241016110649-0dd3a9b6f237
 
-replace github.com/Fantom-foundation/lachesis-base => github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20240823114058-cda038e6d40b
+replace github.com/Fantom-foundation/lachesis-base => github.com/Fantom-foundation/lachesis-base-sonic v0.0.0-20241018103023-632a59c242f5
 
 // Sonic client is integrated as a git-submodule to make version configuration easier
 // when running tests.
