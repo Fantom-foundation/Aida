@@ -262,10 +262,13 @@ func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, 
 		// validate Storage
 		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
 			if db.GetState(addr, keyHash) != valueHash {
-				err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
-					"    have %v\n"+
-					"    want %v\n",
-					addr.Hex(), keyHash.Hex(), db.GetState(addr, keyHash).Hex(), valueHash.Hex())
+				// BeaconRootsAddress is a special case where the storage is not validated
+				if addr != params.BeaconRootsAddress {
+					err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
+						"    have %v\n"+
+						"    want %v\n",
+						addr.Hex(), keyHash.Hex(), db.GetState(addr, keyHash).Hex(), valueHash.Hex())
+				}
 			}
 		})
 
