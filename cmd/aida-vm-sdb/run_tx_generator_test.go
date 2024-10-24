@@ -108,7 +108,7 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	}
 }
 
-func newTestTxCtx(t *testing.T, blkNumber uint64) txcontext.TxContext {
+func newTestTxCtx(_ *testing.T, blkNumber uint64) txcontext.TxContext {
 	return txgenerator.NewTxContext(
 		testTxBlkEnv{blkNumber},
 		&core.Message{

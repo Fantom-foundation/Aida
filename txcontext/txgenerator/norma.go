@@ -28,7 +28,7 @@ import (
 
 // NewNormaTxContext creates a new transaction context for a norma transaction.
 // It expects a signed transaction if sender is nil.
-func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.Address) (txcontext.TxContext, error) {
+func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.Address, fork string) (txcontext.TxContext, error) {
 	s := common.Address{}
 	if sender == nil {
 		addr, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
@@ -43,6 +43,7 @@ func NewNormaTxContext(tx *types.Transaction, blkNumber uint64, sender *common.A
 		txData: txData{
 			Env: normaTxBlockEnv{
 				blkNumber: blkNumber,
+				fork:      fork,
 			},
 			Message: &core.Message{
 				To:                tx.To(),
@@ -71,6 +72,7 @@ type normaTxData struct {
 // normaTxBlockEnv is a block environment for norma transactions.
 type normaTxBlockEnv struct {
 	blkNumber uint64
+	fork      string
 }
 
 // GetRandom is not used in Norma Tx-Generator.
@@ -123,6 +125,5 @@ func (e normaTxBlockEnv) GetBaseFee() *big.Int {
 }
 
 func (e normaTxBlockEnv) GetFork() string {
-	// for now, only necessary for get-tests
-	return ""
+	return e.fork
 }

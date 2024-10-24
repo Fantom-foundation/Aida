@@ -431,10 +431,10 @@ var (
 		Name:  "err-logging",
 		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
 	}
-	ForksFlag = cli.StringSliceFlag{
-		Name:  "forks",
-		Usage: "defines which forks are going to get executed by the eth-tests (\"all\" | <\"cancun\", \"shanghai\", \"paris\", \"bellatrix\", \"grayglacier\", \"arrowglacier\", \"altair\", \"london\", \"berlin\", \"istanbul\", \"muirglacier\">)",
-		Value: cli.NewStringSlice("all"),
+	ForkFlag = cli.StringFlag{
+		Name:  "fork",
+		Usage: "defines a fork to get executed by the eth-tests (\"all\", \"cancun\", \"shanghai\", \"paris\", \"bellatrix\", \"grayglacier\", \"arrowglacier\", \"altair\", \"london\", \"berlin\", \"istanbul\", \"muirglacier\")",
+		Value: "all",
 	}
 	DbComponentFlag = cli.StringFlag{
 		Name:     "db-component",

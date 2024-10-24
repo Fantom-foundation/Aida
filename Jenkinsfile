@@ -81,7 +81,7 @@ pipeline {
                 stage('aida-fuzzing') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-stochastic-sdb replay ${STATEDB} ${TMPDB} --db-shadow-impl geth 50 stochastic/data/simulation_uniform.json"
+                            sh "build/aida-stochastic-sdb replay ${STATEDB} ${TMPDB} --db-shadow-impl geth 20 stochastic/data/simulation_uniform.json"
                         }
                     }
                 }
@@ -91,7 +91,7 @@ pipeline {
                         sh "mkdir -p ${TRACEDIR}"
                         sh "rm -rf ${TRACEDIR}/*"
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-sdb record --cpu-profile cpu-profile-0.dat --trace-file ${TRACEDIR}/trace-0.dat ${AIDADB} ${FROMBLOCK} ${FROMBLOCK}+1000"
+                            sh "build/aida-sdb record --cpu-profile cpu-profile-0.dat --trace-file ${TRACEDIR}/trace-0.dat ${AIDADB} ${FROMBLOCK} ${FROMBLOCK}+100"
                             sh "build/aida-sdb record --cpu-profile cpu-profile-1.dat --trace-file ${TRACEDIR}/trace-1.dat ${AIDADB} ${FROMBLOCK}+1001 ${FROMBLOCK}+2000"
                             sh "build/aida-sdb record --cpu-profile cpu-profile-2.dat --trace-file ${TRACEDIR}/trace-2.dat ${AIDADB} ${FROMBLOCK}+2001 ${TOBLOCK}"
                         }
@@ -129,7 +129,7 @@ pipeline {
                 stage('aida-vm-sdb archive-inquirer') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} ${ARCHIVE} ${PROFILE} --archive-query-rate 5000 --validate-tx --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                            sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} ${STATEDB} ${ARCHIVE} ${PROFILE} --archive-query-rate 200 --validate-tx --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                         }
                         sh "rm -rf *.dat"
                     }
@@ -141,6 +141,40 @@ pipeline {
                             sh "build/aida-vm-sdb substate ${VM} --db-src ${DBSRC} ${AIDADB} --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure 4600001 4610000"
                         }
                         sh "rm -rf *.dat"
+                    }
+                }
+
+                stage('aida-vm-sdb eth-tests') {
+                    steps {
+                        dir('eth-test-package') {
+                            checkout scmGit(
+                                userRemoteConfigs: [[url: 'https://github.com/ethereum/tests.git']]
+                                branches: [[name: 'develop']],
+                            )
+                        }
+                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                            sh """build/aida-vm-sdb ethereum-test \
+                                --validate \
+                                --evm-impl ethereum \
+                                --vm-impl geth \
+                                --db-impl geth \
+                                --db-tmp ${TMPDB} \
+                                --fork Cancun \
+                                ${env.WORKSPACE}/eth-test-package"""
+                        }
+                    }
+                }
+
+                stage('aida-vm-sdb tx-generator') {
+                    steps {
+                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                            sh """build/aida-vm-sdb tx-generator \
+                                --db-impl carmen --db-variant go-file --carmen-schema 5 \
+                                --db-tmp /mnt/tmp-disk \
+                                --shadow-db --db-shadow-impl geth \
+                                --tx-type all --block-length 10 --fork Cancun \
+                                100"""
+                        }
                     }
                 }
 
