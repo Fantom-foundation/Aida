@@ -43,7 +43,7 @@ pipeline {
                 stage('Check formatting') {
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                            sh '''diff=`find . \\( -path ./carmen -o -path ./tosca \\) -prune -o -name '*.go' -exec gofmt -s -l {} \\;`
+                            sh '''diff=`find . \\( -path ./carmen -o -path ./tosca -o -path ./sonic \\) -prune -o -name '*.go' -exec gofmt -s -l {} \\;`
                                   echo $diff
                                   test -z $diff
                                '''
@@ -57,7 +57,7 @@ pipeline {
                             currentBuild.description = "Building on ${env.NODE_NAME}"
                         }
                         sh "git submodule update --init --recursive"
-                        sh "make all"
+                        sh "make all -j 4"
                     }
                 }
 
@@ -148,8 +148,8 @@ pipeline {
                     steps {
                         dir('eth-test-package') {
                             checkout scmGit(
-                                userRemoteConfigs: [[url: 'https://github.com/ethereum/tests.git']]
-                                branches: [[name: 'develop']],
+                                userRemoteConfigs: [[url: 'https://github.com/ethereum/tests.git']],
+                                branches: [[name: 'develop']]
                             )
                         }
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
