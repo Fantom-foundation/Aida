@@ -35,14 +35,18 @@ import (
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func validateWorldState(cfg *utils.Config, db state.VmStateDB, expectedAlloc txcontext.WorldState, isPreTransaction bool, log logger.Logger) error {
+func validateWorldState(cfg *utils.Config, db state.VmStateDB, expectedAlloc txcontext.WorldState, updateOnFailure bool, log logger.Logger) error {
 	var err error
 	switch cfg.StateValidationMode {
 	case utils.SubsetCheck:
 		if cfg.ChainID == utils.EthereumChainID {
-			err = doSubsetValidationEthereum(expectedAlloc, db, isPreTransaction)
+			// Ethereum dataset has different validation process for pre and post transactions,
+			// hence cfg.UpdateOnFailure has to be overruled here.
+			// We do not expect to need it for postTransaction validation.
+			// TODO lfvm is failing due to incompatibility on postTransaction validation at few blocks, need to add special cases to ignore those errors.
+			err = doSubsetValidationEthereum(expectedAlloc, db, updateOnFailure)
 		} else {
-			err = doSubsetValidation(expectedAlloc, db, cfg.UpdateOnFailure)
+			err = doSubsetValidationSonic(expectedAlloc, db, cfg.UpdateOnFailure)
 		}
 	case utils.EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
@@ -152,9 +156,9 @@ func printAccountDiffSummary(label string, want, have txcontext.Account, log log
 
 }
 
-// doSubsetValidation validates whether the given alloc is contained in the db object.
+// doSubsetValidationSonic validates whether the given alloc is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOnFail bool) error {
+func doSubsetValidationSonic(alloc txcontext.WorldState, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
@@ -220,12 +224,12 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
 // Ethereum version of this function assumes that the input substate doesn't have miner rewards therefore all errors
 // in preTransaction regarding account existence and account having lower balance (caused by missing miner rewards) are ignored.
-func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, isPreTransaction bool) error {
+func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, updateOnFailure bool) error {
 	var err string
 
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if !db.Exist(addr) {
-			if isPreTransaction {
+			if updateOnFailure {
 				db.CreateAccount(addr)
 			} else {
 				err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
@@ -236,7 +240,7 @@ func doSubsetValidationEthereum(alloc txcontext.WorldState, db state.VmStateDB, 
 		if accBalance.Cmp(balance) != 0 {
 			// db balance should always be equal or lower because of miner rewards
 			// zero balance exception for slashed accounts - dao fork
-			if isPreTransaction && balance.Cmp(accBalance) < 0 || (accBalance.Eq(uint256.NewInt(0)) && slices.Contains(params.DAODrainList(), addr)) {
+			if updateOnFailure && balance.Cmp(accBalance) < 0 || (accBalance.Eq(uint256.NewInt(0)) && slices.Contains(params.DAODrainList(), addr)) {
 				db.SubBalance(addr, balance, tracing.BalanceChangeUnspecified)
 				db.AddBalance(addr, accBalance, tracing.BalanceChangeUnspecified)
 			} else {

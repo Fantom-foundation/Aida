@@ -155,7 +155,7 @@ func TestEthStateTestValidator_PreBlockEthereumReturnsSuccessBalanceFix(t *testi
 	ext := makeEthStateTestErrorValidator(cfg, log)
 	err := ext.PreBlock(st, ctx)
 	if err != nil {
-		t.Fatalf("pre-transaction must return success; %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -189,9 +189,10 @@ func TestEthStateTestValidator_PreBlockEthereumReturnsErrorOverflowingBalanceNot
 		db.EXPECT().GetCode(common.HexToAddress("0x2")),
 	)
 
+	wantError := fmt.Errorf("pre alloc validation failed;   Failed to validate balance for account 0x0000000000000000000000000000000000000001\n    have 1001\n    want 1000\n")
 	ext := makeEthStateTestErrorValidator(cfg, log)
 	err := ext.PreBlock(st, ctx)
-	if err == nil {
-		t.Fatalf("pre-transaction must return error")
+	if !strings.Contains(err.Error(), wantError.Error()) {
+		t.Errorf("unexpected error;\ngot: %v\nwant: %v", err, wantError)
 	}
 }
