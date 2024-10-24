@@ -823,7 +823,7 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			}
 
 			// Call for state DB validation and subsequent check for error
-			err = doSubsetValidation(ws, sDB, false)
+			err = doSubsetValidationSonic(ws, sDB, false)
 			if err != nil {
 				t.Fatalf("failed to validate state DB: %v", err)
 			}
@@ -884,7 +884,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
-			err = doSubsetValidation(ws, sDB, true)
+			err = doSubsetValidationSonic(ws, sDB, true)
 			if err == nil {
 				t.Fatalf("failed to throw errors while validating state DB: %v", err)
 			}
