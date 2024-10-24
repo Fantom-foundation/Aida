@@ -19,11 +19,12 @@ package executor
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 	"slices"
 	"strings"
 	"sync/atomic"
+
+	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/ethereum/go-ethereum/core"
