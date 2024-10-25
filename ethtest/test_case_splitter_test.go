@@ -61,10 +61,10 @@ func TestTestCaseSplitter_NewTestCaseSplitter_SortsForks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	log.EXPECT().Warningf("Unknown name fork name %v, removing", "toBeRemoved")
+	log.EXPECT().Warningf("Unknown name fork name %v, removing", "Toberemoved")
 
-	got := sortForks(log, "toBeRemoved")
-	want := []string{}
+	got := sortForks(log, []string{"CaNcuN", "london", "toBeRemoved"})
+	want := []string{"Cancun", "London"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("unexpected forks, got: %v\nwant: %v", got, want)
 	}
@@ -74,7 +74,7 @@ func TestTestCaseSplitter_NewTestCaseSplitter_AllAddsAllForks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	got := sortForks(log, "all")
+	got := sortForks(log, []string{"all"})
 	want := maps.Keys(usableForks)
 	// Maps are unordered...
 	slices.Sort(got)
@@ -88,8 +88,10 @@ func TestTestCaseSplitter_NewTestCaseSplitter_GlaciersAreCapitalized(t *testing.
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	got := sortForks(log, "MuirGlacier")
-	want := []string{"MuirGlacier"}
+	log.EXPECT().Warningf("Unknown name fork name %v, removing", "SomeGlacier")
+
+	got := sortForks(log, []string{"muirGlacier", "arrowglacier", "someglaCier"})
+	want := []string{"MuirGlacier", "ArrowGlacier"}
 	// Maps are unordered...
 	slices.Sort(got)
 	slices.Sort(want)

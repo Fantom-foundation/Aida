@@ -32,7 +32,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 
 	cfg := &utils.Config{
 		ArgPath: pathFile,
-		Fork:    "all",
+		Forks:   []string{"all"},
 	}
 
 	provider := NewEthStateTestProvider(cfg)

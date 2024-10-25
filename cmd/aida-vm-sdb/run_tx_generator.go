@@ -40,13 +40,12 @@ const (
 
 // RunTxGenerator performs sequential block processing on a StateDb using transaction generator
 func RunTxGenerator(ctx *cli.Context) error {
-	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
 
 	cfg.StateValidationMode = utils.SubsetCheck
-	cfg.ChainID = utils.EthTestsChainID // Use EthTests chain ID for configurable forks
 
 	db, dbPath, err := utils.PrepareStateDB(cfg)
 	if err != nil {

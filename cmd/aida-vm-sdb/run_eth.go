@@ -74,7 +74,7 @@ var RunEthTestsCmd = cli.Command{
 
 		// Ethereum execution tests
 		&utils.EthTestTypeFlag,
-		&utils.ForkFlag,
+		&utils.ForksFlag,
 	},
 	Description: `
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,
