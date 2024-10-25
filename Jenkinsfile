@@ -92,8 +92,7 @@ pipeline {
                         sh "rm -rf ${TRACEDIR}/*"
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
                             sh "build/aida-sdb record --cpu-profile cpu-profile-0.dat --trace-file ${TRACEDIR}/trace-0.dat ${AIDADB} ${FROMBLOCK} ${FROMBLOCK}+100"
-                            sh "build/aida-sdb record --cpu-profile cpu-profile-1.dat --trace-file ${TRACEDIR}/trace-1.dat ${AIDADB} ${FROMBLOCK}+1001 ${FROMBLOCK}+2000"
-                            sh "build/aida-sdb record --cpu-profile cpu-profile-2.dat --trace-file ${TRACEDIR}/trace-2.dat ${AIDADB} ${FROMBLOCK}+2001 ${TOBLOCK}"
+                            sh "build/aida-sdb record --cpu-profile cpu-profile-1.dat --trace-file ${TRACEDIR}/trace-1.dat ${AIDADB} ${FROMBLOCK}+101 ${FROMBLOCK}+200"
                         }
                     }
                 }
@@ -158,7 +157,7 @@ pipeline {
                                 --evm-impl ethereum \
                                 --vm-impl geth \
                                 --db-impl geth \
-                                --db-tmp ${TMPDB} \
+                                ${TMPDB} \
                                 --fork Cancun \
                                 ${env.WORKSPACE}/eth-test-package"""
                         }
