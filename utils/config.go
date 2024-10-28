@@ -290,6 +290,7 @@ func NewConfigContext(cfg *Config, ctx *cli.Context) *configContext {
 
 // NewTestConfig creates a new config for test purpose
 func NewTestConfig(t *testing.T, chainId ChainID, first, last uint64, validate bool, fork string) *Config {
+	fork = ToTitleCase(fork)
 	chainCfg, err := getChainConfig(chainId, fork)
 	if err != nil {
 		t.Fatalf("cannot get chain cfg: %v", err)
@@ -350,6 +351,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("cannot adjust missing config values; %v", err)
 	}
 
+	cc.cfg.Fork = ToTitleCase(cc.cfg.Fork)
 	cc.reportNewConfig()
 
 	return cfg, nil
@@ -795,6 +797,7 @@ func (cc *configContext) reportNewConfig() {
 	log.Noticef("Used EVM implementation: %v", cfg.EvmImpl)
 	log.Noticef("Used VM implementation: %v", cfg.VmImpl)
 	log.Infof("Aida DB directory: %v", cfg.AidaDb)
+	log.Infof("Fork: %v", cfg.Fork)
 
 	// todo move to tx validator once finished
 	log.Infof("validate tx state: %v", cfg.ValidateTxState)
@@ -827,4 +830,12 @@ func (cc *configContext) setChainConfig() (err error) {
 	}
 	cc.cfg.chainCfg, err = getChainConfig(cc.cfg.ChainID, "")
 	return err
+}
+
+// ToTitleCase adjusts fork names to title case
+func ToTitleCase(fork string) string {
+	// Adjust the case when the fork name is glacier
+	fork = strings.Replace(strings.ToLower(fork), "glacier", "Glacier", -1)
+	fork = strings.Title(fork)
+	return fork
 }

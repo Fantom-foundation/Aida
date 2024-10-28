@@ -742,6 +742,36 @@ func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
 	}
 }
 
+// TestUtilsConfig_ToTitleCase_Success tests if ToTitleCase function works correctly.
+// It should return a string with the first letter capitalized.
+// If a word Glaciers is contained, it should be returned as Glaciers.
+func TestUtilsConfig_ToTitleCase_Success(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{
+			input: "newglaciers",
+			want:  "NewGlaciers",
+		},
+		{
+			input: "all",
+			want:  "All",
+		},
+		{
+			input: "unKnoWn",
+			want:  "Unknown",
+		},
+	}
+
+	for _, test := range tests {
+		got := ToTitleCase(test.input)
+		if got != test.want {
+			t.Fatalf("failed to capitalize first letter; got: %s; expected: %s", got, test.want)
+		}
+	}
+}
+
 // createFakeAidaDb creates fake empty aidaDB with metadata for testing purposes
 func createFakeAidaDb(cfg *Config) error {
 	// fake metadata values

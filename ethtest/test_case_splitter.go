@@ -50,7 +50,8 @@ func NewTestCaseSplitter(cfg *utils.Config) (*TestCaseSplitter, error) {
 }
 
 func sortForks(log logger.Logger, fork string) (forks []string) {
-	if fork == "all" {
+	fork = utils.ToTitleCase(fork)
+	if fork == "All" {
 		forks = maps.Keys(usableForks)
 	} else {
 		if _, ok := usableForks[fork]; !ok {
