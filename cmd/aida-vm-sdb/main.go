@@ -174,6 +174,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.BlockLengthFlag,
 		&utils.TrackerGranularityFlag,
+		&utils.ForkFlag,
 	},
 	Description: `
 The aida-vm-sdb tx-generator command requires two arguments: <blockNumFirst> <blockNumLast>

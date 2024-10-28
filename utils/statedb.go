@@ -224,7 +224,7 @@ func makeStateDBVariant(
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
-		chainCfg, err := cfg.GetChainConfig("")
+		chainCfg, err := cfg.GetChainConfig(cfg.Fork)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get chain config: %w", err)
 		}

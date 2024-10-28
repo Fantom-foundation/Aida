@@ -17,6 +17,8 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/urfave/cli/v2"
@@ -60,7 +62,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		DiagnosticServer:         getFlagValue(ctx, DiagnosticServerFlag).(int64),
 		ErrorLogging:             getFlagValue(ctx, ErrorLoggingFlag).(string),
 		EvmImpl:                  getFlagValue(ctx, EvmImplementation).(string),
-		Forks:                    getFlagValue(ctx, ForksFlag).([]string),
+		Fork:                     getFlagValue(ctx, ForkFlag).(string),
 		Genesis:                  getFlagValue(ctx, GenesisFlag).(string),
 		EthTestType:              EthTestType(getFlagValue(ctx, EthTestTypeFlag).(int)),
 		IncludeStorage:           getFlagValue(ctx, IncludeStorageFlag).(bool),
@@ -107,7 +109,6 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		StateValidationMode: SubsetCheck,
 		SubstateDb:          getFlagValue(ctx, AidaDbFlag).(string),
 		SubstateEncoding:    getFlagValue(ctx, SubstateEncodingFlag).(string),
-
 		SyncPeriodLength:    getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
 		TargetDb:            getFlagValue(ctx, TargetDbFlag).(string),
 		TargetEpoch:         getFlagValue(ctx, TargetEpochFlag).(uint64),
@@ -156,7 +157,12 @@ func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 			}
 
 		case cli.StringFlag:
-			if cmdFlag.Names()[0] == f.Name {
+			if cmdFlag.Names()[0] == ForkFlag.Name {
+				fork := ctx.String(f.Name)
+				fork = strings.Replace(strings.ToLower(fork), "glacier", "Glacier", -1)
+				fork = strings.Title(fork)
+				return fork
+			} else if cmdFlag.Names()[0] == f.Name {
 				return ctx.String(f.Name)
 			}
 
