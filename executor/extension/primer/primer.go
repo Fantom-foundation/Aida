@@ -58,7 +58,13 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 	// is used to determine block from which the priming starts
 	var primingStartBlock uint64
 	if p.cfg.IsExistingStateDb {
-		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(p.cfg.StateDbSrc, utils.PathToDbInfo))
+		var stateDbInfo utils.StateDbInfo
+		var err error
+		if p.cfg.ShadowDb {
+			stateDbInfo, err = utils.ReadStateDbInfo(filepath.Join(p.cfg.StateDbSrc, utils.PathToPrimaryStateDb))
+		} else {
+			stateDbInfo, err = utils.ReadStateDbInfo(p.cfg.StateDbSrc)
+		}
 		if err != nil {
 			return fmt.Errorf("cannot read state db info; %w", err)
 		}

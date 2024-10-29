@@ -101,10 +101,9 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		cfg.PathToStateDb = filepath.Join(cfg.PathToStateDb, PathToPrimaryStateDb)
 	}
 
-	stateDbInfoFile := filepath.Join(cfg.PathToStateDb, PathToDbInfo)
-	stateDbInfo, err = ReadStateDbInfo(stateDbInfoFile)
+	stateDbInfo, err = ReadStateDbInfo(cfg.PathToStateDb)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read StateDb cfg file in '%v'; %v", cfg.PathToStateDb, err)
 	}
 
 	// If the state db is in read-only mode, set archive config as in statedb_info
@@ -143,10 +142,9 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	shadowDbPath = filepath.Join(cfg.StateDbSrc, PathToShadowStateDb)
-	shadowDbInfoFile := filepath.Join(shadowDbPath, PathToDbInfo)
-	shadowDbInfo, err = ReadStateDbInfo(shadowDbInfoFile)
+	shadowDbInfo, err = ReadStateDbInfo(shadowDbPath)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot read ShadowDb cfg file '%v'; %v", shadowDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read ShadowDb info file in '%v'; %v", shadowDbPath, err)
 	}
 
 	cfg.ShadowImpl = shadowDbInfo.Impl

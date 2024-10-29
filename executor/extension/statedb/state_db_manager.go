@@ -93,10 +93,24 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
 
-	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, 0, gc.Hash{}, false); err != nil {
-		return fmt.Errorf("failed to create state-db info file; %v", err)
+	// Set state-db info to incomplete state at the beginning of the run.
+	// If state-db info exists, read block number and hash from it.
+	var blockNum uint64
+	var blockHash gc.Hash
+	if m.cfg.IsExistingStateDb {
+		dbinfo, err := utils.ReadStateDbInfo(ctx.StateDbPath)
+		blockNum = dbinfo.Block
+
+		if err != nil {
+			return fmt.Errorf("failed to read state-db info file; %v", err)
+		}
+		m.log.Infof("Resuming from block %v", blockNum)
 	}
 
+	// Mark state-db info with incomplete state.
+	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.cfg, blockNum, blockHash, false); err != nil {
+		return fmt.Errorf("failed to create state-db info file; %v", err)
+	}
 	return nil
 }
 

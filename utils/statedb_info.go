@@ -134,8 +134,9 @@ func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.H
 }
 
 // ReadStateDbInfo reads meta file of loaded stateDB
-func ReadStateDbInfo(filename string) (StateDbInfo, error) {
+func ReadStateDbInfo(dbpath string) (StateDbInfo, error) {
 	var dbinfo StateDbInfo
+	filename := filepath.Join(dbpath, PathToDbInfo)
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		return dbinfo, fmt.Errorf("failed to read %v; %v", filename, err)

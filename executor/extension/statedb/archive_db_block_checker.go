@@ -47,7 +47,7 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 	var archiveLastBlock uint64
 
 	if c.cfg.ShadowDb {
-		primeDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToPrimaryStateDb, utils.PathToDbInfo))
+		primeDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToPrimaryStateDb))
 		if err != nil {
 			return fmt.Errorf("cannot read state db info for primary db; %v", err)
 		}
@@ -56,7 +56,7 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 			return fmt.Errorf("prime state db %v does not contain archive", filepath.Join(c.cfg.StateDbSrc, utils.PathToPrimaryStateDb))
 		}
 
-		shadowDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb, utils.PathToDbInfo))
+		shadowDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb))
 		if err != nil {
 			return fmt.Errorf("cannot read state db info for shadow db; %v", err)
 		}
@@ -68,7 +68,7 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 		archiveLastBlock = umath.Min(shadowDbInfo.Block, primeDbInfo.Block)
 
 	} else {
-		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToDbInfo))
+		stateDbInfo, err := utils.ReadStateDbInfo(c.cfg.StateDbSrc)
 		if err != nil {
 			return fmt.Errorf("cannot read state db info; %v", err)
 		}
