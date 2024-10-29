@@ -832,7 +832,8 @@ func (cc *configContext) setChainConfig() (err error) {
 	return err
 }
 
-// ToTitleCase adjusts fork names to title case
+// ToTitleCase adjusts fork names to title case.
+// If the input string contains word glacier anywhere in the string, the word is replaced by "Glacier".
 func ToTitleCase(fork string) string {
 	// Adjust the case when the fork name is glacier
 	fork = strings.Replace(strings.ToLower(fork), "glacier", "Glacier", -1)
