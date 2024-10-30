@@ -189,7 +189,7 @@ func TestStateDbManager_StateDbInfoExistenceAndReadable(t *testing.T) {
 		t.Fatalf("failed to find %v of stateDbInfo; %v", utils.PathToDbInfo, err)
 	}
 
-	_, err = utils.ReadStateDbInfo(filename)
+	_, err = utils.ReadStateDbInfo(expectedPath)
 	if err != nil {
 		t.Fatal("failed to read statedb_info.json")
 	}
@@ -223,15 +223,15 @@ func TestStateDbManager_OverrideArchiveMode(t *testing.T) {
 	}
 
 	expectedName := fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, state.Block)
-	DbPath := filepath.Join(cfg.DbTmp, expectedName)
+	dbPath := filepath.Join(cfg.DbTmp, expectedName)
 
-	filename := filepath.Join(DbPath, utils.PathToDbInfo)
+	filename := filepath.Join(dbPath, utils.PathToDbInfo)
 
 	if _, err := os.Stat(filename); err != nil {
 		t.Fatalf("failed to find %v of stateDbInfo; %v", utils.PathToDbInfo, err)
 	}
 
-	stateDbInfo, err := utils.ReadStateDbInfo(filename)
+	stateDbInfo, err := utils.ReadStateDbInfo(dbPath)
 	if err != nil {
 		t.Fatal("failed to read statedb_info.json")
 	}
@@ -257,7 +257,7 @@ func TestStateDbManager_OverrideArchiveMode(t *testing.T) {
 			cfg.DbImpl = "carmen"
 			cfg.ChainID = utils.MainnetChainID
 			cfg.ArchiveMode = true
-			cfg.StateDbSrc = DbPath
+			cfg.StateDbSrc = dbPath
 			if test.readOnlyTool {
 				cfg.SetStateDbSrcReadOnly()
 			}
@@ -314,7 +314,7 @@ func TestStateDbManager_OverrideArchiveVariant(t *testing.T) {
 		t.Fatalf("failed to find %v of stateDbInfo; %v", utils.PathToDbInfo, err)
 	}
 
-	stateDbInfo, err := utils.ReadStateDbInfo(filename)
+	stateDbInfo, err := utils.ReadStateDbInfo(dbPath)
 	if err != nil {
 		t.Fatal("failed to read statedb_info.json")
 	}
@@ -710,7 +710,7 @@ func TestStateDbManager_PreRunCreatesZeroStateDbInfo(t *testing.T) {
 		t.Fatalf("failed to create stateDb; %v", err)
 	}
 
-	info, err := utils.ReadStateDbInfo(filepath.Join(ctx.StateDbPath, utils.PathToDbInfo))
+	info, err := utils.ReadStateDbInfo(ctx.StateDbPath)
 	if err != nil {
 		t.Fatalf("cannot read state-db info: %v", err)
 	}
