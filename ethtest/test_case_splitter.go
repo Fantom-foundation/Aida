@@ -49,15 +49,15 @@ func NewTestCaseSplitter(cfg *utils.Config) (*TestCaseSplitter, error) {
 	}, nil
 }
 
-func sortForks(log logger.Logger, fork string) (forks []string) {
-	fork = utils.ToTitleCase(fork)
-	if fork == "All" {
+func sortForks(log logger.Logger, cfgFork string) (forks []string) {
+	cfgFork = utils.ToTitleCase(cfgFork)
+	if cfgFork == "All" {
 		forks = maps.Keys(usableForks)
 	} else {
-		if _, ok := usableForks[fork]; !ok {
-			log.Warningf("Unknown name fork name %v, removing", fork)
+		if _, ok := usableForks[cfgFork]; !ok {
+			log.Warningf("Unknown name fork name %v, removing", cfgFork)
 		} else {
-			forks = append(forks, fork)
+			forks = append(forks, cfgFork)
 		}
 	}
 	return forks
