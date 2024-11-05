@@ -24,38 +24,38 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// MakeEthereumDbPreTransactionUpdator creates an extension which fixes Ethereum exceptions in pre transaction in LiveDB
-func MakeEthereumDbPreTransactionUpdator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+// MakeEthereumDbPreTransactionUpdater creates an extension which fixes Ethereum exceptions in pre transaction in LiveDB
+func MakeEthereumDbPreTransactionUpdater(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	if cfg.ChainID != utils.EthereumChainID {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "Ethereum-Exception-Updator")
+	log := logger.NewLogger(cfg.LogLevel, "Ethereum-Exception-Updater")
 
-	return makeEthereumDbPreTransactionUpdator(cfg, log)
+	return makeEthereumDbPreTransactionUpdater(cfg, log)
 }
 
-func makeEthereumDbPreTransactionUpdator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
-	return &ethereumDbPreTransactionUpdator{
+func makeEthereumDbPreTransactionUpdater(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+	return &ethereumDbPreTransactionUpdater{
 		cfg: cfg,
 		log: log,
 	}
 }
 
 // PreTransaction validates fixes InputSubstate ethereum exceptions in given substate
-func (v *ethereumDbPreTransactionUpdator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return updateEthereumDb(state, ctx.State, true)
+func (v *ethereumDbPreTransactionUpdater) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	return updateEthereumDb(state, ctx, true)
 }
 
-type ethereumDbPreTransactionUpdator struct {
+type ethereumDbPreTransactionUpdater struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 	log logger.Logger
 }
 
-// PreRun informs the user that ethereumExceptionUpdator is enabled.
-func (v *ethereumDbPreTransactionUpdator) PreRun(executor.State[txcontext.TxContext], *executor.Context) error {
-	v.log.Warning("Ethereum exception pre transaction updator is enabled.")
+// PreRun informs the user that ethereumDbPreTransactionUpdater is enabled.
+func (v *ethereumDbPreTransactionUpdater) PreRun(executor.State[txcontext.TxContext], *executor.Context) error {
+	v.log.Warning("Ethereum exception pre transaction updater is enabled.")
 
 	return nil
 }

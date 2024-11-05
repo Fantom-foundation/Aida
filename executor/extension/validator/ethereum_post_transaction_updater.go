@@ -24,18 +24,18 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// MakeEthereumDbPostTransactionUpdator creates an extension which fixes Ethereum exceptions in LiveDB
-func MakeEthereumDbPostTransactionUpdator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+// MakeEthereumDbPostTransactionUpdater creates an extension which fixes Ethereum exceptions in LiveDB
+func MakeEthereumDbPostTransactionUpdater(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	if cfg.ChainID != utils.EthereumChainID {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "Ethereum-Exception-Updator")
+	log := logger.NewLogger(cfg.LogLevel, "Ethereum-Exception-Updater")
 
-	return makeEthereumDbPostTransactionUpdator(cfg, log)
+	return makeEthereumDbPostTransactionUpdater(cfg, log)
 }
 
-func makeEthereumDbPostTransactionUpdator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+func makeEthereumDbPostTransactionUpdater(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
 	return &ethereumDbPostTransactionUpdater{
 		cfg: cfg,
 		log: log,
@@ -44,7 +44,7 @@ func makeEthereumDbPostTransactionUpdator(cfg *utils.Config, log logger.Logger) 
 
 // PostTransaction fixes OutputAlloc ethereum exceptions in given substate
 func (v *ethereumDbPostTransactionUpdater) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return updateEthereumDb(state, ctx.State, false)
+	return updateEthereumDb(state, ctx, false)
 }
 
 type ethereumDbPostTransactionUpdater struct {
@@ -53,9 +53,9 @@ type ethereumDbPostTransactionUpdater struct {
 	log logger.Logger
 }
 
-// PreRun informs the user that ethereumExceptionUpdator is enabled.
+// PreRun informs the user that ethereumDbPostTransactionUpdater is enabled.
 func (v *ethereumDbPostTransactionUpdater) PreRun(executor.State[txcontext.TxContext], *executor.Context) error {
-	v.log.Warning("Ethereum exception post transaction updator is enabled.")
+	v.log.Warning("Ethereum exception post transaction updater is enabled.")
 
 	return nil
 }

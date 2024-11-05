@@ -25,7 +25,10 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -238,9 +241,10 @@ func updateWorldState(cfg *utils.Config, db state.VmStateDB, alloc txcontext.Wor
 }
 
 // updateEthereumDb is used to fix exceptions in ethereum dataset inconsistencies
-func updateEthereumDb(s executor.State[txcontext.TxContext], db state.VmStateDB, isPreTransaction bool) error {
+func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Context, isPreTransaction bool) error {
 	var overwriteEverything = false
 	var alloc txcontext.WorldState
+	var db = ctx.State
 	if isPreTransaction {
 		alloc = s.Data.GetInputState()
 	} else {
@@ -249,6 +253,7 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], db state.VmStateDB,
 		// only post alloc is diverging for these ethereum block exceptions
 		if slices.Contains(ethereumLfvmBlockExceptions, s.Block) {
 			overwriteEverything = true
+			overwriteReceipt(s, ctx)
 		}
 	}
 
@@ -290,4 +295,38 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], db state.VmStateDB,
 	})
 
 	return nil
+}
+
+// overwriteReceipt is used to fix receipts of exceptions in ethereum dataset
+func overwriteReceipt(s executor.State[txcontext.TxContext], ctx *executor.Context) {
+	//// alternative to skip transaction receipt validation all together
+	//s.Transaction = s.Transaction + 100000
+
+	logs := make([]*substatetypes.Log, 0)
+
+	for _, l := range s.Data.GetResult().GetReceipt().GetLogs() {
+		topics := make([]substatetypes.Hash, 0)
+		for _, t := range l.Topics {
+			topics = append(topics, substatetypes.BytesToHash(t.Bytes()))
+		}
+		logs = append(logs, &substatetypes.Log{
+			Address:     substatetypes.HexToAddress(l.Address.Hex()),
+			Topics:      topics,
+			Data:        l.Data,
+			BlockNumber: l.BlockNumber,
+			TxHash:      substatetypes.BytesToHash(l.TxHash.Bytes()),
+			TxIndex:     l.TxIndex,
+			BlockHash:   substatetypes.BytesToHash(l.BlockHash.Bytes()),
+			Index:       l.Index,
+			Removed:     l.Removed,
+		})
+	}
+
+	receipt := substate.NewResult(s.Data.GetResult().GetReceipt().GetStatus(),
+		substatetypes.BytesToBloom(s.Data.GetResult().GetReceipt().GetBloom().Bytes()),
+		logs,
+		substatetypes.HexToAddress(s.Data.GetResult().GetReceipt().GetContractAddress().Hex()),
+		s.Data.GetResult().GetReceipt().GetGasUsed())
+
+	ctx.ExecutionResult = substatecontext.NewReceipt(receipt)
 }

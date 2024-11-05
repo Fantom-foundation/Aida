@@ -17,6 +17,8 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/urfave/cli/v2"
@@ -118,7 +120,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		TransactionLength:   getFlagValue(ctx, TransactionLengthFlag).(uint64),
 		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
 		UpdateDb:            getFlagValue(ctx, UpdateDbFlag).(string),
-		UpdateOnFailure:     getFlagValue(ctx, UpdateOnFailure).(string),
+		UpdateOnFailure:     strings.ToLower(getFlagValue(ctx, UpdateOnFailure).(string)),
 		UpdateType:          getFlagValue(ctx, UpdateTypeFlag).(string),
 		Validate:            getFlagValue(ctx, ValidateFlag).(bool),
 		ValidateStateHashes: getFlagValue(ctx, ValidateStateHashesFlag).(bool),

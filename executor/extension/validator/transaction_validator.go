@@ -18,7 +18,6 @@ package validator
 
 import (
 	"fmt"
-	"strings"
 	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -135,7 +134,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 	}
 
 	var err error
-	if strings.ToLower(v.cfg.UpdateOnFailure) == "all" || strings.ToLower(v.cfg.UpdateOnFailure) == "pre" {
+	if v.cfg.UpdateOnFailure == "all" || v.cfg.UpdateOnFailure == "pre" {
 		return updateWorldState(v.cfg, db, state.Data.GetInputState())
 	} else {
 		if err = validateWorldState(v.cfg, db, state.Data.GetInputState(), v.log); err == nil {
@@ -154,7 +153,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 
 func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Result, errOutput chan error) error {
 	if v.target.WorldState {
-		if strings.ToLower(v.cfg.UpdateOnFailure) == "all" || strings.ToLower(v.cfg.UpdateOnFailure) == "post" {
+		if v.cfg.UpdateOnFailure == "all" || v.cfg.UpdateOnFailure == "post" {
 			return updateWorldState(v.cfg, db, state.Data.GetOutputState())
 		} else if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), v.log); err != nil {
 			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
