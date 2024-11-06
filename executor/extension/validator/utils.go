@@ -38,7 +38,7 @@ import (
 
 // ethereumLfvmBlockExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
 // Starting with the Shanghai revision and eip-3860 this was fixed
-var ethereumLfvmBlockExceptions = []int{13803456, 14340503, 14953169, 15025981, 15427798, 15445481}
+var ethereumLfvmBlockExceptions = map[int]struct{}{13803456: {}, 14340503: {}, 14953169: {}, 15025981: {}, 15427798: {}, 15445481: {}}
 
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
@@ -251,7 +251,7 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Conte
 		alloc = s.Data.GetOutputState()
 
 		// only post alloc is diverging for these ethereum block exceptions
-		if slices.Contains(ethereumLfvmBlockExceptions, s.Block) {
+		if _, ok := ethereumLfvmBlockExceptions[s.Block]; ok {
 			overwriteEverything = true
 			overwriteReceipt(s, ctx)
 		}
