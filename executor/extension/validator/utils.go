@@ -33,10 +33,6 @@ import (
 	"github.com/holiman/uint256"
 )
 
-// ethereumLfvmBlockExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
-// Starting with the Shanghai revision and eip-3860 this was fixed
-var ethereumLfvmBlockExceptions = map[int]struct{}{13803456: {}, 14340503: {}, 14953169: {}, 15025981: {}, 15427798: {}, 15445481: {}}
-
 // validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
@@ -239,7 +235,7 @@ func updateWorldState(cfg *utils.Config, db state.VmStateDB, alloc txcontext.Wor
 
 // updateEthereumDb is used to fix exceptions in ethereum dataset inconsistencies
 func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Context, isPreTransaction bool) error {
-	var overwriteEverything = false
+	var overwriteAccount = false
 	var alloc txcontext.WorldState
 	var db = ctx.State
 	if isPreTransaction {
@@ -249,7 +245,7 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Conte
 
 		// only post alloc is diverging for these ethereum block exceptions
 		if _, ok := ethereumLfvmBlockExceptions[s.Block]; ok {
-			overwriteEverything = true
+			overwriteAccount = true
 			s.Transaction = utils.EthereumExceptionTx
 		}
 	}
@@ -263,7 +259,7 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Conte
 		balance := db.GetBalance(addr)
 		// balance increments covers block rewards
 		// or zero balance exception for slashed accounts - dao fork
-		if overwriteEverything ||
+		if overwriteAccount ||
 			balance.Cmp(accBalance) < 0 ||
 			(slices.Contains(params.DAODrainList(), addr) && accBalance.Eq(uint256.NewInt(0))) {
 			if accBalance.Cmp(balance) != 0 {
@@ -272,7 +268,7 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Conte
 			}
 		}
 
-		if overwriteEverything {
+		if overwriteAccount {
 			if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {
 				db.SetNonce(addr, acc.GetNonce())
 			}
@@ -282,7 +278,7 @@ func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Conte
 		}
 
 		// BeaconRootsAddress is a special case where the storage is diverging
-		if overwriteEverything || addr == params.BeaconRootsAddress {
+		if overwriteAccount || addr == params.BeaconRootsAddress {
 			acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
 				if db.GetState(addr, keyHash) != valueHash {
 					db.SetState(addr, keyHash, valueHash)

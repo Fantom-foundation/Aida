@@ -24,6 +24,10 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
+// ethereumLfvmBlockzExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
+// Starting with the Shanghai revision and eip-3860 this was fixed
+var ethereumLfvmBlockExceptions = map[int]struct{}{13803456: {}, 14340503: {}, 14953169: {}, 15025981: {}, 15427798: {}, 15445481: {}}
+
 // MakeEthereumDbPostTransactionUpdater creates an extension which fixes Ethereum exceptions in LiveDB
 func MakeEthereumDbPostTransactionUpdater(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	if cfg.ChainID != utils.EthereumChainID {
