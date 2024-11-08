@@ -133,13 +133,9 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 		return nil
 	}
 
-	var err error
-	if v.cfg.UpdateOnFailure == "all" || v.cfg.UpdateOnFailure == "pre" {
-		return updateWorldState(v.cfg, db, state.Data.GetInputState())
-	} else {
-		if err = validateWorldState(v.cfg, db, state.Data.GetInputState(), v.log); err == nil {
-			return nil
-		}
+	err := validateWorldState(v.cfg, db, state.Data.GetInputState(), v.log)
+	if err == nil {
+		return nil
 	}
 
 	err = fmt.Errorf("%v err:\nblock %v tx %v\n world-state input is not contained in the state-db\n %v\n", tool, state.Block, state.Transaction, err)
@@ -153,9 +149,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 
 func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Result, errOutput chan error) error {
 	if v.target.WorldState {
-		if v.cfg.UpdateOnFailure == "all" || v.cfg.UpdateOnFailure == "post" {
-			return updateWorldState(v.cfg, db, state.Data.GetOutputState())
-		} else if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), v.log); err != nil {
+		if err := validateWorldState(v.cfg, db, state.Data.GetOutputState(), v.log); err != nil {
 			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 			if v.isErrFatal(err, errOutput) {
 				return err
