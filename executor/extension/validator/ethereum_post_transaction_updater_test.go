@@ -98,6 +98,10 @@ func TestEthereumPostTransactionUpdator_OverwriteAccount(t *testing.T) {
 	if err != nil {
 		t.Fatal("post-transaction unexpected error: ", err)
 	}
+
+	if st.Transaction != utils.EthereumExceptionTx {
+		t.Fatalf("incorrect receipt exception number; want %d, got %d", utils.EthereumExceptionTx, st.Transaction)
+	}
 }
 
 func getExceptionBlock() int {
