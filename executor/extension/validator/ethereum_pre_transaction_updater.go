@@ -42,15 +42,15 @@ func makeEthereumDbPreTransactionUpdater(cfg *utils.Config, log logger.Logger) e
 	}
 }
 
-// PreTransaction validates fixes InputSubstate ethereum exceptions in given substate
-func (v *ethereumDbPreTransactionUpdater) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return updateEthereumDb(state, ctx, true)
-}
-
 type ethereumDbPreTransactionUpdater struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 	log logger.Logger
+}
+
+// PreTransaction fixes InputSubstate ethereum exceptions in given substate
+func (v *ethereumDbPreTransactionUpdater) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	return fixStateDbOnEthereum(state.Data.GetInputState(), ctx.State, false)
 }
 
 // PreRun informs the user that ethereumDbPreTransactionUpdater is enabled.

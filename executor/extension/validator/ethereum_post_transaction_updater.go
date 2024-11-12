@@ -46,15 +46,20 @@ func makeEthereumDbPostTransactionUpdater(cfg *utils.Config, log logger.Logger) 
 	}
 }
 
-// PostTransaction fixes OutputAlloc ethereum exceptions in given substate
-func (v *ethereumDbPostTransactionUpdater) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return updateEthereumDb(state, ctx, false)
-}
-
 type ethereumDbPostTransactionUpdater struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 	log logger.Logger
+}
+
+// PostTransaction fixes OutputAlloc ethereum exceptions in given substate
+func (v *ethereumDbPostTransactionUpdater) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	if _, ok := ethereumLfvmBlockExceptions[state.Block]; ok && v.cfg.VmImpl == "lfvm" {
+		// only post alloc is diverging for these ethereum block exceptions
+		state.Transaction = utils.EthereumExceptionTx
+		return fixStateDbOnEthereum(state.Data.GetOutputState(), ctx.State, true)
+	}
+	return nil
 }
 
 // PreRun informs the user that ethereumDbPostTransactionUpdater is enabled.

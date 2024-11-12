@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -213,23 +212,8 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 	return nil
 }
 
-// updateEthereumDb is used to fix exceptions in ethereum dataset inconsistencies
-func updateEthereumDb(s executor.State[txcontext.TxContext], ctx *executor.Context, isPreTransaction bool) error {
-	var overwriteAccount = false
-	var alloc txcontext.WorldState
-	var db = ctx.State
-	if isPreTransaction {
-		alloc = s.Data.GetInputState()
-	} else {
-		alloc = s.Data.GetOutputState()
-
-		// only post alloc is diverging for these ethereum block exceptions
-		if _, ok := ethereumLfvmBlockExceptions[s.Block]; ok {
-			overwriteAccount = true
-			s.Transaction = utils.EthereumExceptionTx
-		}
-	}
-
+// fixStateDbOnEthereum is used to fix exceptions in ethereum dataset inconsistencies
+func fixStateDbOnEthereum(alloc txcontext.WorldState, db state.StateDB, overwriteAccount bool) error {
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if !db.Exist(addr) {
 			db.CreateAccount(addr)
