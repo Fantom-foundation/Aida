@@ -16,8 +16,9 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthereumPreTransactionUpdator_FixBalance(t *testing.T) {
+func TestEthereumPreTransactionUpdater_FixBalance(t *testing.T) {
 	cfg := &utils.Config{}
+	cfg.ChainID = utils.EthereumChainID
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -47,8 +48,9 @@ func TestEthereumPreTransactionUpdator_FixBalance(t *testing.T) {
 	}
 }
 
-func TestEthereumPreTransactionUpdator_DontFixBalanceIfLower(t *testing.T) {
+func TestEthereumPreTransactionUpdater_DontFixBalanceIfLower(t *testing.T) {
 	cfg := &utils.Config{}
+	cfg.ChainID = utils.EthereumChainID
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -76,8 +78,9 @@ func TestEthereumPreTransactionUpdator_DontFixBalanceIfLower(t *testing.T) {
 	}
 }
 
-func TestEthereumPreTransactionUpdator_BeaconRootsAddressStorageException(t *testing.T) {
+func TestEthereumPreTransactionUpdater_BeaconRootsAddressStorageException(t *testing.T) {
 	cfg := &utils.Config{}
+	cfg.ChainID = utils.EthereumChainID
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -103,8 +106,9 @@ func TestEthereumPreTransactionUpdator_BeaconRootsAddressStorageException(t *tes
 	}
 }
 
-func TestEthereumPreTransactionUpdator_DaoFork(t *testing.T) {
+func TestEthereumPreTransactionUpdater_DaoFork(t *testing.T) {
 	cfg := &utils.Config{}
+	cfg.ChainID = utils.EthereumChainID
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)

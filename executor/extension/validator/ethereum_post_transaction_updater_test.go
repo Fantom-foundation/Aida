@@ -5,6 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -15,21 +16,21 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthereumPostTransactionUpdator_Skips(t *testing.T) {
+func TestEthereumPostTransactionUpdater_Skips(t *testing.T) {
 	tests := []struct {
-		name   string
-		vmImpl string
-		block  int
+		name    string
+		vmImpl  string
+		chainId utils.ChainID
 	}{
 		{
-			name:   "SkipNonLfvm",
-			vmImpl: "geth",
-			block:  getExceptionBlock(),
+			name:    "SkipNonLfvm",
+			vmImpl:  "geth",
+			chainId: utils.EthereumChainID,
 		},
 		{
-			name:   "SkipExceptionOnWorkingBlock",
-			vmImpl: "lfvm",
-			block:  10000000,
+			name:    "SkipOnNonEthereumChain",
+			vmImpl:  "lfvm",
+			chainId: utils.MainnetChainID,
 		},
 	}
 
@@ -37,6 +38,7 @@ func TestEthereumPostTransactionUpdator_Skips(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &utils.Config{}
 			cfg.VmImpl = tt.vmImpl
+			cfg.ChainID = tt.chainId
 
 			ctrl := gomock.NewController(t)
 			log := logger.NewMockLogger(ctrl)
@@ -46,9 +48,12 @@ func TestEthereumPostTransactionUpdator_Skips(t *testing.T) {
 			ctx := new(executor.Context)
 			ctx.State = db
 
-			st := executor.State[txcontext.TxContext]{Block: tt.block, Transaction: 1, Data: data}
+			st := executor.State[txcontext.TxContext]{Block: getExceptionBlock(), Transaction: 1, Data: data}
 
 			ext := makeEthereumDbPostTransactionUpdater(cfg, log)
+			if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
+				t.Fatal("unexpected extension initialization")
+			}
 			err := ext.PostTransaction(st, ctx)
 			if err != nil {
 				t.Fatal("post-transaction unexpected error: ", err)
@@ -57,9 +62,10 @@ func TestEthereumPostTransactionUpdator_Skips(t *testing.T) {
 	}
 }
 
-func TestEthereumPostTransactionUpdator_OverwriteAccount(t *testing.T) {
+func TestEthereumPostTransactionUpdater_OverwriteAccount(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.VmImpl = "lfvm"
+	cfg.ChainID = utils.EthereumChainID
 
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
@@ -98,18 +104,12 @@ func TestEthereumPostTransactionUpdator_OverwriteAccount(t *testing.T) {
 	if err != nil {
 		t.Fatal("post-transaction unexpected error: ", err)
 	}
-
-	if st.Transaction != utils.EthereumExceptionTx {
-		t.Fatalf("incorrect receipt exception number; want %d, got %d", utils.EthereumExceptionTx, st.Transaction)
-	}
 }
 
 func getExceptionBlock() int {
 	// retrieving exception block
-	var exceptionBlock int
 	for key := range ethereumLfvmBlockExceptions {
-		exceptionBlock = key
-		break
+		return key
 	}
-	return exceptionBlock
+	return -1
 }

@@ -50,7 +50,7 @@ type ethereumDbPreTransactionUpdater struct {
 
 // PreTransaction fixes InputSubstate ethereum exceptions in given substate
 func (v *ethereumDbPreTransactionUpdater) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return fixStateDbOnEthereum(state.Data.GetInputState(), ctx.State, false)
+	return fixEthereumExceptions(state.Data.GetInputState(), ctx.State, false)
 }
 
 // PreRun informs the user that ethereumDbPreTransactionUpdater is enabled.

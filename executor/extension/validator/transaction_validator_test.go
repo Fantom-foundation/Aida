@@ -953,6 +953,28 @@ func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 	}
 }
 
+// TestValidateVMResult tests validatation of data result.
+func TestValidateStateDb_ValidateReceiptEthereumSkip(t *testing.T) {
+	sub := &substate.Substate{Result: getDummyResult()}
+	ctx := new(executor.Context)
+	ctx.ExecutionResult = substatecontext.NewReceipt(getDummyResult())
+
+	cfg := &utils.Config{}
+	cfg.ChainID = utils.EthereumChainID
+	cfg.VmImpl = "lfvm"
+	cfg.ValidateTxState = true
+
+	ext := makeLiveDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)), ValidateTxTarget{WorldState: false, Receipt: true})
+
+	// mismatch is skipped
+	sub = &substate.Substate{Result: getDummyResult()}
+	sub.Result.Status = types.ReceiptStatusSuccessful
+	err := ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub), Block: getExceptionBlock()}, ctx)
+	if err != nil {
+		t.Fatalf("unexpected error\ngot: %v\nwant: nil", err)
+	}
+}
+
 func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	expectedResult := getDummyResult()
 	vmResult := getDummyResult()

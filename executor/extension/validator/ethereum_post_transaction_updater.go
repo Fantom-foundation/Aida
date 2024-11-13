@@ -26,20 +26,21 @@ import (
 
 // ethereumLfvmBlockzExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
 // Starting with the Shanghai revision and eip-3860 this was fixed
+// only post alloc is diverging for these ethereum block exceptions
 var ethereumLfvmBlockExceptions = map[int]struct{}{13803456: {}, 14340503: {}, 14953169: {}, 15025981: {}, 15427798: {}, 15445481: {}}
 
 // MakeEthereumDbPostTransactionUpdater creates an extension which fixes Ethereum exceptions in LiveDB
 func MakeEthereumDbPostTransactionUpdater(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if cfg.ChainID != utils.EthereumChainID {
-		return extension.NilExtension[txcontext.TxContext]{}
-	}
-
 	log := logger.NewLogger(cfg.LogLevel, "Ethereum-Exception-Updater")
 
 	return makeEthereumDbPostTransactionUpdater(cfg, log)
 }
 
 func makeEthereumDbPostTransactionUpdater(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+	if cfg.ChainID != utils.EthereumChainID || cfg.VmImpl != "lfvm" {
+		return extension.NilExtension[txcontext.TxContext]{}
+	}
+
 	return &ethereumDbPostTransactionUpdater{
 		cfg: cfg,
 		log: log,
@@ -54,10 +55,8 @@ type ethereumDbPostTransactionUpdater struct {
 
 // PostTransaction fixes OutputAlloc ethereum exceptions in given substate
 func (v *ethereumDbPostTransactionUpdater) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	if _, ok := ethereumLfvmBlockExceptions[state.Block]; ok && v.cfg.VmImpl == "lfvm" {
-		// only post alloc is diverging for these ethereum block exceptions
-		state.Transaction = utils.EthereumExceptionTx
-		return fixStateDbOnEthereum(state.Data.GetOutputState(), ctx.State, true)
+	if _, ok := ethereumLfvmBlockExceptions[state.Block]; ok {
+		return fixEthereumExceptions(state.Data.GetOutputState(), ctx.State, true)
 	}
 	return nil
 }
