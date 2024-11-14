@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
@@ -8,7 +9,10 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Substate/substate"
+	substatetypes "github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/params"
@@ -16,7 +20,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthereumPreTransactionUpdater_FixBalance(t *testing.T) {
+func TestEthereumPreTransactionUpdater_FixBalanceWhenNewBalanceIsHigher(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ChainID = utils.EthereumChainID
 
@@ -24,7 +28,7 @@ func TestEthereumPreTransactionUpdater_FixBalance(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestTransaction(t)
+	data := createTestTransaction()
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: getExceptionBlock(), Transaction: 1, Data: data}
@@ -86,7 +90,7 @@ func TestEthereumPreTransactionUpdater_BeaconRootsAddressStorageException(t *tes
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateBeaconRootsAddressTestTransaction(t)
+	data := createBeaconRootsAddressTestTransaction()
 
 	ctx := new(executor.Context)
 	ctx.State = db
@@ -114,7 +118,7 @@ func TestEthereumPreTransactionUpdater_DaoFork(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateDaoForkAddressTestTransaction(t)
+	data := createDaoForkAddressTestTransaction()
 
 	ctx := new(executor.Context)
 	ctx.State = db
@@ -132,4 +136,26 @@ func TestEthereumPreTransactionUpdater_DaoFork(t *testing.T) {
 	if err != nil {
 		t.Fatal("post-transaction unexpected error: ", err)
 	}
+}
+
+func createBeaconRootsAddressTestTransaction() txcontext.TxContext {
+	return substatecontext.NewTxContext(&substate.Substate{
+		InputSubstate: substate.WorldState{
+			substatetypes.BytesToAddress(params.BeaconRootsAddress.Bytes()): &substate.Account{
+				Balance: big.NewInt(1),
+				Storage: map[substatetypes.Hash]substatetypes.Hash{
+					substatetypes.BytesToHash([]byte{0x1}): substatetypes.BytesToHash([]byte{0x2})},
+			},
+		},
+	})
+}
+
+func createDaoForkAddressTestTransaction() txcontext.TxContext {
+	return substatecontext.NewTxContext(&substate.Substate{
+		InputSubstate: substate.WorldState{
+			substatetypes.BytesToAddress(params.DAODrainList()[0].Bytes()): &substate.Account{
+				Balance: big.NewInt(0),
+			},
+		},
+	})
 }

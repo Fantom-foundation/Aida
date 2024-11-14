@@ -212,8 +212,8 @@ func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOn
 	return nil
 }
 
-// fixEthereumExceptions is used to fix exceptions in ethereum dataset inconsistencies
-func fixEthereumExceptions(alloc txcontext.WorldState, db state.StateDB, overwriteAccount bool) error {
+// updateStateDbOnEthereumChain is used to fix exceptions in ethereum dataset inconsistencies
+func updateStateDbOnEthereumChain(alloc txcontext.WorldState, db state.StateDB, overwriteAccount bool) error {
 	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if !db.Exist(addr) {
 			db.CreateAccount(addr)

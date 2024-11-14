@@ -26,16 +26,16 @@ import (
 
 // MakeEthereumDbPreTransactionUpdater creates an extension which fixes Ethereum exceptions in pre transaction in LiveDB
 func MakeEthereumDbPreTransactionUpdater(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if cfg.ChainID != utils.EthereumChainID {
-		return extension.NilExtension[txcontext.TxContext]{}
-	}
-
 	log := logger.NewLogger(cfg.LogLevel, "Ethereum-Exception-Updater")
 
 	return makeEthereumDbPreTransactionUpdater(cfg, log)
 }
 
 func makeEthereumDbPreTransactionUpdater(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
+	if cfg.ChainID != utils.EthereumChainID {
+		return extension.NilExtension[txcontext.TxContext]{}
+	}
+
 	return &ethereumDbPreTransactionUpdater{
 		cfg: cfg,
 		log: log,
@@ -50,7 +50,7 @@ type ethereumDbPreTransactionUpdater struct {
 
 // PreTransaction fixes InputSubstate ethereum exceptions in given substate
 func (v *ethereumDbPreTransactionUpdater) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return fixEthereumExceptions(state.Data.GetInputState(), ctx.State, false)
+	return updateStateDbOnEthereumChain(state.Data.GetInputState(), ctx.State, false)
 }
 
 // PreRun informs the user that ethereumDbPreTransactionUpdater is enabled.

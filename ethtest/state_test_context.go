@@ -59,7 +59,6 @@ type StateTestContext struct {
 	postNumber    int    // the post number within one 'fork' within one JSON file
 	env           *stBlockEnvironment
 	inputState    types.GenesisAlloc
-	outputState   types.GenesisAlloc
 	msg           *core.Message
 	rootHash      common.Hash // expected root hash
 	expectedError string      // expected error by processor
@@ -80,7 +79,8 @@ func (s *StateTestContext) GetStateHash() common.Hash {
 }
 
 func (s *StateTestContext) GetOutputState() txcontext.WorldState {
-	return NewWorldState(s.outputState)
+	// we dont execute pseudo transactions here
+	return nil
 }
 
 func (s *StateTestContext) GetInputState() txcontext.WorldState {

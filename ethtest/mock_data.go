@@ -21,12 +21,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/params"
-
 	"github.com/Fantom-foundation/Aida/txcontext"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/tests"
@@ -60,19 +58,6 @@ func CreateTestTransaction(t *testing.T) txcontext.TxContext {
 			common.HexToAddress("0x1"): core.GenesisAccount{
 				Balance: big.NewInt(1000),
 				Nonce:   1,
-			},
-			common.HexToAddress("0x2"): core.GenesisAccount{
-				Balance: big.NewInt(2000),
-				Nonce:   2,
-			},
-		},
-		outputState: types.GenesisAlloc{
-			common.HexToAddress("0x1"): core.GenesisAccount{
-				Balance: big.NewInt(1000),
-				Nonce:   1,
-				Storage: map[common.Hash]common.Hash{
-					common.HexToHash("0x1"): common.HexToHash("0x2"),
-				},
 			},
 			common.HexToAddress("0x2"): core.GenesisAccount{
 				Balance: big.NewInt(2000),
@@ -207,28 +192,5 @@ func CreateTransactionThatFailsSenderValidation(t *testing.T) txcontext.TxContex
 		txBytes: txBytes,
 		msg:     &core.Message{},
 		env:     &stBlockEnvironment{fork: "Shanghai"}, // FORK MUST BE Shanghai
-	}
-}
-
-func CreateBeaconRootsAddressTestTransaction(*testing.T) txcontext.TxContext {
-	return &StateTestContext{
-		inputState: types.GenesisAlloc{
-			params.BeaconRootsAddress: core.GenesisAccount{
-				Balance: big.NewInt(1),
-				Storage: map[common.Hash]common.Hash{
-					common.HexToHash("0x1"): common.HexToHash("0x2"),
-				},
-			},
-		},
-	}
-}
-
-func CreateDaoForkAddressTestTransaction(*testing.T) txcontext.TxContext {
-	return &StateTestContext{
-		inputState: types.GenesisAlloc{
-			params.DAODrainList()[0]: core.GenesisAccount{
-				Balance: big.NewInt(0),
-			},
-		},
 	}
 }
