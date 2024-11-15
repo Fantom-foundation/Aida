@@ -19,7 +19,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthereumPostTransactionUpdater_SkippedExtensionBecauseOfWrongConditions(t *testing.T) {
+func TestEthereumPostTransactionUpdater_SkippedExtensionBecauseOfWrongVmImplOrWrongChainId(t *testing.T) {
 	tests := []struct {
 		name    string
 		vmImpl  string
@@ -31,7 +31,7 @@ func TestEthereumPostTransactionUpdater_SkippedExtensionBecauseOfWrongConditions
 			chainId: utils.EthereumChainID,
 		},
 		{
-			name:    "SkipOnNonEthereumChain",
+			name:    "SkipWrongChainId",
 			vmImpl:  "lfvm",
 			chainId: utils.MainnetChainID,
 		},
@@ -93,7 +93,7 @@ func TestEthereumPostTransactionUpdater_NonExceptionBlockDoesntGetOverwritten(t 
 	}
 }
 
-func TestEthereumPostTransactionUpdater_OverwriteAccount(t *testing.T) {
+func TestEthereumPostTransactionUpdater_ExceptionBlockGetsOverwritten(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.VmImpl = "lfvm"
 	cfg.ChainID = utils.EthereumChainID
