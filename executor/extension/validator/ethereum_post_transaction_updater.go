@@ -24,9 +24,9 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// ethereumLfvmBlockzExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
+// ethereumLfvmBlocksExceptions LFVM uses a uint16 program counter with a range from 0 to 65535.
 // Starting with the Shanghai revision and eip-3860 this was fixed
-// only post alloc is diverging for these ethereum block exceptions
+// only post alloc is diverging for these ethereum block exceptions, so it needs to be overwritten
 var ethereumLfvmBlockExceptions = map[int]struct{}{13803456: {}, 14340503: {}, 14953169: {}, 15025981: {}, 15427798: {}, 15445161: {}, 15445481: {}}
 
 // MakeEthereumDbPostTransactionUpdater creates an extension which fixes Ethereum exceptions in LiveDB
