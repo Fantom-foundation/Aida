@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.4
 
 require (
-	github.com/Fantom-foundation/Carmen/go v0.0.0-20241121102311-62fc85c89464
+	github.com/Fantom-foundation/Carmen/go v0.0.0-20241129202153-690bc10fa624
 	github.com/Fantom-foundation/Norma v0.0.0-20240422103552-42e37352b2f4
 	github.com/Fantom-foundation/Substate v0.0.0-20240930092859-d12af8cad7ef
 	github.com/Fantom-foundation/Tosca v0.0.0-20241028082205-7b33705a4675
