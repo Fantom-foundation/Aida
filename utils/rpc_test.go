@@ -183,9 +183,6 @@ func TestRPCFindEpochNumber_Positive(t *testing.T) {
 	var (
 		expectedMainnetEpoch uint64 = 5576
 		testingMainnetBlock  uint64 = 4_564_025
-
-		expectedTestnetEpoch uint64 = 2457
-		testingTestnetBlock  uint64 = 479_326
 	)
 
 	for _, id := range maps.Keys(RealChainIDs) {
@@ -196,8 +193,7 @@ func TestRPCFindEpochNumber_Positive(t *testing.T) {
 				testingBlock = testingMainnetBlock
 				expectedEpoch = expectedMainnetEpoch
 			} else if id == TestnetChainID {
-				testingBlock = testingTestnetBlock
-				expectedEpoch = expectedTestnetEpoch
+				t.Skip("Opera Testnet ChainID is not supported")
 			} else if id == EthereumChainID {
 				t.Skip("EthereumChainID is not supported")
 			} else {
