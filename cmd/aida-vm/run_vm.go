@@ -91,6 +91,7 @@ func run(
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
+		validator.MakeEthereumDbPostTransactionUpdater(cfg),
 		statedb.MakeTransactionEventEmitter[txcontext.TxContext](),
 	)
 	extensions = append(extensions, extra...)
