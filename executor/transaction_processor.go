@@ -523,6 +523,7 @@ func (t *toscaProcessor) processRegularTx(db state.VmStateDB, block int, tx int,
 		gasUsed:    uint64(receipt.GasUsed),
 		err:        err,
 		returnData: receipt.Output,
+		failed:     !receipt.Success,
 	}
 
 	return newTransactionResult(log, msg, result, finalError, msg.From), nil
