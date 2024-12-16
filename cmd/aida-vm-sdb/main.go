@@ -113,6 +113,7 @@ var RunSubstateCmd = cli.Command{
 		//&utils.MaxNumTransactionsFlag,
 		&utils.ValidateTxStateFlag,
 		&utils.ValidateFlag,
+		&utils.OverwritePreWorldStateFlag,
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.TrackProgressFlag,

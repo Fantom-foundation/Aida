@@ -391,8 +391,8 @@ var (
 		Usage: "maximum number of errors when ContinueOnFailure is enabled, 0 is endless",
 		Value: 10,
 	}
-	UpdateOnFailure = cli.BoolFlag{
-		Name:  "update-on-failure",
+	OverwritePreWorldStateFlag = cli.BoolFlag{
+		Name:  "overwrite-pre-world-state",
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: false,
 	}

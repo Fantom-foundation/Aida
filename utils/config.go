@@ -259,7 +259,7 @@ type Config struct {
 	TxGeneratorType          []string       // type of the application used for transaction generation
 	UpdateBufferSize         uint64         // cache size in Bytes
 	UpdateDb                 string         // update-set directory
-	UpdateOnFailure          bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
+	OverwritePreWorldState   bool           // instead of validation of StateDb we overwrite it with the provided data
 	UpdateType               string         // download datatype
 	Validate                 bool           // validate validate aida-db
 	ValidateStateHashes      bool           // if this is true state hash validation is enabled in Executor
