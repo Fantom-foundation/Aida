@@ -1,3 +1,11 @@
+# We've Moved!
+
+This repository has found a new home! 
+
+You can now find everything at [https://github.com/0xsoniclabs/aida](https://github.com/0xsoniclabs/aida). 
+
+Please update your bookmarks and any links you have to this repo.
+
 # Aida
 
 Aida is a block-processing testing infrastructure for EVM-compatible chains.
